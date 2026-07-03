@@ -36,16 +36,67 @@ function Dashboard() {
   const { metrics, shipments } = useContext(ShipmentContext);
   const latestShipments = shipments.slice(0, 3);
 
+  const roleKey = (auth?.user?.role || "").toLowerCase();
+  const roleMap = {
+    customer: {
+      eyebrow: "Customer",
+      title: "Customer Dashboard",
+      sub: "View your orders, tracking status, and delivery ETA.",
+    },
+    bussinex: {
+      eyebrow: "Bussinex",
+      title: "Bussinex Dashboard",
+      sub: "Manage business shipments, invoices, and batch operations.",
+    },
+    logistic: {
+      eyebrow: "Logistics",
+      title: "Logistics Dashboard",
+      sub: "Operational view of pickups, routes, and delivery progress.",
+    },
+    support: {
+      eyebrow: "Support",
+      title: "Support Dashboard",
+      sub: "Assist customers and view open shipment issues.",
+    },
+    admin: {
+      eyebrow: "Admin",
+      title: "Admin Dashboard",
+      sub: "Track shipments, view metrics, and manage workflows in real time.",
+    },
+  };
+
+  const { eyebrow, sub } = roleMap[roleKey] || roleMap["admin"];
+  const title = eyebrow;
+  const subText = "";
+  const roleColors = {
+    customer: "#10b981",
+    bussinex: "#7c3aed",
+    logistic: "#f97316",
+    support: "#0ea5e9",
+    admin: "#2563eb",
+  };
+  const roleColor = roleColors[roleKey] || roleColors.admin;
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <div className="eyebrow">Milestone 1 complete</div>
-          <h1>Shipment tracking core setup</h1>
-          <p className="subtle">
-            Project initialization, role-aware auth, shipment workflows, and tracking dashboard are
-            ready in React.
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              className="role-badge"
+              style={{
+                background: roleColor,
+                color: "#fff",
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontWeight: 700,
+                textTransform: "capitalize",
+                fontSize: 18,
+              }}
+            >
+              {title}
+            </div>
+          </div>
         </div>
         <Link className="button primary" to="/shipments/new">
           + New shipment

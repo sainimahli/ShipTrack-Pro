@@ -570,6 +570,20 @@ a {
   border-right: 1px solid var(--line);
   min-height: 100vh;
   padding: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-panel-content {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 18px;
+}
+
+.auth-panel .brand {
+  margin-bottom: 28px;
 }
 
 .auth-visual {

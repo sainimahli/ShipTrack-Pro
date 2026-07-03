@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/auth";
 
 const titles = {
-  "/dashboard": ["Milestone 1 Dashboard", "Core setup, architecture plan, and workflow status"],
+  "/dashboard": ["Dashboard", ""],
   "/shipments": ["Shipment Management", "Create, monitor, and update shipment lifecycle records"],
   "/shipments/new": ["Create Shipment", "Register a new package into the tracking workflow"],
   "/track": ["Tracking Dashboard", "Search by tracking number and view delivery progress"],

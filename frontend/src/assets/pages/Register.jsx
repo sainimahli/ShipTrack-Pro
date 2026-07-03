@@ -35,12 +35,25 @@ function Register() {
   return (
     <div className="auth-page">
       <section className="auth-panel">
-        <div className="eyebrow">Account setup</div>
-        <h1>Create your ShipTrack account</h1>
-        <p className="subtle">Choose the role that matches your milestone workflow access.</p>
+        <div className="auth-panel-content">
+          <div className="brand" style={{ paddingInline: 0 }}>
+            <div className="brand-mark">ST</div>
+            <div>
+              <div className="brand-title" style={{ color: "#132238" }}>
+                ShipTrack Pro
+              </div>
+              <div className="brand-subtitle" style={{ color: "#657184" }}>
+                Shipment visibility platform
+              </div>
+            </div>
+          </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {error && <div className="alert error">{error}</div>}
+          <div className="eyebrow">Account setup</div>
+          <h1>Create your ShipTrack account</h1>
+          <p className="subtle">Choose the role that matches your milestone workflow access.</p>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {error && <div className="alert error">{error}</div>}
 
           <div className="form-field">
             <label htmlFor="name">Full name</label>
@@ -50,7 +63,7 @@ function Register() {
               name="name"
               onChange={handleChange}
               required
-              value={form.name}
+              placeholder="Enter your full name"
             />
           </div>
 
@@ -63,7 +76,7 @@ function Register() {
               onChange={handleChange}
               required
               type="email"
-              value={form.email}
+              placeholder="Enter your email"
             />
           </div>
 
@@ -77,7 +90,7 @@ function Register() {
               onChange={handleChange}
               required
               type="password"
-              value={form.password}
+              placeholder="Enter your password"
             />
           </div>
 
@@ -99,7 +112,7 @@ function Register() {
               id="company"
               name="company"
               onChange={handleChange}
-              value={form.company}
+              placeholder="Enter your company name"
             />
           </div>
 
@@ -111,6 +124,7 @@ function Register() {
         <p className="auth-switch">
           Already registered? <Link to="/login">Sign in</Link>
         </p>
+        </div>
       </section>
 
       <section className="auth-visual">
