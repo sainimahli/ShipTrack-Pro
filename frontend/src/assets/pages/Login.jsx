@@ -3,10 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 
 function Login() {
-  const { login } = useContext(AuthContext);
+  const { login, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "admin@shiptrack.com", password: "admin123" });
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState({ type: "", message: "" });
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -17,15 +17,31 @@ function Login() {
     const result = login(form);
 
     if (!result.ok) {
-      setError(result.message);
+      setFeedback({ type: "error", message: result.message });
       return;
     }
 
+    setFeedback({ type: "success", message: "Signed in successfully." });
     navigate("/dashboard", { replace: true });
   };
-   
+
+  const handleGoogleLogin = () => {
+    const result = googleLogin(null, {
+      name: "Google User",
+      email: "google.user@shiptrack.com",
+      role: "Customer",
+      company: "Google Workspace",
+    });
+    if (!result.ok) {
+      setFeedback({ type: "error", message: result.message });
+      return;
+    }
+
+    setFeedback({ type: "success", message: "Signed in with Google." });
+    navigate("/dashboard", { replace: true });
+  };
+
   return (
-    
     <div className="auth-page">
       <section className="auth-panel">
         <div className="auth-panel-content">
@@ -47,9 +63,17 @@ function Login() {
             Use the seeded administrator account or a registered user to open the dashboard.
           </p>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {error && <div className="alert error">{error}</div>}
+          {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
 
+          <div className="auth-actions">
+            <button className="button secondary" type="button" onClick={handleGoogleLogin}>
+              Continue with Google
+            </button>
+          </div>
+
+          <div className="auth-divider">or use your email</div>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
             <div className="form-field">
               <label htmlFor="email">Email</label>
               <input
@@ -80,6 +104,10 @@ function Login() {
               Sign in
             </button>
           </form>
+
+          <p className="auth-switch">
+            <Link to="/forgot-password">Forgot password?</Link>
+          </p>
 
           <p className="auth-switch">
             New user? <Link to="/register">Create an account</Link>

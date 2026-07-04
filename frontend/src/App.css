@@ -212,6 +212,11 @@ a {
   margin: 6px 0 8px;
 }
 
+.auth-panel h1 {
+  font-size: 28px;
+  margin: 6px 0 0;
+}
+
 .section-title {
   color: var(--ink);
   font-size: 18px;
@@ -221,6 +226,8 @@ a {
 
 .subtle {
   color: var(--muted);
+  margin-bottom: 6px;
+
 }
 
 .grid {
@@ -559,7 +566,7 @@ a {
 }
 
 .auth-page {
-  align-items: center;
+  align-items: stretch;
   display: grid;
   grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
   min-height: 100vh;
@@ -568,29 +575,42 @@ a {
 .auth-panel {
   background: #ffffff;
   border-right: 1px solid var(--line);
-  min-height: 100vh;
-  padding: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 32px 42px;
 }
 
 .auth-panel-content {
   width: 100%;
   max-width: 420px;
   display: grid;
-  gap: 18px;
+  gap: 0.65rem;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding-block: 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.auth-panel-content::-webkit-scrollbar {
+  display: none;
 }
 
 .auth-panel .brand {
-  margin-bottom: 28px;
+  margin-bottom: 0.5rem;
 }
 
 .auth-visual {
   align-items: center;
   background:
     linear-gradient(180deg, rgba(16, 34, 51, 0.78), rgba(16, 34, 51, 0.88)),
-    url("/icons.svg");
+    url("https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1400&q=80");
+  background-position: center;
+  background-size: cover;
   color: #ffffff;
   display: flex;
   min-height: 100vh;
@@ -621,7 +641,27 @@ a {
 
 .auth-switch {
   color: var(--muted);
-  margin-top: 18px;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-divider {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.auth-otp-card {
+  background: #f8fbfd;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
 }
 
 .alert {
@@ -675,6 +715,15 @@ a {
   .auth-panel,
   .auth-visual {
     min-height: auto;
+  }
+
+  .auth-panel {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .auth-panel-content {
+    max-height: none;
   }
 }
 

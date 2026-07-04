@@ -8,6 +8,7 @@ import { AuthProvider } from "./assets/context/AuthContext";
 import { ShipmentProvider } from "./assets/context/ShipmentContext";
 import CreateShipment from "./assets/pages/CreateShipment";
 import Dashboard from "./assets/pages/Dashboard";
+import ForgotPassword from "./assets/pages/ForgotPassword";
 import Login from "./assets/pages/Login";
 import Profile from "./assets/pages/Profile";
 import Register from "./assets/pages/Register";
@@ -64,6 +65,14 @@ function App() {
               element={
                 <PublicRoute>
                   <Register />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicRoute>
+                  <ForgotPassword />
                 </PublicRoute>
               }
             />

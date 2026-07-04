@@ -5,9 +5,11 @@ import { AuthContext } from "../context/auth";
 const roles = ["Customer", "Business Client", "Logistics Operator", "Support Agent", "Administrator"];
 
 function Register() {
-  const { register } = useContext(AuthContext);
+  const { register, requestOtp, verifyOtp, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState({ type: "", message: "" });
+  const [step, setStep] = useState("details");
+  const [otp, setOtp] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -20,15 +22,60 @@ function Register() {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const result = register(form);
+  const handleOtpChange = (event) => {
+    setOtp(event.target.value);
+  };
+
+  const handleGoogleSignup = () => {
+    const result = googleLogin(null, {
+      name: form.name || "Google User",
+      email: form.email || "google.user@shiptrack.com",
+      role: form.role,
+      company: form.company || "Google Workspace",
+    });
 
     if (!result.ok) {
-      setError(result.message);
+      setFeedback({ type: "error", message: result.message });
       return;
     }
 
+    setFeedback({ type: "success", message: "Signed up with Google." });
+    navigate("/dashboard", { replace: true });
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (step === "details") {
+      if (form.password.length < 6) {
+        setFeedback({ type: "error", message: "Use a password with at least 6 characters." });
+        return;
+      }
+
+      const result = requestOtp({ email: form.email, purpose: "signup" });
+      if (!result.ok) {
+        setFeedback({ type: "error", message: result.message });
+        return;
+      }
+
+      setStep("verify");
+      setFeedback({ type: "success", message: result.message });
+      return;
+    }
+
+    const verified = verifyOtp({ email: form.email, otp, purpose: "signup" });
+    if (!verified.ok) {
+      setFeedback({ type: "error", message: verified.message });
+      return;
+    }
+
+    const result = register(form);
+    if (!result.ok) {
+      setFeedback({ type: "error", message: result.message });
+      return;
+    }
+
+    setFeedback({ type: "success", message: "Account created successfully." });
     navigate("/dashboard", { replace: true });
   };
 
@@ -52,78 +99,128 @@ function Register() {
           <h1>Create your ShipTrack account</h1>
           <p className="subtle">Choose the role that matches your milestone workflow access.</p>
 
+          {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
+
+          <div className="auth-actions">
+            <button className="button secondary" type="button" onClick={handleGoogleSignup}>
+              Continue with Google
+            </button>
+          </div>
+
+          <div className="auth-divider">or create with email</div>
+
           <form className="auth-form" onSubmit={handleSubmit}>
-            {error && <div className="alert error">{error}</div>}
+            {step === "details" ? (
+              <>
+                <div className="form-field">
+                  <label htmlFor="name">Full name</label>
+                  <input
+                    className="input"
+                    id="name"
+                    name="name"
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter your full name"
+                    value={form.name}
+                  />
+                </div>
 
-          <div className="form-field">
-            <label htmlFor="name">Full name</label>
-            <input
-              className="input"
-              id="name"
-              name="name"
-              onChange={handleChange}
-              required
-              placeholder="Enter your full name"
-            />
-          </div>
+                <div className="form-field">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    className="input"
+                    id="email"
+                    name="email"
+                    onChange={handleChange}
+                    required
+                    type="email"
+                    placeholder="Enter your email"
+                    value={form.email}
+                  />
+                </div>
 
-          <div className="form-field">
-            <label htmlFor="email">Email</label>
-            <input
-              className="input"
-              id="email"
-              name="email"
-              onChange={handleChange}
-              required
-              type="email"
-              placeholder="Enter your email"
-            />
-          </div>
+                <div className="form-field">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    className="input"
+                    id="password"
+                    minLength={6}
+                    name="password"
+                    onChange={handleChange}
+                    required
+                    type="password"
+                    placeholder="Enter your password"
+                    value={form.password}
+                  />
+                </div>
 
-          <div className="form-field">
-            <label htmlFor="password">Password</label>
-            <input
-              className="input"
-              id="password"
-              minLength={6}
-              name="password"
-              onChange={handleChange}
-              required
-              type="password"
-              placeholder="Enter your password"
-            />
-          </div>
+                <div className="form-field">
+                  <label htmlFor="role">Role</label>
+                  <select className="select" id="role" name="role" onChange={handleChange} value={form.role}>
+                    {roles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-          <div className="form-field">
-            <label htmlFor="role">Role</label>
-            <select className="select" id="role" name="role" onChange={handleChange} value={form.role}>
-              {roles.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </div>
+                <div className="form-field">
+                  <label htmlFor="company">Company</label>
+                  <input
+                    className="input"
+                    id="company"
+                    name="company"
+                    onChange={handleChange}
+                    placeholder="Enter your company name"
+                    value={form.company}
+                  />
+                </div>
 
-          <div className="form-field">
-            <label htmlFor="company">Company</label>
-            <input
-              className="input"
-              id="company"
-              name="company"
-              onChange={handleChange}
-              placeholder="Enter your company name"
-            />
-          </div>
+                <button className="button primary" type="submit">
+                  Send verification code
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="auth-otp-card">
+                  <div className="eyebrow">Email verification</div>
+                  <p className="subtle">
+                    Enter the one-time code you received to finish creating your account.
+                  </p>
+                  <div className="form-field">
+                    <label htmlFor="otp">Verification code</label>
+                    <input
+                      className="input"
+                      id="otp"
+                      name="otp"
+                      onChange={handleOtpChange}
+                      required
+                      placeholder="Enter the 6-digit code"
+                      value={otp}
+                    />
+                  </div>
+                </div>
+                <button className="button primary" type="submit">
+                  Verify and create account
+                </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => {
+                    setStep("details");
+                    setFeedback({ type: "", message: "" });
+                  }}
+                >
+                  Edit details
+                </button>
+              </>
+            )}
+          </form>
 
-          <button className="button primary" type="submit">
-            Create account
-          </button>
-        </form>
-
-        <p className="auth-switch">
-          Already registered? <Link to="/login">Sign in</Link>
-        </p>
+          <p className="auth-switch">
+            Already registered? <Link to="/login">Sign in</Link>
+          </p>
         </div>
       </section>
 

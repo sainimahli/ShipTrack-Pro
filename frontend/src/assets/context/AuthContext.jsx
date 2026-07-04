@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext, roleCapabilities } from "./auth";
 
 const STORAGE_KEY = "shiptrack_auth";
+const OTP_STORAGE_KEY = "shiptrack_otps";
 
 const demoUsers = [
   {
@@ -48,6 +49,17 @@ const getStoredAuth = () => {
   }
 };
 
+const getStoredOtpRequests = () => {
+  try {
+    const value = localStorage.getItem(OTP_STORAGE_KEY);
+    return value ? JSON.parse(value) : {};
+  } catch {
+    return {};
+  }
+};
+
+const createOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
+
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
   const [registeredUsers, setRegisteredUsers] = useState(() => {
@@ -58,6 +70,7 @@ export function AuthProvider({ children }) {
       return demoUsers;
     }
   });
+  const [otpRequests, setOtpRequests] = useState(getStoredOtpRequests);
 
   useEffect(() => {
     localStorage.setItem("shiptrack_users", JSON.stringify(registeredUsers));
@@ -71,12 +84,16 @@ export function AuthProvider({ children }) {
     }
   }, [auth]);
 
+  useEffect(() => {
+    localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpRequests));
+  }, [otpRequests]);
+
   const login = useCallback(
     ({ email, password }) => {
+      const normalizedEmail = email.trim().toLowerCase();
       const user = registeredUsers.find(
         (candidate) =>
-          candidate.email.toLowerCase() === email.trim().toLowerCase() &&
-          candidate.password === password,
+          candidate.email.toLowerCase() === normalizedEmail && candidate.password === password,
       );
 
       if (!user) {
@@ -90,10 +107,137 @@ export function AuthProvider({ children }) {
     [registeredUsers],
   );
 
+  const googleLogin = useCallback(
+    (externalUser = null, options = {}) => {
+      const user = externalUser || {
+        id: "USR-GOOGLE",
+        name: options.name || "Google User",
+        email: options.email || "google.user@shiptrack.com",
+        password: "google-oauth",
+        role: options.role || "Customer",
+        company: options.company || "Google Workspace",
+      };
+
+      const normalizedEmail = user.email.toLowerCase();
+      const existingUser = registeredUsers.find(
+        (candidate) => candidate.email.toLowerCase() === normalizedEmail,
+      );
+
+      const resolvedUser = existingUser || {
+        ...user,
+        id: `USR-${String(registeredUsers.length + 1).padStart(3, "0")}`,
+      };
+
+      const safeUser = withoutPassword(resolvedUser);
+      setAuth({ token: createToken(resolvedUser), user: safeUser });
+
+      if (!existingUser) {
+        setRegisteredUsers((users) => [...users, resolvedUser]);
+      }
+
+      return { ok: true, user: safeUser };
+    },
+    [registeredUsers],
+  );
+
+  const requestOtp = useCallback(
+    ({ email, purpose }) => {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) {
+        return { ok: false, message: "Please enter an email address." };
+      }
+
+      if (purpose === "password-reset") {
+        const exists = registeredUsers.some(
+          (candidate) => candidate.email.toLowerCase() === normalizedEmail,
+        );
+
+        if (!exists) {
+          return { ok: false, message: "No account is registered with that email address." };
+        }
+      }
+
+      const code = createOtpCode();
+      setOtpRequests((current) => ({
+        ...current,
+        [normalizedEmail]: {
+          purpose,
+          code,
+          expiresAt: Date.now() + 10 * 60 * 1000,
+        },
+      }));
+
+      return {
+        ok: true,
+        message: `A verification code was sent to ${normalizedEmail}. It will expire in 10 minutes.`,
+      };
+    },
+    [registeredUsers]
+  );
+
+  const verifyOtp = useCallback(
+    ({ email, otp, purpose }) => {
+      const normalizedEmail = email.trim().toLowerCase();
+      const record = otpRequests[normalizedEmail];
+
+      if (!record) {
+        return { ok: false, message: "No verification code was requested for this email." };
+      }
+
+      if (record.purpose !== purpose) {
+        return { ok: false, message: "The verification code does not match this flow." };
+      }
+
+      if (Date.now() > record.expiresAt) {
+        return { ok: false, message: "The verification code has expired. Please request a new one." };
+      }
+
+      if (String(otp).trim() !== record.code) {
+        return { ok: false, message: "The verification code is invalid." };
+      }
+
+      return { ok: true, message: "Verification succeeded." };
+    },
+    [otpRequests],
+  );
+
+  const resetPassword = useCallback(
+    ({ email, otp, password }) => {
+      const verified = verifyOtp({ email, otp, purpose: "password-reset" });
+      if (!verified.ok) {
+        return verified;
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const targetUser = registeredUsers.find(
+        (candidate) => candidate.email.toLowerCase() === normalizedEmail,
+      );
+
+      if (!targetUser) {
+        return { ok: false, message: "No account is registered with that email address." };
+      }
+
+      const updatedUser = { ...targetUser, password };
+      setRegisteredUsers((users) =>
+        users.map((user) => (user.id === targetUser.id ? updatedUser : user)),
+      );
+      const safeUser = withoutPassword(updatedUser);
+      setAuth({ token: createToken(updatedUser), user: safeUser });
+
+      return {
+        ok: true,
+        user: safeUser,
+        message: "Your password has been updated successfully.",
+      };
+    },
+    [registeredUsers, verifyOtp],
+  );
+
   const register = useCallback(
     ({ name, email, password, role, company }) => {
+      const normalizedEmail = email.trim().toLowerCase();
       const exists = registeredUsers.some(
-        (candidate) => candidate.email.toLowerCase() === email.trim().toLowerCase(),
+        (candidate) => candidate.email.toLowerCase() === normalizedEmail,
       );
 
       if (exists) {
@@ -126,10 +270,14 @@ export function AuthProvider({ children }) {
       login,
       logout,
       register,
+      requestOtp,
+      verifyOtp,
+      resetPassword,
+      googleLogin,
       users: registeredUsers.map(withoutPassword),
       capabilities: auth?.user ? roleCapabilities[auth.user.role] || [] : [],
     }),
-    [auth, login, logout, register, registeredUsers],
+    [auth, login, logout, register, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
