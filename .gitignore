@@ -15,7 +15,7 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,26 +23,20 @@ dist-ssr
 *.sln
 *.sw?
 
-# Backend (Java/Maven/Spring)
-backend/target/
-backend/*.log
-backend/logs/
-
-# Java compiled files
+# Java / Maven
+target/
 *.class
-
-# Maven
 .mvn/timing.properties
 
 # Spring Boot
-backend/.springBeans
-backend/.sts4-cache/
+.springBeans
+.sts4-cache/
 
-# Env/config secrets
-backend/.env
-backend/.env.*
+# Environment
+.env
+.env.*
 
-# Java IDE project files
-backend/.classpath
-backend/.project
-backend/.settings/
+# Eclipse
+.classpath
+.project
+.settings/
