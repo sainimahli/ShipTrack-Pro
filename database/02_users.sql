@@ -7,6 +7,8 @@ CREATE TABLE users (
     phone VARCHAR(15) UNIQUE,
     role_id BIGINT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    registration_status VARCHAR(20) DEFAULT 'APPROVED'
+        CHECK (registration_status IN ('PENDING', 'APPROVED', 'REJECTED')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_role
