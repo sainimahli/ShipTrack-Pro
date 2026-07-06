@@ -15,7 +15,10 @@ function Register() {
     email: "",
     password: "",
     role: "Customer",
-    company: "",
+    companyName: "",
+    gstNumber: "",
+    businessType: "",
+    website: "",
   });
 
   const handleChange = (event) => {
@@ -165,17 +168,56 @@ function Register() {
                   </select>
                 </div>
 
-                <div className="form-field">
-                  <label htmlFor="company">Company</label>
-                  <input
-                    className="input"
-                    id="company"
-                    name="company"
-                    onChange={handleChange}
-                    placeholder="Enter your company name"
-                    value={form.company}
-                  />
-                </div>
+                {form.role === "Business Client" && (
+  <>
+    <div className="form-field">
+      <label>Company Name</label>
+      <input
+        className="input"
+        name="companyName"
+        value={form.companyName}
+        onChange={handleChange}
+        placeholder="Enter company name"
+      />
+    </div>
+
+    <div className="form-field">
+      <label>GST Number</label>
+      <input
+        className="input"
+        name="gstNumber"
+        value={form.gstNumber}
+        onChange={handleChange}
+        placeholder="Enter GST number"
+      />
+    </div>
+
+    <div className="form-field">
+      <label>Business Type</label>
+      <input
+        className="input"
+        name="businessType"
+        value={form.businessType}
+        onChange={handleChange}
+        placeholder="e.g. Logistics"
+      />
+    </div>
+
+    <div className="form-field">
+      <label>Website</label>
+      <input
+        className="input"
+        type="url"
+        name="website"
+        value={form.website}
+        onChange={handleChange}
+        placeholder="https://example.com"
+      />
+    </div>
+  </>
+)}
+
+                
 
                 <button className="button primary" type="submit">
                   Send verification code

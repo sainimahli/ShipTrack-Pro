@@ -75,7 +75,7 @@ function CreateShipment() {
               name="senderName"
               onChange={handleChange}
               required
-              value={form.senderName}
+              placeholder="Enter Sender Name"
             />
           </div>
 
@@ -88,7 +88,7 @@ function CreateShipment() {
               name="senderCity"
               onChange={handleChange}
               required
-              value={form.senderCity}
+              placeholder="Enter Sender City"
             />
           </div>
 
@@ -101,7 +101,7 @@ function CreateShipment() {
               name="receiverName"
               onChange={handleChange}
               required
-              value={form.receiverName}
+              placeholder="Enter Receiver Name"
             />
           </div>
 
@@ -114,7 +114,7 @@ function CreateShipment() {
               name="receiverCity"
               onChange={handleChange}
               required
-              value={form.receiverCity}
+              placeholder="Enter Receiver City"
             />
           </div>
 
@@ -126,7 +126,7 @@ function CreateShipment() {
               id="packageType"
               name="packageType"
               onChange={handleChange}
-              value={form.packageType}
+              placeholder="Select Package Type"
             >
               <option>General Cargo</option>
               <option>Electronics</option>
@@ -146,7 +146,7 @@ function CreateShipment() {
               onChange={handleChange}
               placeholder="12 kg"
               required
-              value={form.weight}
+              placeholder="Enter Package Weight"
             />
           </div>
 
@@ -160,7 +160,7 @@ function CreateShipment() {
               onChange={handleChange}
               required
               type="date"
-              value={form.eta}
+             placeholder="Enter Estimate Delivery Date"
             />
           </div>
 
@@ -172,7 +172,7 @@ function CreateShipment() {
               id="priority"
               name="priority"
               onChange={handleChange}
-              value={form.priority}
+              placeholder="Select Priority"
             >
               <option>Standard</option>
               <option>Express</option>
@@ -189,7 +189,7 @@ function CreateShipment() {
               name="deliveryAddress"
               onChange={handleChange}
               required
-              value={form.deliveryAddress}
+              placeholder="Enter Delivery Address"
             />
           </div>
         </div>
