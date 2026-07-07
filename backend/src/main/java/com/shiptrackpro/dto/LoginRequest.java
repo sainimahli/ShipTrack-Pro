@@ -3,7 +3,6 @@ package com.shiptrackpro.dto;
 public class LoginRequest {
 
     private String email;
-
     private String password;
 
     public LoginRequest() {
