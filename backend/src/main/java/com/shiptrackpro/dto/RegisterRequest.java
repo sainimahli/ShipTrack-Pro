@@ -1,30 +1,37 @@
 package com.shiptrackpro.dto;
 
-import com.shiptrackpro.enums.Role;
-
 public class RegisterRequest {
 
-    private String fullName;
+    private String firstName;
+    private String lastName;
     private String email;
+    private String phone;
     private String password;
-    private Role role;
+    private Long roleId;
+
+    // Business Client fields (optional for CUSTOMER)
+    private String companyName;
+    private String gstNumber;
+    private String businessType;
+    private String website;
 
     public RegisterRequest() {
     }
 
-    public RegisterRequest(String fullName, String email, String password, Role role) {
-        this.fullName = fullName;
-        this.email = email;
-        this.password = password;
-        this.role = role;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public String getFullName() {
-        return fullName;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getEmail() {
@@ -35,6 +42,14 @@ public class RegisterRequest {
         this.email = email;
     }
 
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
     public String getPassword() {
         return password;
     }
@@ -43,11 +58,43 @@ public class RegisterRequest {
         this.password = password;
     }
 
-    public Role getRole() {
-        return role;
+    public Long getRoleId() {
+        return roleId;
     }
 
-    public void setRole(Role role) {
-        this.role = role;
+    public void setRoleId(Long roleId) {
+        this.roleId = roleId;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
+
+    public String getGstNumber() {
+        return gstNumber;
+    }
+
+    public void setGstNumber(String gstNumber) {
+        this.gstNumber = gstNumber;
+    }
+
+    public String getBusinessType() {
+        return businessType;
+    }
+
+    public void setBusinessType(String businessType) {
+        this.businessType = businessType;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
     }
 }

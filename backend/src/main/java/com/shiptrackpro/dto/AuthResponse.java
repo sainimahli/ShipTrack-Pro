@@ -1,17 +1,15 @@
 package com.shiptrackpro.dto;
 
-import com.shiptrackpro.enums.Role;
-
 public class AuthResponse {
 
     private String token;
-    private Role role;
+    private String role;
     private String message;
 
     public AuthResponse() {
     }
 
-    public AuthResponse(String token, Role role, String message) {
+    public AuthResponse(String token, String role, String message) {
         this.token = token;
         this.role = role;
         this.message = message;
@@ -25,11 +23,11 @@ public class AuthResponse {
         this.token = token;
     }
 
-    public Role getRole() {
+    public String getRole() {
         return role;
     }
 
-    public void setRole(Role role) {
+    public void setRole(String role) {
         this.role = role;
     }
 
