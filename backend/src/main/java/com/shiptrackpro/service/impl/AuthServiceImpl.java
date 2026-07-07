@@ -9,6 +9,8 @@ import com.shiptrackpro.entity.Role;
 import com.shiptrackpro.entity.User;
 import com.shiptrackpro.exception.EmailAlreadyExistsException;
 import com.shiptrackpro.exception.InvalidCredentialsException;
+import com.shiptrackpro.exception.PendingApprovalException;
+import com.shiptrackpro.exception.RegistrationRejectedException;
 import com.shiptrackpro.repository.BusinessClientRepository;
 import com.shiptrackpro.repository.RoleRepository;
 import com.shiptrackpro.repository.UserRepository;
@@ -128,29 +130,29 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
-
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() ->
                         new InvalidCredentialsException("Invalid email or password.")
                 );
 
         if (user.getRegistrationStatus() == RegistrationStatus.PENDING) {
-            throw new RuntimeException(
+            throw new PendingApprovalException(
                     "Your account is waiting for Admin approval."
             );
         }
 
         if (user.getRegistrationStatus() == RegistrationStatus.REJECTED) {
-            throw new RuntimeException(
+            throw new RegistrationRejectedException(
                     "Your registration request has been rejected."
             );
         }
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
 
         String token = jwtService.generateToken(user);
 
