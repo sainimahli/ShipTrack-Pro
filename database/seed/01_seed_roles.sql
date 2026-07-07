@@ -1,6 +1,6 @@
-INSERT INTO roles (role_name, description) VALUES
-('CUSTOMER', 'Individual customer who books and tracks shipments'),
-('BUSINESS_CLIENT', 'Business account holder with company shipment needs'),
-('LOGISTICS_OPERATOR', 'Staff managing warehouse and shipment operations'),
-('SUPPORT_AGENT', 'Customer support staff handling queries and issues'),
-('ADMINISTRATOR', 'Full system access and management');
+INSERT INTO roles (role_name, description, is_self_registerable) VALUES
+('CUSTOMER', 'Individual customer who books and tracks shipments', TRUE),
+('BUSINESS_CLIENT', 'Business account holder with company shipment needs', TRUE),
+('LOGISTICS_OPERATOR', 'Staff managing warehouse and shipment operations', FALSE),
+('SUPPORT_AGENT', 'Customer support staff handling queries and issues', FALSE),
+('ADMINISTRATOR', 'Full system access and management', FALSE);
