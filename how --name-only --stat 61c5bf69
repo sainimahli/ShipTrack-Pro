@@ -1,0 +1,18 @@
+[33m61c5bf69[m[33m ([m[1;31morigin/shipment-tracking[m[33m, [m[1;32mshipment-tracking[m[33m)[m Implemented shipment tracking module
+[33m32e0e0e1[m Merge pull request #3 from sainimahli/feature/security
+[33m8274111e[m added Oauth and forgot pass feature
+[33m3603008c[m Implemented JWT security module foundation
+[33m5646db92[m[33m ([m[1;31morigin/feature/security[m[33m)[m Implemented JWT security module foundation
+[33mf6b9f6c2[m Merge pull request #2 from sainimahli/shiny
+[33m88764e6f[m[33m ([m[1;31morigin/shiny[m[33m, [m[1;31morigin/feature/authentication[m[33m)[m Merge branch 'main' into feature/authentication
+[33m174bb40a[m Add authentication foundation
+[33mcaa1db14[m Updated Frontend UI
+[33m1cbb554c[m Merge branch 'main' of https://github.com/sainimahli/ShipTrack-Pro
+[33mc0e9e1e0[m changed version for pom
+[33m11a098d9[m milestone 1
+[33madda8388[m Add .gitkeep files to maintain directory structure in backend
+[33m448b3e9b[m Initial Spring Boot backend setup
+[33m200456c9[m Add files via upload
+[33md83f2373[m Added AdminDashboard
+[33m13e11a36[m Initial Frontend Setup
+[33m9614d052[m Initial commit
