@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Login Test</title>
+</head>
+<body>
+
+<h2>Google OAuth Test</h2>
+
+<p><strong>JWT Token:</strong></p>
+
+<textarea id="token" rows="10" cols="100"></textarea>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+document.getElementById("token").value = token || "No token received";
+</script>
+
+</body>
+</html>

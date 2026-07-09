@@ -14,57 +14,75 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 @Configuration
 public class SecurityConfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+        @Autowired
+        private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+        @Autowired
+        private CustomUserDetailsService customUserDetailsService;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Autowired
+        private OAuth2SuccessHandler oAuth2SuccessHandler;
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(customUserDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
+        @Autowired
+        private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        @Bean
+        public AuthenticationProvider authenticationProvider() {
+                DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+                provider.setUserDetailsService(customUserDetailsService);
+                provider.setPasswordEncoder(passwordEncoder());
+                return provider;
+        }
 
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .authenticationProvider(authenticationProvider())
-                .authorizeHttpRequests(auth ->
-                        auth
-                                .requestMatchers(
-                                        "/api/auth/**",
-                                        "/api/roles/**",
-                                        "/api/admin/**"
-                                ).permitAll()
-                                .anyRequest().authenticated()
-                )
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration config) throws Exception {
+                return config.getAuthenticationManager();
+        }
 
-        return http.build();
-    }
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+                http
+                                .csrf(csrf -> csrf.disable())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                                .exceptionHandling(exception -> exception
+                                                .defaultAuthenticationEntryPointFor(
+                                                                restAuthenticationEntryPoint,
+                                                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher(
+                                                                                "/api/**")))
+
+                                .authenticationProvider(authenticationProvider())
+
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(
+                                                                "/",
+                                                                "/index.html",
+                                                                "/api/auth/**",
+                                                                "/api/roles/**"
+                                                                // "/api/admin/**",                                                                
+                                                        )
+                                                .permitAll()
+                                                .anyRequest().authenticated())
+
+                                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
+
+                                .addFilterBefore(
+                                                jwtAuthenticationFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
 }
