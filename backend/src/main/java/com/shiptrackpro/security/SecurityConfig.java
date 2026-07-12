@@ -57,6 +57,7 @@ public class SecurityConfig {
                                         "/api/auth/**",
                                         "/api/roles/**",
                                         "/api/admin/**"
+                                        // "/api/tracking/**"
                                 ).permitAll()
                                 .anyRequest().authenticated()
                 )
