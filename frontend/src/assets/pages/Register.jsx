@@ -104,14 +104,7 @@ function Register() {
 
           {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
 
-          <div className="auth-actions">
-            <button className="button secondary" type="button" onClick={handleGoogleSignup}>
-              Continue with Google
-            </button>
-          </div>
-
-          <div className="auth-divider">or create with email</div>
-
+          
           <form className="auth-form" onSubmit={handleSubmit}>
             {step === "details" ? (
               <>

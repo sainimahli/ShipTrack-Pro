@@ -1,5 +1,6 @@
 package com.shiptrackpro.entity;
 
+import com.shiptrackpro.enums.ShipmentStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

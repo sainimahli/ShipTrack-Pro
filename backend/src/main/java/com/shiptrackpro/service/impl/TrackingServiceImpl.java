@@ -6,8 +6,8 @@ import com.shiptrackpro.dto.TrackingTimelineResponse;
 import com.shiptrackpro.dto.UpdateLocationRequest;
 import com.shiptrackpro.dto.UpdateTrackingStatusRequest;
 import com.shiptrackpro.entity.Shipment;
-import com.shiptrackpro.entity.ShipmentStatus;
 import com.shiptrackpro.entity.TrackingEvent;
+import com.shiptrackpro.enums.ShipmentStatus;
 import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.repository.TrackingEventRepository;
 import com.shiptrackpro.service.TrackingService;
@@ -61,7 +61,9 @@ public class TrackingServiceImpl implements TrackingService {
         response.setTrackingNumber(shipment.getTrackingNumber());
         response.setCurrentStatus(shipment.getShipmentStatus());
         response.setLatestLocation(null);
-        response.setLatestUpdateAt(shipment.getUpdatedAt());
+        response.setLatestUpdateAt(shipment.getUpdatedAt() != null
+                ? shipment.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC)
+                : null);
         return response;
     }
 

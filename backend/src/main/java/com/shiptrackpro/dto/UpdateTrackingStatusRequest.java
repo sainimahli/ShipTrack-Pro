@@ -1,6 +1,6 @@
 package com.shiptrackpro.dto;
 
-import com.shiptrackpro.entity.ShipmentStatus;
+import com.shiptrackpro.enums.ShipmentStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

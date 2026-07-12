@@ -10,4 +10,7 @@ public interface AuthService {
 
     AuthResponse login(LoginRequest request);
 
+    // Google Sign-In for already registered users for oAuth2 login
+    AuthResponse googleLogin(String email);
+
 }

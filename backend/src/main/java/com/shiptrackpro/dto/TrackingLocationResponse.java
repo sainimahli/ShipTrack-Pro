@@ -1,6 +1,6 @@
 package com.shiptrackpro.dto;
 
-import com.shiptrackpro.entity.ShipmentStatus;
+import com.shiptrackpro.enums.ShipmentStatus;
 
 import java.time.OffsetDateTime;
 
