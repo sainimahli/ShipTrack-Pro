@@ -16,6 +16,10 @@ import com.shiptrackpro.repository.RoleRepository;
 import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.security.JwtService;
 import com.shiptrackpro.service.AuthService;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -142,7 +146,11 @@ public class AuthServiceImpl implements AuthService {
                                                 request.getEmail(),
                                                 request.getPassword()));
 
-                String token = jwtService.generateToken(user);
+                Map<String, Object> claims = new HashMap<>();
+
+                claims.put("role", user.getRole().getRoleName());
+
+                String token = jwtService.generateToken(claims, user);
 
                 return new AuthResponse(
                                 token,

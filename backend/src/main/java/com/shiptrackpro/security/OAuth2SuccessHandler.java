@@ -21,7 +21,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private GoogleAuthService googleAuthService;
 
     @Override
-    public void onAuthenticationSuccess(
+    public void onAuthenticationSuccess( 
             HttpServletRequest request,
             HttpServletResponse response,
             Authentication authentication)
@@ -41,7 +41,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         System.out.println("===== BEFORE REDIRECT =====");
 
-        response.sendRedirect("/index.html?token=" + authResponse.getToken());
+        response.sendRedirect("http://localhost:5173/dashboard/success?token=" + authResponse.getToken());
 
         System.out.println("===== AFTER REDIRECT =====");
     }
