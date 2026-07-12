@@ -6,6 +6,7 @@ import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.shiptrackpro.dto.UpdateProfileRequest;
 
 @Service
 public class ProfileServiceImpl implements ProfileService {
@@ -28,5 +29,17 @@ public class ProfileServiceImpl implements ProfileService {
                 user.getRole().getRoleName(),
                 user.getRegistrationStatus().name()
         );
+    }
+    @Override
+    public void updateProfile(String email, UpdateProfileRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setPhone(request.getPhone());
+
+        userRepository.save(user);
     }
 }
