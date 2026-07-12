@@ -7,6 +7,7 @@ function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "admin@shiptrack.com", password: "admin123" });
   const [feedback, setFeedback] = useState({ type: "", message: "" });
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -89,15 +90,34 @@ function Login() {
 
             <div className="form-field">
               <label htmlFor="password">Password</label>
-              <input
-                className="input"
-                id="password"
-                name="password"
-                onChange={handleChange}
-                required
-                type="password"
-                placeholder="Enter your password"
-              />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input
+                  className="input"
+                  id="password"
+                  name="password"
+                  onChange={handleChange}
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  style={{ paddingRight: "40px" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    color: "#657184",
+                    fontWeight: "500",
+                  }}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
 
             <button className="button primary" type="submit">
