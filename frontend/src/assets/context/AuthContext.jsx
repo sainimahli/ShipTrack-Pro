@@ -11,7 +11,7 @@ const demoUsers = [
     email: "admin@shiptrack.com",
     password: "admin123",
     role: "Administrator",
-    company: "ShipTrack Control Tower",
+    company: "ShipTrack Control Tower", 
   },
   {
     id: "USR-002",
@@ -42,8 +42,19 @@ const createToken = (user) =>
 
 const getStoredAuth = () => {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
-    return value ? JSON.parse(value) : null;
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!token) {
+      return null;
+    }
+
+    return {
+      token,
+      user: {
+        role,
+      },
+    };
   } catch {
     return null;
   }
@@ -62,6 +73,19 @@ const createOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (token) {
+    setAuth({
+      token,
+      user: {
+        role,
+      },
+    });
+  }
+}, []);
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     try {
       const saved = localStorage.getItem("shiptrack_users");
@@ -76,36 +100,24 @@ export function AuthProvider({ children }) {
     localStorage.setItem("shiptrack_users", JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
-  useEffect(() => {
-    if (auth) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+ useEffect(() => {
+  if (auth?.token) {
+    localStorage.setItem("token", auth.token);
+
+    if (auth.user?.role) {
+      localStorage.setItem("role", auth.user.role);
     }
-  }, [auth]);
+  } else {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+  }
+}, [auth]);
 
   useEffect(() => {
     localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpRequests));
   }, [otpRequests]);
 
-  const login = useCallback(
-    ({ email, password }) => {
-      const normalizedEmail = email.trim().toLowerCase();
-      const user = registeredUsers.find(
-        (candidate) =>
-          candidate.email.toLowerCase() === normalizedEmail && candidate.password === password,
-      );
-
-      if (!user) {
-        return { ok: false, message: "Email or password is incorrect." };
-      }
-
-      const safeUser = withoutPassword(user);
-      setAuth({ token: createToken(user), user: safeUser });
-      return { ok: true, user: safeUser };
-    },
-    [registeredUsers],
-  );
+ 
 
   const googleLogin = useCallback(
     (externalUser = null, options = {}) => {
@@ -262,13 +274,20 @@ export function AuthProvider({ children }) {
   );
 
   const logout = useCallback(() => setAuth(null), []);
-
+  const updateAuth = useCallback((token, role) => {
+  setAuth({
+    token,
+    user: {
+      role,
+    },
+  });
+}, []);
   const value = useMemo(
     () => ({
       auth,
       isAuthenticated: Boolean(auth?.token),
-      login,
       logout,
+      updateAuth,
       register,
       requestOtp,
       verifyOtp,
@@ -277,7 +296,7 @@ export function AuthProvider({ children }) {
       users: registeredUsers.map(withoutPassword),
       capabilities: auth?.user ? roleCapabilities[auth.user.role] || [] : [],
     }),
-    [auth, login, logout, register, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
+    [auth, logout, updateAuth, register, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

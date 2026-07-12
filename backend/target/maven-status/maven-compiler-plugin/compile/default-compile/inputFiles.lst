@@ -1,13 +1,35 @@
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/dto/AuthResponse.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/dto/LoginRequest.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/dto/RegisterRequest.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/entity/User.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/enums/Role.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/exception/EmailAlreadyExistsException.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/exception/InvalidCredentialsException.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/repository/UserRepository.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/security/CustomUserDetailsService.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/security/JwtAuthenticationFilter.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/security/JwtService.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/security/SecurityConfig.java
-/home/user/Projects/ShipTrack-Pro/backend/src/main/java/com/shiptrackpro/service/AuthService.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\BackendApplication.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\controller\AdminController.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\controller\AuthController.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\controller\RoleController.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\dto\AuthResponse.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\dto\LoginRequest.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\dto\PendingUserResponse.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\dto\RegisterRequest.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\dto\RoleResponse.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\entity\BusinessClient.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\entity\RegistrationStatus.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\entity\Role.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\entity\User.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\exception\EmailAlreadyExistsException.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\exception\GlobalExceptionHandler.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\exception\InvalidCredentialsException.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\exception\PendingApprovalException.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\exception\RegistrationRejectedException.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\repository\BusinessClientRepository.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\repository\RoleRepository.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\repository\UserRepository.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\security\CustomUserDetailsService.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\security\JwtAuthenticationFilter.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\security\JwtService.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\security\OAuth2SuccessHandler.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\security\RestAuthenticationEntryPoint.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\security\SecurityConfig.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\AdminService.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\AuthService.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\google\GoogleAuthService.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\google\GoogleAuthServiceImpl.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\impl\AdminServiceImpl.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\impl\AuthServiceImpl.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\impl\RoleServiceImpl.java
+C:\New folder (2)\ShipTrack-Pro\backend\src\main\java\com\shiptrackpro\service\RoleService.java
