@@ -71,8 +71,11 @@ public class SecurityConfig {
                                                                 "/",
                                                                 "/index.html",
                                                                 "/api/auth/**",
-                                                                "/api/roles/**"
-                                                                // "/api/admin/**",                                                                
+                                                                "/api/roles/**",
+                                                                // "/api/admin/**",
+                                                                
+                                                                "/oauth2/**",
+                                                                "/login/oauth2/**"
                                                         )
                                                 .permitAll()
                                                 .anyRequest().authenticated())

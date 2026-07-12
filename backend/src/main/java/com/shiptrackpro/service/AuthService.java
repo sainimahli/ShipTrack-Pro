@@ -1,8 +1,6 @@
 package com.shiptrackpro.service;
 
-import com.shiptrackpro.dto.AuthResponse;
-import com.shiptrackpro.dto.LoginRequest;
-import com.shiptrackpro.dto.RegisterRequest;
+import com.shiptrackpro.dto.*;
 
 public interface AuthService {
 
@@ -10,7 +8,14 @@ public interface AuthService {
 
     AuthResponse login(LoginRequest request);
 
-    // Google Sign-In for already registered users for oAuth2 login
+    // Google Sign-In
     AuthResponse googleLogin(String email);
 
+} 
+    // Forgot Password
+    void forgotPassword(ForgotPasswordRequest request);
+
+    void verifyOtp(VerifyOtpRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
 }

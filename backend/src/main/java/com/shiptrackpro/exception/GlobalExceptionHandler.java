@@ -4,7 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+import com.shiptrackpro.exception.InvalidOtpException;
+import com.shiptrackpro.exception.OtpExpiredException;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -36,6 +37,25 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("message", ex.getMessage()));
+    }
+    @ExceptionHandler(InvalidOtpException.class)
+    public ResponseEntity<?> handleInvalidOtp(InvalidOtpException ex) {
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "message",
+                        ex.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(OtpExpiredException.class)
+    public ResponseEntity<?> handleOtpExpired(OtpExpiredException ex) {
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "message",
+                        ex.getMessage()
+                ));
     }
 
     @ExceptionHandler(RuntimeException.class)
