@@ -3,6 +3,14 @@ package com.shiptrackpro.service.impl;
 import com.shiptrackpro.dto.AuthResponse;
 import com.shiptrackpro.dto.LoginRequest;
 import com.shiptrackpro.dto.RegisterRequest;
+import com.shiptrackpro.dto.ForgotPasswordRequest;
+import com.shiptrackpro.dto.VerifyOtpRequest;
+import com.shiptrackpro.dto.ResetPasswordRequest;
+import com.shiptrackpro.entity.PasswordResetToken;
+import com.shiptrackpro.repository.PasswordResetTokenRepository;
+
+import java.security.SecureRandom;
+import java.time.OffsetDateTime;
 import com.shiptrackpro.entity.BusinessClient;
 import com.shiptrackpro.entity.RegistrationStatus;
 import com.shiptrackpro.entity.Role;
@@ -11,6 +19,8 @@ import com.shiptrackpro.exception.EmailAlreadyExistsException;
 import com.shiptrackpro.exception.InvalidCredentialsException;
 import com.shiptrackpro.exception.PendingApprovalException;
 import com.shiptrackpro.exception.RegistrationRejectedException;
+import com.shiptrackpro.exception.InvalidOtpException;
+import com.shiptrackpro.exception.OtpExpiredException;
 import com.shiptrackpro.repository.BusinessClientRepository;
 import com.shiptrackpro.repository.RoleRepository;
 import com.shiptrackpro.repository.UserRepository;
@@ -46,6 +56,11 @@ public class AuthServiceImpl implements AuthService {
 
         @Autowired
         private JwtService jwtService;
+
+        @Autowired
+        private PasswordResetTokenRepository passwordResetTokenRepository;
+
+        private final SecureRandom secureRandom = new SecureRandom();
 
         @Override
         public AuthResponse register(RegisterRequest request) {
@@ -183,5 +198,83 @@ public class AuthServiceImpl implements AuthService {
                                 token,
                                 user.getRole().getRoleName(),
                                 "Google login successful.");
+        }
+        @Override
+        public void forgotPassword(ForgotPasswordRequest request) {
+
+                User user = userRepository.findByEmail(request.getEmail())
+                        .orElseThrow(() ->
+                                new RuntimeException("No account found with this email."));
+
+                PasswordResetToken token = new PasswordResetToken();
+
+                token.setUser(user);
+
+                String otp = generateOtp();
+
+                token.setOtp(otp);
+
+                token.setExpiresAt(
+                        OffsetDateTime.now().plusMinutes(10));
+
+                token.setIsUsed(false);
+
+                passwordResetTokenRepository.save(token);
+
+                System.out.println("====================================");
+                System.out.println("Password Reset OTP : " + otp);
+                System.out.println("====================================");
+        }
+        @Override
+        public void verifyOtp(VerifyOtpRequest request) {
+
+                User user = userRepository.findByEmail(request.getEmail())
+                        .orElseThrow(() ->
+                                new RuntimeException("User not found."));
+
+                PasswordResetToken token = passwordResetTokenRepository
+                        .findTopByUserAndOtpAndIsUsedFalseOrderByCreatedAtDesc(
+                                user,
+                                request.getOtp())
+                        .orElseThrow(() ->
+                                new InvalidOtpException("Invalid OTP."));
+
+                if (token.getExpiresAt().isBefore(OffsetDateTime.now())) {
+                        throw new OtpExpiredException("OTP has expired.");
+                }
+        }
+
+        @Override
+        public void resetPassword(ResetPasswordRequest request) {
+
+                User user = userRepository.findByEmail(request.getEmail())
+                        .orElseThrow(() ->
+                                new RuntimeException("User not found."));
+
+                PasswordResetToken token = passwordResetTokenRepository
+                        .findTopByUserAndOtpAndIsUsedFalseOrderByCreatedAtDesc(
+                                user,
+                                request.getOtp())
+                        .orElseThrow(() ->
+                                new InvalidOtpException("Invalid OTP."));
+
+                if (token.getExpiresAt().isBefore(OffsetDateTime.now())) {
+                        throw new OtpExpiredException("OTP has expired.");
+                }
+
+                user.setPassword(
+                        passwordEncoder.encode(request.getNewPassword()));
+
+                userRepository.save(user);
+
+                token.setIsUsed(true);
+
+                passwordResetTokenRepository.save(token);
+        }
+        private String generateOtp() {
+
+                int otp = 100000 + secureRandom.nextInt(900000);
+
+                return String.valueOf(otp);
         }
 }
