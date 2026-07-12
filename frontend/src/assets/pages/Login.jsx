@@ -1,45 +1,45 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth";
-
+import { login as loginApi } from "../services/api";
 function Login() {
-  const { login, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { updateAuth } = useContext(AuthContext);
   const [form, setForm] = useState({ email: "admin@shiptrack.com", password: "admin123" });
   const [feedback, setFeedback] = useState({ type: "", message: "" });
-
-  const handleChange = (event) => {
+ const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = login(form);
+ 
+ try {
+    const result = await loginApi(form);
 
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
+    if (result.status === 200) {
+        localStorage.setItem("token", result.data.token);
+        localStorage.setItem("role", result.data.role);
+        updateAuth(result.data.token, result.data.role);
+        setFeedback({
+            type: "success",
+            message: "Login successful."
+        });
+        navigate("/dashboard");
     }
-
-    setFeedback({ type: "success", message: "Signed in successfully." });
-    navigate("/dashboard", { replace: true });
-  };
-
-  const handleGoogleLogin = () => {
-    const result = googleLogin(null, {
-      name: "Google User",
-      email: "google.user@shiptrack.com",
-      role: "Customer",
-      company: "Google Workspace",
+} catch (error) {
+    setFeedback({
+        type: "error",
+        message: error.response?.data?.message || "Invalid email or password."
     });
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
-    }
-
-    setFeedback({ type: "success", message: "Signed in with Google." });
-    navigate("/dashboard", { replace: true });
+}
+   
   };
+
+ const handleGoogleLogin = () => {
+    window.location.href =
+        "http://localhost:8080/oauth2/authorization/google";
+};
 
   return (
     <div className="auth-page">
@@ -120,11 +120,11 @@ function Login() {
           <div className="auth-visual-copy">
             <h2>From shipment to delivery proof, one control tower.</h2>
             <p>
-              Real-time visibility.
+              Real-time visibility
               <br />
-              Smarter decisions.
+              Smarter decisions
               <br />
-              Happier customers.
+              Happier customers
             </p>
           </div>
         </div>
