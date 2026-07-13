@@ -25,10 +25,15 @@ export const getRoles = () => API.get("/roles");
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
 
-export const approveUser = (id) =>
-  API.put(`/admin/users/${id}/approve`);
+export const approveUser = (id) => API.put(`/admin/users/${id}/approve`);
 
-export const rejectUser = (id) =>
-  API.put(`/admin/users/${id}/reject`);
+export const rejectUser = (id) => API.put(`/admin/users/${id}/reject`);
+
+// ForgotPassword
+export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
+
+export const verifyOtp = (data) => API.post("/auth/verify-otp", data);
+
+export const resetPassword = (data) => API.post("/auth/reset-password", data);
 
 export default API;

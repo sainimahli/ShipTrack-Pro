@@ -1,12 +1,36 @@
-import { useContext, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { login as loginApi } from "../services/api";
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { updateAuth } = useContext(AuthContext);
   const [form, setForm] = useState({ email: "admin@shiptrack.com", password: "admin123" });
   const [feedback, setFeedback] = useState({ type: "", message: "" });
+  useEffect(() => {
+  if (location.state?.message) {
+    setFeedback({
+      type: "success",
+      message: location.state.message,
+    });
+
+    window.history.replaceState({}, document.title);
+    return;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const error = params.get("error");
+
+  if (error) {
+    setFeedback({
+      type: "error",
+      message: error,
+    });
+
+    navigate("/login", { replace: true });
+  }
+}, [location, navigate]);
  const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };

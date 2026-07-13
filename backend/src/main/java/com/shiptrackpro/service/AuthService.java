@@ -11,7 +11,6 @@ public interface AuthService {
     // Google Sign-In
     AuthResponse googleLogin(String email);
 
-} 
     // Forgot Password
     void forgotPassword(ForgotPasswordRequest request);
 
