@@ -74,12 +74,10 @@ public class Shipment {
     @JoinColumn(name = "receiver_user_id")
     private User receiverUser;
 
-    // MODIFIED: added cascade = {PERSIST, MERGE}
     @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name = "origin_address_id", nullable = false)
     private Address originAddress;
 
-    // MODIFIED: added cascade = {PERSIST, MERGE}
     @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name = "destination_address_id", nullable = false)
     private Address destinationAddress;
@@ -124,5 +122,4 @@ public class Shipment {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-
 }

@@ -1,45 +1,73 @@
-import { useContext, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth";
-
+import { login as loginApi } from "../services/api";
 function Login() {
-  const { login, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { updateAuth } = useContext(AuthContext);
   const [form, setForm] = useState({ email: "admin@shiptrack.com", password: "admin123" });
-  const [feedback, setFeedback] = useState({ type: "", message: "" });
+const [showPassword, setShowPassword] = useState(false);
+const [feedback, setFeedback] = useState({
+  type: "",
+  message: "",
+});
+useEffect(() => {
+  if (location.state?.message) {
+    setFeedback({
+      type: "success",
+      message: location.state.message,
+    });
 
-  const handleChange = (event) => {
+    window.history.replaceState({}, document.title);
+    return;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const error = params.get("error");
+
+  if (error) {
+    setFeedback({
+      type: "error",
+      message: error,
+    });
+
+    navigate("/login", { replace: true });
+  }
+}, [location, navigate]);
+ const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = login(form);
+ 
+ try {
+    const result = await loginApi(form);
 
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
+    if (result.status === 200) {
+        localStorage.setItem("token", result.data.token);
+        localStorage.setItem("role", result.data.role);
+        updateAuth(result.data.token, result.data.role);
+        setFeedback({
+            type: "success",
+            message: "Login successful."
+        });
+        navigate("/dashboard");
     }
-
-    setFeedback({ type: "success", message: "Signed in successfully." });
-    navigate("/dashboard", { replace: true });
-  };
-
-  const handleGoogleLogin = () => {
-    const result = googleLogin(null, {
-      name: "Google User",
-      email: "google.user@shiptrack.com",
-      role: "Customer",
-      company: "Google Workspace",
+} catch (error) {
+    setFeedback({
+        type: "error",
+        message: error.response?.data?.message || "Invalid email or password."
     });
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
-    }
-
-    setFeedback({ type: "success", message: "Signed in with Google." });
-    navigate("/dashboard", { replace: true });
+}
+   
   };
+
+ const handleGoogleLogin = () => {
+    window.location.href =
+        "http://localhost:8080/oauth2/authorization/google";
+};
 
   return (
     <div className="auth-page">
@@ -89,15 +117,34 @@ function Login() {
 
             <div className="form-field">
               <label htmlFor="password">Password</label>
-              <input
-                className="input"
-                id="password"
-                name="password"
-                onChange={handleChange}
-                required
-                type="password"
-                placeholder="Enter your password"
-              />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input
+                  className="input"
+                  id="password"
+                  name="password"
+                  onChange={handleChange}
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  style={{ paddingRight: "40px" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    color: "#657184",
+                    fontWeight: "500",
+                  }}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
 
             <button className="button primary" type="submit">
@@ -120,11 +167,11 @@ function Login() {
           <div className="auth-visual-copy">
             <h2>From shipment to delivery proof, one control tower.</h2>
             <p>
-              Real-time visibility.
+              Real-time visibility
               <br />
-              Smarter decisions.
+              Smarter decisions
               <br />
-              Happier customers.
+              Happier customers
             </p>
           </div>
         </div>

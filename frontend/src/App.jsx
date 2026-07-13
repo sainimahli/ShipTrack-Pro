@@ -14,6 +14,7 @@ import Profile from "./assets/pages/Profile";
 import Register from "./assets/pages/Register";
 import ShipmentList from "./assets/pages/ShipmentList";
 import TrackShipment from "./assets/pages/TrackShipment";
+import OAuth2Success from "./assets/pages/OAuth2Success";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useContext(AuthContext);
@@ -76,6 +77,7 @@ function App() {
                 </PublicRoute>
               }
             />
+            <Route path="/dashboard/success" element={<OAuth2Success />} />
             <Route path="/*" element={<AppLayout />} />
           </Routes>
         </BrowserRouter>

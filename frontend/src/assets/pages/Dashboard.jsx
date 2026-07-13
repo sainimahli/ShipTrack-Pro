@@ -36,46 +36,48 @@ function Dashboard() {
   const { metrics, shipments } = useContext(ShipmentContext);
   const latestShipments = shipments.slice(0, 3);
 
-  const roleKey = (auth?.user?.role || "").toLowerCase();
-  const roleMap = {
-    customer: {
-      eyebrow: "Customer",
-      title: "Customer Dashboard",
-      sub: "View your orders, tracking status, and delivery ETA.",
-    },
-    bussinex: {
-      eyebrow: "Bussinex",
-      title: "Bussinex Dashboard",
-      sub: "Manage business shipments, invoices, and batch operations.",
-    },
-    logistic: {
-      eyebrow: "Logistics",
-      title: "Logistics Dashboard",
-      sub: "Operational view of pickups, routes, and delivery progress.",
-    },
-    support: {
-      eyebrow: "Support",
-      title: "Support Dashboard",
-      sub: "Assist customers and view open shipment issues.",
-    },
-    admin: {
-      eyebrow: "Admin",
-      title: "Admin Dashboard",
-      sub: "Track shipments, view metrics, and manage workflows in real time.",
-    },
-  };
+const roleKey = (auth?.user?.role || "").toLowerCase();
+ const roleMap = {
+  administrator: {
+    eyebrow: "Administrator",
+    title: "Administrator Dashboard",
+    sub: "Track shipments, view metrics, and manage workflows in real time.",
+  },
 
-  const { eyebrow, sub } = roleMap[roleKey] || roleMap["admin"];
-  const title = eyebrow;
-  const subText = "";
+  customer: {
+    eyebrow: "Customer",
+    title: "Customer Dashboard",
+    sub: "View your orders, tracking status, and delivery ETA.",
+  },
+
+  "business client": {
+    eyebrow: "Business Client",
+    title: "Business Client Dashboard",
+    sub: "Manage business shipments, invoices, and batch operations.",
+  },
+
+  "logistics operator": {
+    eyebrow: "Logistics Operator",
+    title: "Logistics Operator Dashboard",
+    sub: "Monitor pickups, routes, and delivery progress.",
+  },
+
+  "support agent": {
+    eyebrow: "Support Agent",
+    title: "Support Agent Dashboard",
+    sub: "Assist customers and resolve shipment issues.",
+  },
+};
+
+  const { eyebrow, title, sub } = roleMap[roleKey] || roleMap["administrator"];
   const roleColors = {
-    customer: "#10b981",
-    bussinex: "#7c3aed",
-    logistic: "#f97316",
-    support: "#0ea5e9",
-    admin: "#2563eb",
-  };
-  const roleColor = roleColors[roleKey] || roleColors.admin;
+  administrator: "#2563eb",
+  customer: "#10b981",
+  "business client": "#7c3aed",
+  "logistics operator": "#f97316",
+  "support agent": "#0ea5e9",
+};
+  const roleColor = roleColors[roleKey] || roleColors.administrator;
 
   return (
     <div className="page">

@@ -13,6 +13,8 @@ import com.shiptrackpro.dto.AuthResponse;
 import com.shiptrackpro.service.google.GoogleAuthService;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
@@ -21,7 +23,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private GoogleAuthService googleAuthService;
 
     @Override
-    public void onAuthenticationSuccess(
+    public void onAuthenticationSuccess( 
             HttpServletRequest request,
             HttpServletResponse response,
             Authentication authentication)
@@ -34,15 +36,25 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         System.out.println("Google User: " + name);
         System.out.println("Email: " + email);
 
-        AuthResponse authResponse = googleAuthService.googleLogin(email);
+        try {
 
-        System.out.println("JWT Token: " + authResponse.getToken());
-        System.out.println("Role: " + authResponse.getRole());
+    AuthResponse authResponse = googleAuthService.googleLogin(email);
 
-        System.out.println("===== BEFORE REDIRECT =====");
+    System.out.println("JWT Token: " + authResponse.getToken());
+    System.out.println("Role: " + authResponse.getRole());
 
-        response.sendRedirect("/index.html?token=" + authResponse.getToken());
+    response.sendRedirect(
+            "http://localhost:5173/dashboard/success?token="
+                    + authResponse.getToken());
 
-        System.out.println("===== AFTER REDIRECT =====");
+} catch (RuntimeException ex) {
+
+    String error = URLEncoder.encode(
+            ex.getMessage(),
+            StandardCharsets.UTF_8);
+
+    response.sendRedirect(
+            "http://localhost:5173/login?error=" + error);
+}
     }
 }
