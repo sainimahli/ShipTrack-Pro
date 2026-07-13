@@ -8,7 +8,10 @@ function Login() {
   const { updateAuth } = useContext(AuthContext);
   const [form, setForm] = useState({ email: "admin@shiptrack.com", password: "admin123" });
 const [showPassword, setShowPassword] = useState(false);
-
+const [feedback, setFeedback] = useState({
+  type: "",
+  message: "",
+});
 useEffect(() => {
   if (location.state?.message) {
     setFeedback({
