@@ -2,7 +2,7 @@
 -- Run this AFTER tracking_events.shipment_id column exists but is NULL
 
 UPDATE tracking_events te
-SET shipment_id = s.id
+SET shipment_id = s.shipment_id
 FROM shipments s
 WHERE te.tracking_number = s.tracking_number
   AND te.shipment_id IS NULL;
