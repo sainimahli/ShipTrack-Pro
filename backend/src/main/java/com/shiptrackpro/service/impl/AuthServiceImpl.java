@@ -26,6 +26,7 @@ import com.shiptrackpro.repository.RoleRepository;
 import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.security.JwtService;
 import com.shiptrackpro.service.AuthService;
+import com.shiptrackpro.service.EmailService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -56,6 +57,9 @@ public class AuthServiceImpl implements AuthService {
 
         @Autowired
         private JwtService jwtService;
+
+        @Autowired
+        private EmailService emailService;
 
         @Autowired
         private PasswordResetTokenRepository passwordResetTokenRepository;
@@ -221,9 +225,7 @@ public class AuthServiceImpl implements AuthService {
 
                 passwordResetTokenRepository.save(token);
 
-                System.out.println("====================================");
-                System.out.println("Password Reset OTP : " + otp);
-                System.out.println("====================================");
+                emailService.sendOtpEmail(user.getEmail(), otp);
         }
         @Override
         public void verifyOtp(VerifyOtpRequest request) {
