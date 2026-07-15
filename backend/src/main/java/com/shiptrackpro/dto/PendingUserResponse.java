@@ -7,6 +7,7 @@ public class PendingUserResponse {
     private String lastName;
     private String email;
     private String role;
+    private String phone;
     private String registrationStatus;
 
     public PendingUserResponse() {
@@ -17,12 +18,14 @@ public class PendingUserResponse {
                                String lastName,
                                String email,
                                String role,
+                               String phone,
                                String registrationStatus) {
         this.userId = userId;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.role = role;
+        this.phone = phone;
         this.registrationStatus = registrationStatus;
     }
 
@@ -64,6 +67,14 @@ public class PendingUserResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getRegistrationStatus() {

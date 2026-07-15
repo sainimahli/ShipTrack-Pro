@@ -294,6 +294,37 @@ a {
   margin-bottom: 18px;
 }
 
+.user-tabs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.user-tab {
+  align-items: center;
+  background: #f6f9fc;
+  border: 1px solid #cbd8e5;
+  border-radius: 8px;
+  color: var(--ink);
+  display: flex;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+.user-tab.active {
+  background: #e7f5f8;
+  border-color: var(--brand);
+  color: var(--brand-strong);
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -386,6 +417,11 @@ a {
   color: var(--danger);
 }
 
+.button.compact {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
@@ -418,6 +454,11 @@ a {
 }
 
 .badge.out-for-delivery {
+  background: #fff7db;
+  color: #8a5d00;
+}
+
+.badge.pending {
   background: #fff7db;
   color: #8a5d00;
 }
@@ -565,6 +606,50 @@ a {
   padding: 14px;
 }
 
+.admin-shipment-overview {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.admin-shipment-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.admin-shipment-panel.wide {
+  grid-column: 1 / -1;
+}
+
+.roman-list,
+.feature-list {
+  color: #29384d;
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.roman-list {
+  list-style-type: lower-roman;
+}
+
+.feature-list li::marker {
+  color: var(--brand);
+}
+
+.status-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.live-delivery-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .auth-page {
   align-items: stretch;
   display: grid;
@@ -706,9 +791,14 @@ a {
   .grid-2,
   .grid-3,
   .grid-4,
+  .admin-shipment-overview,
   .form-grid,
   .schema-grid,
   .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .live-delivery-list {
     grid-template-columns: 1fr;
   }
 
@@ -740,6 +830,10 @@ a {
   .toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .user-tabs {
+    grid-template-columns: 1fr;
   }
 
   .route-strip {
