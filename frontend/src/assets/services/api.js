@@ -25,6 +25,10 @@ export const getRoles = () => API.get("/roles");
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
 
+export const getApprovedUsers = () => API.get("/admin/approved-users");
+
+export const getRejectedUsers = () => API.get("/admin/rejected-users");
+
 export const approveUser = (id) => API.put(`/admin/users/${id}/approve`);
 
 export const rejectUser = (id) => API.put(`/admin/users/${id}/reject`);

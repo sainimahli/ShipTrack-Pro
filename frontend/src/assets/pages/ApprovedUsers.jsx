@@ -62,12 +62,12 @@ function ApprovedUsers() {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id}>
+                  <tr key={user.userId}>
                     <td>
                       <strong>{user.firstName} {user.lastName}</strong>
                     </td>
                     <td>{user.email}</td>
-                    <td>{user.roleName}</td>
+                    <td>{user.role}</td>
                     <td>{user.phone || "-"}</td>
                     <td>
                       <span className="badge delivered">Approved</span>

@@ -29,7 +29,7 @@ function PendingUsers() {
       await approveUser(id);
       setSuccess("User approved successfully.");
       setTimeout(() => setSuccess(""), 3000);
-      setUsers(users.filter((user) => user.id !== id));
+      setUsers(users.filter((user) => user.userId !== id));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to approve user.");
       setTimeout(() => setError(""), 3000);
@@ -41,7 +41,7 @@ function PendingUsers() {
       await rejectUser(id);
       setSuccess("User rejected successfully.");
       setTimeout(() => setSuccess(""), 3000);
-      setUsers(users.filter((user) => user.id !== id));
+      setUsers(users.filter((user) => user.userId !== id));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to reject user.");
       setTimeout(() => setError(""), 3000);
@@ -89,19 +89,19 @@ function PendingUsers() {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id}>
+                  <tr key={user.userId}>
                     <td>
                       <strong>{user.firstName} {user.lastName}</strong>
                     </td>
                     <td>{user.email}</td>
-                    <td>{user.roleName}</td>
+                    <td>{user.role}</td>
                     <td>{user.phone || "-"}</td>
                     <td>
                       <span className="badge pending">Pending</span>
                     </td>
                     <td>
-                      <button className="button primary" style={{ marginRight: 8, padding: "6px 12px", fontSize: 12 }} onClick={() => handleApprove(user.id)}>Approve</button>
-                      <button className="button secondary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => handleReject(user.id)}>Reject</button>
+                      <button className="button primary" style={{ marginRight: 8, padding: "6px 12px", fontSize: 12 }} onClick={() => handleApprove(user.userId)}>Approve</button>
+                      <button className="button secondary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => handleReject(user.userId)}>Reject</button>
                     </td>
                   </tr>
                 ))

@@ -3,7 +3,17 @@ import { Link } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
 
-const editableRoles = ["Logistics Operator", "Administrator"];
+const roleLabels = {
+  BUSINESS_CLIENT: "Business Client",
+  LOGISTICS_OPERATOR: "Logistics Operator",
+  ADMINISTRATOR: "Administrator",
+  SUPER_ADMIN: "Super Admin",
+};
+
+const normalizeRole = (role) => roleLabels[role] || role || "Customer";
+
+const editableRoles = ["Business Client", "Logistics Operator", "Administrator", "Super Admin"];
+const shipmentAdminRoles = ["Administrator", "Super Admin"];
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
@@ -14,7 +24,9 @@ function ShipmentList() {
   const { shipments, statuses, updateStatus, metrics } = useContext(ShipmentContext);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
-  const canEditStatus = editableRoles.includes(auth.user.role);
+  const role = normalizeRole(auth.user.role);
+  const canEditStatus = editableRoles.includes(role);
+  const canViewAdminShipmentContent = shipmentAdminRoles.includes(role);
 
   const filteredShipments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -44,7 +56,7 @@ function ShipmentList() {
           <p className="subtle">Filter shipments, review route progress, and update lifecycle status.</p>
         </div>
         <Link className="button primary" to="/shipments/new">
-          + New shipment
+          {role === "Customer" ? "+ Request shipment" : "+ New shipment"}
         </Link>
       </div>
 
@@ -66,6 +78,8 @@ function ShipmentList() {
           <div className="metric-value">{metrics.delayed}</div>
         </div>
       </section>
+
+      {/* {canViewAdminShipmentContent && <AdminShipmentContent />} */}
 
       <section className="panel">
         <div className="toolbar">
