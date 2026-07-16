@@ -119,12 +119,14 @@ const initialShipments = [
 ];
 
 const statusProgress = {
+  "Pending Approval": 0,
   Created: 12,
   "Picked Up": 28,
   "In Transit": 58,
   "Out for Delivery": 84,
   Delivered: 100,
   "Failed Delivery": 72,
+  Rejected: 0,
   Cancelled: 0,
 };
 
@@ -151,12 +153,12 @@ export function ShipmentProvider({ children }) {
         ...shipment,
         id: `SHP-2026-${String(nextNumber + 3).padStart(3, "0")}`,
         trackingNumber: `STP${String(10024593 + nextNumber).padStart(8, "0")}`,
-        status: "Created",
+        status: shipment.requestStatus || "Created",
         createdAt: new Date().toISOString().slice(0, 10),
-        progress: statusProgress.Created,
+        progress: statusProgress[shipment.requestStatus] ?? statusProgress.Created,
         history: [
           {
-            status: "Created",
+            status: shipment.requestStatus || "Created",
             location: shipment.senderCity,
             timestamp: new Date().toISOString(),
           },
@@ -191,19 +193,79 @@ export function ShipmentProvider({ children }) {
     );
   }, []);
 
+  const updateShipment = useCallback((trackingNumber, changes) => {
+    setShipments((items) =>
+      items.map((shipment) =>
+        shipment.trackingNumber === trackingNumber
+          ? { ...shipment, ...changes }
+          : shipment,
+      ),
+    );
+  }, []);
+
+  const cancelShipment = useCallback((trackingNumber, location) => {
+    setShipments((items) =>
+      items.map((shipment) => {
+        if (shipment.trackingNumber !== trackingNumber || shipment.status === "Cancelled") {
+          return shipment;
+        }
+
+        return {
+          ...shipment,
+          status: "Cancelled",
+          progress: statusProgress.Cancelled,
+          history: [
+            ...shipment.history,
+            {
+              status: "Cancelled",
+              location: location || shipment.senderCity,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+      }),
+    );
+  }, []);
+
+  const rejectShipment = useCallback((trackingNumber, location) => {
+    setShipments((items) =>
+      items.map((shipment) => {
+        if (shipment.trackingNumber !== trackingNumber || shipment.status !== "Pending Approval") {
+          return shipment;
+        }
+
+        return {
+          ...shipment,
+          status: "Rejected",
+          progress: statusProgress.Rejected,
+          history: [
+            ...shipment.history,
+            {
+              status: "Rejected",
+              location: location || shipment.senderCity,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+      }),
+    );
+  }, []);
+
   const metrics = useMemo(() => {
     const total = shipments.length;
     const active = shipments.filter(
-      (shipment) => !["Delivered", "Cancelled"].includes(shipment.status),
+      (shipment) => !["Delivered", "Cancelled", "Rejected", "Pending Approval"].includes(shipment.status),
     ).length;
     const delivered = shipments.filter((shipment) => shipment.status === "Delivered").length;
     const delayed = shipments.filter((shipment) => shipment.status === "Failed Delivery").length;
+    const pendingApproval = shipments.filter((shipment) => shipment.status === "Pending Approval").length;
 
     return {
       total,
       active,
       delivered,
       delayed,
+      pendingApproval,
       deliveryRate: total ? Math.round((delivered / total) * 100) : 0,
     };
   }, [shipments]);
@@ -213,10 +275,13 @@ export function ShipmentProvider({ children }) {
       shipments,
       createShipment,
       updateStatus,
+      updateShipment,
+      cancelShipment,
+      rejectShipment,
       metrics,
       statuses: Object.keys(statusProgress),
     }),
-    [createShipment, metrics, shipments, updateStatus],
+    [cancelShipment, createShipment, metrics, rejectShipment, shipments, updateShipment, updateStatus],
   );
 
   return <ShipmentContext.Provider value={value}>{children}</ShipmentContext.Provider>;
