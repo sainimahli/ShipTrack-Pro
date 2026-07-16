@@ -52,7 +52,11 @@ function CreateShipment() {
     event.preventDefault();
     if (!canCreate) return;
 
-    const shipment = createShipment(form);
+    const requiresApproval = !["Administrator", "Super Admin"].includes(role);
+    const shipment = createShipment({
+      ...form,
+      requestStatus: requiresApproval ? "Pending Approval" : "Created",
+    });
     setCreated(shipment);
     setForm(initialForm);
   };
@@ -82,7 +86,7 @@ function CreateShipment() {
 
       {created && (
         <div className="alert success" style={{ marginBottom: 18 }}>
-          Shipment {created.trackingNumber} {isCustomer ? "requested" : "created"} and added to the tracking dashboard.
+          Shipment {created.trackingNumber} {created.status === "Pending Approval" ? "submitted for approval" : "created"}.
         </div>
       )}
 
