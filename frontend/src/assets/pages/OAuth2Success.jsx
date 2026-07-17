@@ -6,22 +6,28 @@ function OAuth2Success() {
   const token = searchParams.get("token");
   const navigate = useNavigate();
   const { updateAuth } = useContext(AuthContext);
-  const role = token
-  ? JSON.parse(atob(token.split(".")[1])).role
-  : null;
-  localStorage.setItem("token", token);
-  localStorage.setItem("role", role);
   useEffect(() => {
-  if (!token) {
-    navigate("/login", { replace: true });
-    return;
-  }
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
-  updateAuth(token, role);
+    try {
+      const payload = token.split(".")[1];
+      const role = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))).role;
 
-  navigate("/dashboard", { replace: true });
+      if (!role) {
+        throw new Error("Missing role");
+      }
 
-}, [token, role, navigate, updateAuth]);
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+      updateAuth(token, role);
+      navigate("/dashboard", { replace: true });
+    } catch {
+      navigate("/login?error=Unable%20to%20complete%20Google%20sign-in.", { replace: true });
+    }
+  }, [token, navigate, updateAuth]);
   return (
     <div>
       <h2>Signing you in...</h2>

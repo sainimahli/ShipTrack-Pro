@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -78,6 +79,16 @@ public class SecurityConfig {
                                                                 "/login/oauth2/**"
                                                         )
                                                 .permitAll()
+                                                .requestMatchers("/api/admin/**")
+                                                .hasAnyRole("ADMINISTRATOR", "SUPER_ADMIN")
+                                                .requestMatchers(HttpMethod.POST, "/api/shipments")
+                                                .hasAnyRole("CUSTOMER", "BUSINESS_CLIENT", "LOGISTICS_OPERATOR", "ADMINISTRATOR", "SUPER_ADMIN")
+                                                .requestMatchers(HttpMethod.PUT, "/api/shipments/**", "/api/tracking/status")
+                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR", "SUPER_ADMIN")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/shipments/**")
+                                                .hasAnyRole("ADMINISTRATOR", "SUPER_ADMIN")
+                                                .requestMatchers(HttpMethod.POST, "/api/tracking/location")
+                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR", "SUPER_ADMIN")
                                                 .anyRequest().authenticated())
 
                                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))

@@ -95,6 +95,74 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.business-insights {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.insight-card {
+  min-height: 216px;
+}
+
+.insight-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.insight-metrics div,
+.insight-list div {
+  background: #f6fafb;
+  border: 1px solid #dbe8ee;
+  border-radius: 8px;
+  padding: 11px;
+}
+
+.insight-metrics span,
+.insight-list span {
+  color: #66758a;
+  display: block;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.insight-metrics strong {
+  color: #132238;
+  font-size: 21px;
+}
+
+.insight-list {
+  display: grid;
+  gap: 8px;
+}
+
+.insight-list div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.insight-list span {
+  margin: 0;
+}
+
+.insight-list strong {
+  color: #24364c;
+  font-size: 12px;
+  text-align: right;
+}
+
+.insight-copy {
+  color: #52657b;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .role-grid {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
@@ -464,7 +532,8 @@
   }
 
   .stats-grid,
-  .analytics-grid {
+  .analytics-grid,
+  .business-insights {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -498,6 +567,7 @@
 
   .stats-grid,
   .analytics-grid,
+  .business-insights,
   .control-grid,
   .insight-row {
     grid-template-columns: 1fr;

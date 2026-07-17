@@ -41,6 +41,7 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
   const [notice, setNotice] = useState("");
   const isCancelled = shipment.status === "Cancelled";
   const isDelivered = shipment.status === "Delivered";
+  const isPendingApproval = shipment.status === "Pending Approval";
 
   const saveDetails = (event) => {
     event.preventDefault();

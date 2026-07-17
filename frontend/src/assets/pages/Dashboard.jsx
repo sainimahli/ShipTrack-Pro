@@ -329,6 +329,79 @@ function SnapshotPanel({ data, role }) {
   );
 }
 
+function BusinessClientInsights({ data }) {
+  const total = Math.max(data.metrics.total, 1);
+  const delivered = data.shipments.filter((shipment) => shipment.status === "Delivered");
+  const onTimeDeliveries = delivered.filter((shipment) => {
+    const deliveredAt = shipment.history?.find((event) => event.status === "Delivered")?.timestamp;
+    return deliveredAt && shipment.eta && new Date(deliveredAt) <= new Date(`${shipment.eta}T23:59:59`);
+  }).length;
+  const packageMix = Object.entries(
+    data.shipments.reduce((counts, shipment) => {
+      counts[shipment.packageType] = (counts[shipment.packageType] || 0) + 1;
+      return counts;
+    }, {}),
+  ).sort(([, left], [, right]) => right - left).slice(0, 3);
+  const routes = Object.entries(
+    data.shipments.reduce((counts, shipment) => {
+      const route = `${shipment.senderCity} → ${shipment.receiverCity}`;
+      counts[route] = (counts[route] || 0) + 1;
+      return counts;
+    }, {}),
+  ).sort(([, left], [, right]) => right - left);
+  const customerAccounts = new Set(data.shipments.map((shipment) => shipment.senderName)).size;
+  const pendingRequests = data.shipments.filter((shipment) => shipment.status === "Pending Approval").length;
+
+  return (
+    <section className="business-insights" aria-label="Business performance insights">
+      <article className="dashboard-panel insight-card">
+        <div className="panel-header compact"><h2>Shipment analytics</h2></div>
+        <div className="insight-metrics">
+          <div><span>Total volume</span><strong>{data.metrics.total}</strong></div>
+          <div><span>Average progress</span><strong>{data.avgProgress}%</strong></div>
+        </div>
+        <div className="insight-list">{packageMix.map(([type, count]) => <div key={type}><span>{type}</span><strong>{count} shipments</strong></div>)}</div>
+      </article>
+
+      <article className="dashboard-panel insight-card">
+        <div className="panel-header compact"><h2>Delivery performance</h2></div>
+        <div className="insight-metrics">
+          <div><span>Completion rate</span><strong>{data.metrics.deliveryRate}%</strong></div>
+          <div><span>On-time deliveries</span><strong>{onTimeDeliveries}/{delivered.length}</strong></div>
+        </div>
+        <p className="insight-copy">{delivered.length ? "Completed deliveries are measured against their promised ETA." : "Delivery performance will appear when shipments are completed."}</p>
+      </article>
+
+      <article className="dashboard-panel insight-card">
+        <div className="panel-header compact"><h2>Delay analysis</h2></div>
+        <div className="insight-metrics">
+          <div><span>Delay exceptions</span><strong>{data.delayedShipments.length}</strong></div>
+          <div><span>Critical loads</span><strong>{data.criticalShipments.length}</strong></div>
+        </div>
+        <div className="insight-list"><div><span>Exception rate</span><strong>{Math.round((data.delayedShipments.length / total) * 100)}%</strong></div><div><span>ETA watchlist</span><strong>{data.delayedShipments.length + data.criticalShipments.length} shipments</strong></div></div>
+      </article>
+
+      <article className="dashboard-panel insight-card">
+        <div className="panel-header compact"><h2>Logistics overview</h2></div>
+        <div className="insight-metrics">
+          <div><span>Active shipments</span><strong>{data.activeShipments.length}</strong></div>
+          <div><span>Live routes</span><strong>{routes.length}</strong></div>
+        </div>
+        <div className="insight-list">{routes.slice(0, 2).map(([route, count]) => <div key={route}><span>{route}</span><strong>{count} shipment{count === 1 ? "" : "s"}</strong></div>)}</div>
+      </article>
+
+      <article className="dashboard-panel insight-card">
+        <div className="panel-header compact"><h2>Customer activity</h2></div>
+        <div className="insight-metrics">
+          <div><span>Customer accounts</span><strong>{customerAccounts}</strong></div>
+          <div><span>Pending requests</span><strong>{pendingRequests}</strong></div>
+        </div>
+        <div className="insight-list"><div><span>Active deliveries</span><strong>{data.activeShipments.length}</strong></div><div><span>Completed history</span><strong>{delivered.length} deliveries</strong></div></div>
+      </article>
+    </section>
+  );
+}
+
 function DashboardLayout({
   actions,
   controlGroups,
@@ -337,6 +410,7 @@ function DashboardLayout({
   permissions,
   reports,
   role,
+  insights,
   subtitle,
   tableTitle,
   title,
@@ -345,6 +419,7 @@ function DashboardLayout({
     <div className="dashboard">
       <DashboardHero actions={actions} subtitle={subtitle} title={title} />
       <MetricsStrip data={data} />
+      {insights}
 
       <section className="dashboard-grid main-grid">
         <ShipmentOperations data={data} />
@@ -478,6 +553,7 @@ function BusinessClientDashboard({ data }) {
         },
       ]}
       data={data}
+      insights={<BusinessClientInsights data={data} />}
       notifications={[
         "Customer shipment requests waiting for processing.",
         "Delivery alerts and delay warnings for business shipments.",
@@ -493,6 +569,8 @@ function BusinessClientDashboard({ data }) {
         { title: "Customer activity", description: "Customer shipment requests, active deliveries, and history." },
         { title: "Delivery performance", description: "Delivery completion, delays, and ETA performance." },
         { title: "Shipment analytics", description: "Business shipment volume, package type, and route trends." },
+        { title: "Delay analysis", description: "Exception rate, critical loads, and shipments needing ETA attention." },
+        { title: "Logistics overview", description: "Active routes, shipment progress, and current delivery workload." },
       ]}
       role="Business Client"
       subtitle="Business-level control for customers, shipment creation, shipment management, and tracking."

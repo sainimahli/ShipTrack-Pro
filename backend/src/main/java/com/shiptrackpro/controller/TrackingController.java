@@ -1,6 +1,7 @@
 package com.shiptrackpro.controller;
 
 import com.shiptrackpro.dto.TrackingLocationResponse;
+import com.shiptrackpro.dto.DeliveryForecastResponse;
 import com.shiptrackpro.dto.TrackingStatusResponse;
 import com.shiptrackpro.dto.TrackingTimelineResponse;
 import com.shiptrackpro.dto.UpdateLocationRequest;
@@ -41,6 +42,11 @@ public class TrackingController {
     @GetMapping("/location/{trackingNumber}")
     public ResponseEntity<TrackingLocationResponse> getLatestLocation(@PathVariable String trackingNumber) {
         return ResponseEntity.ok(trackingService.getTrackingLocation(trackingNumber));
+    }
+
+    @GetMapping("/forecast/{trackingNumber}")
+    public ResponseEntity<DeliveryForecastResponse> getDeliveryForecast(@PathVariable String trackingNumber) {
+        return ResponseEntity.ok(trackingService.getDeliveryForecast(trackingNumber));
     }
 
     @PutMapping("/status")

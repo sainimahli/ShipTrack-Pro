@@ -1,6 +1,7 @@
 package com.shiptrackpro.service.impl;
 
 import com.shiptrackpro.dto.TrackingLocationResponse;
+import com.shiptrackpro.dto.DeliveryForecastResponse;
 import com.shiptrackpro.dto.TrackingStatusResponse;
 import com.shiptrackpro.dto.TrackingTimelineResponse;
 import com.shiptrackpro.dto.UpdateLocationRequest;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -88,6 +90,48 @@ public class TrackingServiceImpl implements TrackingService {
     public TrackingLocationResponse getTrackingLocation(String trackingNumber) {
         TrackingEvent latestLocationEvent = findLatestLocationEvent(trackingNumber);
         return toLocationResponse(latestLocationEvent);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DeliveryForecastResponse getDeliveryForecast(String trackingNumber) {
+        String normalizedTrackingNumber = normalizeTrackingNumber(trackingNumber);
+        Shipment shipment = findShipment(normalizedTrackingNumber);
+        TrackingEvent latestEvent = findLatestEventOrNull(normalizedTrackingNumber);
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime expectedDelivery = shipment.getExpectedDeliveryDate() == null
+                ? null
+                : shipment.getExpectedDeliveryDate().atOffset(java.time.ZoneOffset.UTC);
+
+        DeliveryForecastResponse response = new DeliveryForecastResponse();
+        response.setTrackingNumber(normalizedTrackingNumber);
+
+        if (shipment.getShipmentStatus() == ShipmentStatus.DELIVERED) {
+            response.setPredictedDeliveryAt(latestEvent != null ? latestEvent.getUpdatedAt() : now);
+            response.setPredictedDelayMinutes(0);
+            response.setConfidencePercentage(100);
+            response.setRiskLevel("DELIVERED");
+            response.setReason("Delivery has been confirmed.");
+            return response;
+        }
+
+        long remainingMinutes = remainingMinutes(shipment.getShipmentStatus());
+        boolean staleUpdate = latestEvent != null && latestEvent.getUpdatedAt().isBefore(now.minusHours(8));
+        if (staleUpdate) {
+            remainingMinutes += 120;
+        }
+
+        OffsetDateTime predictedDelivery = now.plusMinutes(remainingMinutes);
+        long delayMinutes = expectedDelivery == null || !predictedDelivery.isAfter(expectedDelivery)
+                ? 0
+                : Duration.between(expectedDelivery, predictedDelivery).toMinutes();
+
+        response.setPredictedDeliveryAt(predictedDelivery);
+        response.setPredictedDelayMinutes(delayMinutes);
+        response.setConfidencePercentage(Math.max(55, staleUpdate ? 65 : 82));
+        response.setRiskLevel(delayMinutes > 240 ? "HIGH" : delayMinutes > 0 || staleUpdate ? "WATCH" : "ON_TRACK");
+        response.setReason(buildForecastReason(shipment.getShipmentStatus(), staleUpdate, delayMinutes));
+        return response;
     }
 
     @Override
@@ -198,6 +242,30 @@ public class TrackingServiceImpl implements TrackingService {
         return event.getLatitude() != null
                 || event.getLongitude() != null
                 || (event.getLocationName() != null && !event.getLocationName().isBlank());
+    }
+
+    private long remainingMinutes(ShipmentStatus status) {
+        return switch (status) {
+            case CREATED -> 1_440;
+            case PICKED_UP -> 960;
+            case IN_TRANSIT -> 480;
+            case OUT_FOR_DELIVERY -> 120;
+            case CANCELLED, RETURNED -> 0;
+            case DELIVERED -> 0;
+        };
+    }
+
+    private String buildForecastReason(ShipmentStatus status, boolean staleUpdate, long delayMinutes) {
+        if (status == ShipmentStatus.CANCELLED || status == ShipmentStatus.RETURNED) {
+            return "This shipment is no longer progressing through delivery.";
+        }
+        if (delayMinutes > 0) {
+            return "Current " + status + " progress indicates a forecast delay of about " + delayMinutes + " minutes.";
+        }
+        if (staleUpdate) {
+            return "No recent tracking update was received; the ETA is being monitored.";
+        }
+        return "The shipment is " + status + " and is currently forecast to meet its ETA.";
     }
 
     private TrackingLocationResponse toLocationResponse(TrackingEvent event) {

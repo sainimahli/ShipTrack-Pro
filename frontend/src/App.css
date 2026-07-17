@@ -555,6 +555,94 @@ a {
   font-size: 13px;
 }
 
+.live-monitoring {
+  align-items: center;
+  background: linear-gradient(135deg, #0f334d, #17645d);
+  border-radius: 10px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 18px 22px;
+}
+
+.live-monitoring .eyebrow,
+.live-monitoring span,
+.live-monitoring small {
+  color: #cce9e6;
+  display: block;
+}
+
+.live-monitoring strong {
+  display: block;
+  font-size: 20px;
+  margin: 5px 0;
+}
+
+.live-monitoring > div:last-child {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-risk {
+  background: #e1f5eb;
+  border-radius: 999px;
+  color: #176144 !important;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.live-risk.high-risk,
+.live-risk.stopped {
+  background: #fdeceb;
+  color: #96362f !important;
+}
+
+.live-risk.watch {
+  background: #fff4dc;
+  color: #89610d !important;
+}
+
+.tracking-map-panel {
+  margin-bottom: 18px;
+}
+
+.tracking-map {
+  border: 0;
+  border-radius: 8px;
+  display: block;
+  height: 280px;
+  margin: 0 0 14px;
+  width: 100%;
+}
+
+.forecast-panel {
+  border-top: 4px solid #2579a9;
+}
+
+.forecast-details {
+  align-items: center;
+  background: #f5fafb;
+  border: 1px solid #dce9ed;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0;
+  padding: 12px;
+}
+
+.forecast-details span {
+  color: #66758a;
+  font-size: 13px;
+}
+
+.forecast-details strong {
+  color: #17364e;
+}
+
 .route-strip {
   align-items: center;
   display: grid;
