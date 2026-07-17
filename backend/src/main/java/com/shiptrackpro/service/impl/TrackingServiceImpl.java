@@ -16,6 +16,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
 
 import java.time.OffsetDateTime;
 import java.time.Duration;
@@ -25,6 +29,59 @@ import java.util.List;
 public class TrackingServiceImpl implements TrackingService {
 
     private static final String SYSTEM_USER = "SYSTEM";
+
+    private static final Map<ShipmentStatus, Set<ShipmentStatus>> VALID_TRANSITIONS =
+            new EnumMap<>(ShipmentStatus.class);
+
+    static {
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.CREATED,
+                EnumSet.of(
+                        ShipmentStatus.PICKED_UP,
+                        ShipmentStatus.CANCELLED
+                )
+        );
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.PICKED_UP,
+                EnumSet.of(
+                        ShipmentStatus.IN_TRANSIT,
+                        ShipmentStatus.CANCELLED
+                )
+        );
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.IN_TRANSIT,
+                EnumSet.of(
+                        ShipmentStatus.OUT_FOR_DELIVERY,
+                        ShipmentStatus.CANCELLED
+                )
+        );
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.OUT_FOR_DELIVERY,
+                EnumSet.of(
+                        ShipmentStatus.DELIVERED,
+                        ShipmentStatus.RETURNED
+                )
+        );
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.DELIVERED,
+                EnumSet.noneOf(ShipmentStatus.class)
+        );
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.CANCELLED,
+                EnumSet.noneOf(ShipmentStatus.class)
+        );
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.RETURNED,
+                EnumSet.noneOf(ShipmentStatus.class)
+        );
+    }
 
     private final TrackingEventRepository trackingEventRepository;
     private final ShipmentRepository shipmentRepository;
@@ -139,6 +196,10 @@ public class TrackingServiceImpl implements TrackingService {
     public TrackingStatusResponse updateTrackingStatus(UpdateTrackingStatusRequest request) {
         String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
         Shipment shipment = findShipment(trackingNumber);
+        validateStatusTransition(
+                shipment.getShipmentStatus(),
+                request.getStatus()
+        );
 
         TrackingEvent event = new TrackingEvent();
         event.setShipment(shipment);
@@ -283,6 +344,32 @@ public class TrackingServiceImpl implements TrackingService {
         response.setUpdatedBy(event.getUpdatedBy());
         response.setUpdatedAt(event.getUpdatedAt());
         return response;
+    }
+    private void validateStatusTransition(
+            ShipmentStatus currentStatus,
+            ShipmentStatus newStatus
+    ) {
+
+        if (currentStatus == newStatus) {
+            return;
+        }
+
+        Set<ShipmentStatus> allowedStatuses =
+                VALID_TRANSITIONS.getOrDefault(
+                        currentStatus,
+                        EnumSet.noneOf(ShipmentStatus.class)
+                );
+
+        if (!allowedStatuses.contains(newStatus)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid shipment status transition from "
+                            + currentStatus
+                            + " to "
+                            + newStatus
+            );
+        }
     }
 
     private String normalizeTrackingNumber(String trackingNumber) {

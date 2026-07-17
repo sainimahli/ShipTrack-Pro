@@ -80,11 +80,11 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.POST, "/api/shipments")
                                                 .hasAnyRole("CUSTOMER", "BUSINESS_CLIENT", "LOGISTICS_OPERATOR", "ADMINISTRATOR")
                                                 .requestMatchers(HttpMethod.PUT, "/api/shipments/**", "/api/tracking/status")
-                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR")
+                                                .hasAnyRole("LOGISTICS_OPERATOR")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/shipments/**")
                                                 .hasRole("ADMINISTRATOR")
                                                 .requestMatchers(HttpMethod.POST, "/api/tracking/location")
-                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR")
+                                                .hasAnyRole("LOGISTICS_OPERATOR")
                                                 .anyRequest().authenticated())
 
                                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
