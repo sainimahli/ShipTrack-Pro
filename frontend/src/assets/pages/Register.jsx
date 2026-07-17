@@ -28,8 +28,9 @@ function Register() {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const response = await getRoles();
-        setRoles(response.data);
+       const response = await getRoles();
+console.log(response.data);
+setRoles(response.data);
       } catch (error) {
         console.error("Failed to load roles", error);
       }
@@ -176,11 +177,13 @@ return;
         required
       >
         <option value="">Select Role</option>
-        {roles.map((role) => (
-          <option key={role.roleId} value={role.roleId}>
-            {role.roleName}
-          </option>
-        ))}
+ {roles
+  .filter((role) => role.roleName !== "ADMIN")
+  .map((role) => (
+    <option key={role.roleId} value={role.roleId}>
+      {role.roleName}
+    </option>
+  ))}
       </select>
     </div>
 
