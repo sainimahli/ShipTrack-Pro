@@ -24,6 +24,8 @@ import java.util.Set;
 import java.time.OffsetDateTime;
 import java.time.Duration;
 import java.util.List;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class TrackingServiceImpl implements TrackingService {
@@ -206,7 +208,7 @@ public class TrackingServiceImpl implements TrackingService {
         event.setTrackingNumberCache(trackingNumber);
         event.setStatus(request.getStatus());
         event.setDescription(request.getDescription().trim());
-        event.setUpdatedBy(SYSTEM_USER);
+        event.setUpdatedBy(getCurrentUsername());
         event.setUpdatedAt(OffsetDateTime.now());
 
         TrackingEvent savedEvent = trackingEventRepository.save(event);
@@ -238,7 +240,7 @@ public class TrackingServiceImpl implements TrackingService {
         event.setLongitude(request.getLongitude());
         event.setLocationName(request.getLocationName().trim());
         event.setDescription(request.getDescription().trim());
-        event.setUpdatedBy(SYSTEM_USER);
+        event.setUpdatedBy(getCurrentUsername());
         event.setUpdatedAt(OffsetDateTime.now());
 
         TrackingEvent savedEvent = trackingEventRepository.save(event);
@@ -370,6 +372,18 @@ public class TrackingServiceImpl implements TrackingService {
                             + newStatus
             );
         }
+    }
+    private String getCurrentUsername() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return "SYSTEM";
+        }
+
+        return authentication.getName();
     }
 
     private String normalizeTrackingNumber(String trackingNumber) {
