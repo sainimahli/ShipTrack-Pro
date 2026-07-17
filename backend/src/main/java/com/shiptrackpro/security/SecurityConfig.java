@@ -9,7 +9,6 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -33,15 +32,10 @@ public class SecurityConfig {
         private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
         @Bean
-        public PasswordEncoder passwordEncoder() {
-                return new BCryptPasswordEncoder();
-        }
-
-        @Bean
-        public AuthenticationProvider authenticationProvider() {
+        public AuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
                 DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
                 provider.setUserDetailsService(customUserDetailsService);
-                provider.setPasswordEncoder(passwordEncoder());
+                provider.setPasswordEncoder(passwordEncoder);
                 return provider;
         }
 
@@ -52,7 +46,9 @@ public class SecurityConfig {
         }
 
         @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http,
+                        AuthenticationProvider authenticationProvider) throws Exception {
 
                 http
                                 .csrf(csrf -> csrf.disable())
@@ -65,7 +61,7 @@ public class SecurityConfig {
                                                                 new org.springframework.security.web.util.matcher.AntPathRequestMatcher(
                                                                                 "/api/**")))
 
-                                .authenticationProvider(authenticationProvider())
+                                .authenticationProvider(authenticationProvider)
 
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
