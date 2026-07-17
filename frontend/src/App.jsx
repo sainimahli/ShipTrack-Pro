@@ -19,12 +19,11 @@ import TrackShipment from "./assets/pages/TrackShipment";
 
 const roleLabels = {
   ADMINISTRATOR: "Administrator",
-  SUPER_ADMIN: "Super Admin",
 };
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 
-const canManageUsers = (role) => ["Administrator", "Super Admin"].includes(normalizeRole(role));
+const canManageUsers = (role) => normalizeRole(role) === "Administrator";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useContext(AuthContext);

@@ -7,11 +7,9 @@ const roleLabels = {
   LOGISTICS_OPERATOR: "Logistics Operator",
   SUPPORT_AGENT: "Support Agent",
   ADMINISTRATOR: "Administrator",
-  SUPER_ADMIN: "Super Admin",
 };
 
 const controlledRoles = {
-  "Super Admin": ["Administrator", "Logistics Operator", "Business Client", "Customer"],
   Administrator: ["Logistics Operator", "Business Client", "Customer"],
   "Business Client": ["Customer"],
 };

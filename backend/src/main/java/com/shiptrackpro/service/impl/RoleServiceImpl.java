@@ -21,6 +21,8 @@ public class RoleServiceImpl implements RoleService {
         List<Role> roles = roleRepository.findAll();
 
         return roles.stream()
+                .filter(role -> role.getRoleName() == null ||
+                        !role.getRoleName().replaceAll("[^A-Za-z]", "").equalsIgnoreCase("SUPERADMIN"))
                 .map(role -> new RoleResponse(
                         role.getRoleId(),
                         role.getRoleName()

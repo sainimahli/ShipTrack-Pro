@@ -21,7 +21,6 @@ const roleLabels = {
   BUSINESS_CLIENT: "Business Client",
   LOGISTICS_OPERATOR: "Logistics Operator",
   ADMINISTRATOR: "Administrator",
-  SUPER_ADMIN: "Super Admin",
 };
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
@@ -31,7 +30,6 @@ const allowedCreateRoles = [
   "Business Client",
   "Logistics Operator",
   "Administrator",
-  "Super Admin",
 ];
 
 function CreateShipment() {
@@ -52,7 +50,7 @@ function CreateShipment() {
     event.preventDefault();
     if (!canCreate) return;
 
-    const requiresApproval = !["Administrator", "Super Admin"].includes(role);
+    const requiresApproval = role !== "Administrator";
     const shipment = createShipment({
       ...form,
       requestStatus: requiresApproval ? "Pending Approval" : "Created",

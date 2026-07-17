@@ -10,7 +10,6 @@ const roleLabels = {
   LOGISTICS_OPERATOR: "Logistics Operator",
   SUPPORT_AGENT: "Support Agent",
   ADMINISTRATOR: "Administrator",
-  SUPER_ADMIN: "Super Admin",
 };
 
 const statusTone = {
@@ -444,57 +443,6 @@ function DashboardLayout({
   );
 }
 
-function SuperAdminDashboard({ data }) {
-  return (
-    <DashboardLayout
-      actions={[actionLinks.users, actionLinks.create, actionLinks.manage, actionLinks.track]}
-      controlGroups={[
-        {
-          count: data.roleTotals.admins,
-          description: "Full control over administrator accounts and approval governance.",
-          label: "Administrators",
-        },
-        {
-          count: data.roleTotals.operators,
-          description: "Assign, monitor, and manage logistics operator work.",
-          label: "Operators",
-        },
-        {
-          count: data.roleTotals.businessClients,
-          description: "Control business client access, activity, and shipment ownership.",
-          label: "Business Clients",
-        },
-        {
-          count: data.roleTotals.customers,
-          description: "Control customer accounts, requests, shipment history, and support access.",
-          label: "Customers",
-        },
-      ]}
-      data={data}
-      notifications={[
-        "Platform-wide delivery alerts and delay warnings.",
-        "Admin, operator, business client, and customer access review queue.",
-        "Shipment creation, management, and tracking audit events.",
-      ]}
-      permissions={[
-        "Control all administrators, operators, business clients, and customers.",
-        "Create shipments for any account or operational workflow.",
-        "Manage shipment status, lifecycle, route progress, and delivery exceptions.",
-        "Track all shipments across the platform.",
-      ]}
-      reports={[
-        { title: "Platform reports", description: "All users, roles, shipments, routes, and delivery performance." },
-        { title: "Access reports", description: "Role activity, approval flow, and user governance." },
-        { title: "Logistics reports", description: "Delay trends, route performance, and proof of delivery coverage." },
-      ]}
-      role="Super Admin"
-      subtitle="Complete platform control across admins, operators, business clients, customers, shipments, and tracking."
-      tableTitle="All Shipments"
-      title="Super Admin Dashboard"
-    />
-  );
-}
-
 function AdministratorDashboard({ data }) {
   return (
     <DashboardLayout
@@ -687,7 +635,6 @@ function Dashboard() {
   const role = normalizeRole(auth?.user?.role);
   const data = useMemo(() => getDashboardData(shipments, metrics, users), [metrics, shipments, users]);
 
-  if (role === "Super Admin") return <SuperAdminDashboard data={data} />;
   if (role === "Administrator") return <AdministratorDashboard data={data} />;
   if (role === "Business Client") return <BusinessClientDashboard data={data} />;
   if (role === "Logistics Operator") return <LogisticsOperatorDashboard data={data} />;

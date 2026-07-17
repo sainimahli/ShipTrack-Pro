@@ -11,8 +11,6 @@ export const roleCapabilities = {
   SUPPORT_AGENT: ["Search shipments", "Assist customers", "Review tracking history"],
   Administrator: ["Control operators", "Control business clients", "Control customers", "Create and manage shipments"],
   ADMINISTRATOR: ["Control operators", "Control business clients", "Control customers", "Create and manage shipments"],
-  "Super Admin": ["Control administrators", "Control operators", "Control business clients", "Control customers"],
-  SUPER_ADMIN: ["Control administrators", "Control operators", "Control business clients", "Control customers"],
 };
 
 export const AuthContext = createContext(null);

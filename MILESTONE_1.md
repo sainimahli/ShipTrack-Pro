@@ -32,7 +32,6 @@ Core tables and their relationships are defined in `database/`:
 | Business Client | Create and track business shipments |
 | Logistics Operator | Create shipments and update status/location checkpoints |
 | Administrator | Manage users, shipments, and delivery operations |
-| Super Admin | Full administrative access |
 
 The server enforces these rules for admin, shipment-write, status-update, and location-update endpoints.
 

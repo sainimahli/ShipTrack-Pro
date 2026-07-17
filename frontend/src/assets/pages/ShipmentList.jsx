@@ -7,12 +7,11 @@ const roleLabels = {
   BUSINESS_CLIENT: "Business Client",
   LOGISTICS_OPERATOR: "Logistics Operator",
   ADMINISTRATOR: "Administrator",
-  SUPER_ADMIN: "Super Admin",
 };
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
-const editableRoles = ["Business Client", "Logistics Operator", "Administrator", "Super Admin"];
-const shipmentAdminRoles = ["Administrator", "Super Admin"];
+const editableRoles = ["Business Client", "Logistics Operator", "Administrator"];
+const shipmentAdminRoles = ["Administrator"];
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");

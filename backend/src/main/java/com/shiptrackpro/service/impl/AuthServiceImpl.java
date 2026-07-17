@@ -93,6 +93,10 @@ public class AuthServiceImpl implements AuthService {
 
                 String roleName = role.getRoleName();
 
+                if (roleName != null && roleName.replaceAll("[^A-Za-z]", "").equalsIgnoreCase("SUPERADMIN")) {
+                        throw new RuntimeException("The Super Admin role is no longer available.");
+                }
+
                 if ("BUSINESS_CLIENT".equalsIgnoreCase(roleName) &&
                                 normalizeOptional(request.getCompanyName()) == null) {
 

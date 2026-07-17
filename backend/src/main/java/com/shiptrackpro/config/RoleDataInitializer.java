@@ -25,7 +25,6 @@ public class RoleDataInitializer implements CommandLineRunner {
         defaultRoles.put("LOGISTICS_OPERATOR", "Staff managing warehouse and shipment operations");
         defaultRoles.put("SUPPORT_AGENT", "Customer support staff handling queries and issues");
         defaultRoles.put("ADMINISTRATOR", "Full system access and management");
-        defaultRoles.put("SUPER_ADMIN", "Highest-level system owner with unrestricted administration access");
 
         defaultRoles.forEach((roleName, description) ->
                 roleRepository.findByRoleName(roleName).orElseGet(() -> {

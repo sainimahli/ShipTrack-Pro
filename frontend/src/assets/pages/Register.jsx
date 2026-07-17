@@ -7,8 +7,10 @@ const fallbackRoles = [
   { roleId: 2, roleName: "BUSINESS_CLIENT" },
   { roleId: 3, roleName: "LOGISTICS_OPERATOR" },
   { roleId: 5, roleName: "ADMINISTRATOR" },
-  { roleId: 6, roleName: "SUPER_ADMIN" },
 ];
+
+const isSuperAdminRole = (roleName) =>
+  String(roleName).replace(/[^a-z]/gi, "").toUpperCase() === "SUPERADMIN";
 
 const formatRoleName = (roleName) =>
   roleName
@@ -18,10 +20,11 @@ const formatRoleName = (roleName) =>
     .join(" ");
 
 const withDefaultRoles = (loadedRoles) => {
-  const roleNames = new Set(loadedRoles.map((role) => role.roleName));
+  const availableRoles = loadedRoles.filter((role) => !isSuperAdminRole(role.roleName));
+  const roleNames = new Set(availableRoles.map((role) => role.roleName));
   const missingRoles = fallbackRoles.filter((role) => !roleNames.has(role.roleName));
 
-  return [...loadedRoles, ...missingRoles];
+  return [...availableRoles, ...missingRoles];
 };
 
 function Register() {

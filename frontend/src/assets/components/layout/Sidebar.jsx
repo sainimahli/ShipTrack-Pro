@@ -16,14 +16,13 @@ const roleLabels = {
   LOGISTICS_OPERATOR: "Logistics Operator",
   SUPPORT_AGENT: "Support Agent",
   ADMINISTRATOR: "Administrator",
-  SUPER_ADMIN: "Super Admin",
 };
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 
-const canManageShipments = (role) => ["Administrator", "Super Admin"].includes(role);
+const canManageShipments = (role) => role === "Administrator";
 
-const canManageUsers = (role) => ["Administrator", "Super Admin"].includes(role);
+const canManageUsers = (role) => role === "Administrator";
 
 const getNavLabel = (item, role) => {
   if (item.to === "/shipments" && canManageShipments(role)) {
