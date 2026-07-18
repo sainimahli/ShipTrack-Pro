@@ -10,6 +10,8 @@ CREATE TABLE shipments (
     assigned_vehicle_id BIGINT,
     shipment_status VARCHAR(30) NOT NULL DEFAULT 'CREATED'
         CHECK (shipment_status IN ('CREATED','PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','FAILED_DELIVERY','CANCELLED')),
+    shipment_type VARCHAR(20) DEFAULT 'STANDARD'
+        CHECK (shipment_type IN ('STANDARD', 'EXPRESS', 'SAME_DAY')),
     total_weight_kg DECIMAL(10,2),
     expected_delivery_date DATE,
     actual_delivery_date TIMESTAMPTZ,
