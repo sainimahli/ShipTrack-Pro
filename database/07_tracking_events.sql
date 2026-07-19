@@ -11,7 +11,7 @@ CREATE TABLE tracking_events (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tracking_events_shipment_id
         FOREIGN KEY (shipment_id)
-        REFERENCES shipments(id)
+        REFERENCES shipments(shipment_id)
         ON DELETE CASCADE
 );
 

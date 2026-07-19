@@ -10,9 +10,16 @@ CREATE TABLE shipments (
     assigned_vehicle_id BIGINT,
     shipment_status VARCHAR(30) NOT NULL DEFAULT 'CREATED'
         CHECK (shipment_status IN ('CREATED','PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','FAILED_DELIVERY','CANCELLED')),
+    shipment_type VARCHAR(20) DEFAULT 'STANDARD'
+        CHECK (shipment_type IN ('STANDARD', 'EXPRESS', 'SAME_DAY')),
     total_weight_kg DECIMAL(10,2),
     expected_delivery_date DATE,
     actual_delivery_date TIMESTAMPTZ,
+    estimated_arrival TIMESTAMPTZ,
+    distance_remaining_km DECIMAL(10,2),
+    forecast_confidence VARCHAR(20) CHECK (forecast_confidence IN ('HIGH', 'MEDIUM', 'LOW')),
+    is_delayed BOOLEAN DEFAULT FALSE,
+    delay_reason VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_shipment_user FOREIGN KEY (user_id) REFERENCES users(user_id),
