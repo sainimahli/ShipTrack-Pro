@@ -56,7 +56,7 @@ public class TrackingController {
         return ResponseEntity.ok(trackingService.updateTrackingStatus(request));
     }
 
-    @PostMapping("/location")
+    @PutMapping("/location")
     public ResponseEntity<TrackingLocationResponse> updateLocation(
             @Valid @RequestBody UpdateLocationRequest request) {
 

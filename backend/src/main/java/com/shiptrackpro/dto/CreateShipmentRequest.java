@@ -1,29 +1,17 @@
 package com.shiptrackpro.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.math.BigDecimal;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
-/**
- * Payload for creating a new shipment.
- *
- * <p>Deliberately excludes {@code id}, {@code trackingNumber},
- * {@code shipmentStatus}, {@code createdBy}, and the audit timestamps —
- * all system-managed. {@code trackingNumber} is generated server-side;
- * {@code createdBy} is resolved from the authenticated JWT principal in
- * the controller, never taken from the request body (a client could
- * otherwise claim to be someone else).</p>
- */
 @Getter
 @Setter
 @Builder
@@ -31,49 +19,27 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CreateShipmentRequest {
 
-    @NotBlank(message = "Sender name is required")
-    @Size(max = 150)
-    private String senderName;
+    @NotNull(message = "Sender address ID is required")
+    private Long senderAddressId;
 
-    @NotBlank(message = "Sender phone is required")
-    @Size(max = 20)
-    private String senderPhone;
+    @NotNull(message = "Receiver address ID is required")
+    private Long receiverAddressId;
 
-    /** Optional: set if the sender is a registered platform user. */
-    private Long senderUserId;
+    private Long originWarehouseId;
 
-    @NotBlank(message = "Receiver name is required")
-    @Size(max = 150)
-    private String receiverName;
+    private Long destinationWarehouseId;
 
-    @NotBlank(message = "Receiver phone is required")
-    @Size(max = 20)
-    private String receiverPhone;
+    private Long assignedDriverId;
 
-    /** Optional: set if the receiver is a registered platform user. */
-    private Long receiverUserId;
+    private Long assignedVehicleId;
 
-    @NotNull(message = "Origin address is required")
-    @Valid
-    private AddressRequest originAddress;
+    @NotNull(message = "Total weight is required")
+    @Positive(message = "Total weight must be greater than zero")
+    private BigDecimal totalWeightKg;
 
-    @NotNull(message = "Destination address is required")
-    @Valid
-    private AddressRequest destinationAddress;
-
-    @NotNull(message = "Package weight is required")
-    @Positive(message = "Package weight must be greater than zero")
-    private Double packageWeight;
-
-    @NotBlank(message = "Shipment type is required")
-    @Size(max = 30)
+    @NotNull(message = "Shipment type is required")
     private String shipmentType;
 
-    @Size(max = 50)
-    private String packageType;
-
     @Future(message = "Expected delivery date must be in the future")
-    private LocalDateTime expectedDeliveryDate;
-
+    private LocalDate expectedDeliveryDate;
 }
-

@@ -7,14 +7,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 
-/**
- * Outbound shipment payload. Supersedes the earlier flat-string version of
- * this class from previous messages — origin/destination are now nested
- * {@link AddressResponse} objects, matching the updated {@code Shipment}
- * entity.
- */
+
+
 @Getter
 @Setter
 @Builder
@@ -22,29 +20,43 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ShipmentResponse {
 
-    private Long id;
+    private Long shipmentId;
+
     private String trackingNumber;
 
-    private String senderName;
-    private String senderPhone;
-    private Long senderUserId;
+    private Long userId;
 
-    private String receiverName;
-    private String receiverPhone;
-    private Long receiverUserId;
+    private Long senderAddressId;
 
-    private AddressResponse originAddress;
-    private AddressResponse destinationAddress;
+    private Long receiverAddressId;
 
-    private Double packageWeight;
-    private String shipmentType;
-    private String packageType;
+    private Long originWarehouseId;
+
+    private Long destinationWarehouseId;
+
+    private Long assignedDriverId;
+
+    private Long assignedVehicleId;
+
     private ShipmentStatus shipmentStatus;
-    private LocalDateTime expectedDeliveryDate;
 
-    private Long createdByUserId;
+    private BigDecimal totalWeightKg;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String shipmentType;
 
+    private LocalDate expectedDeliveryDate;
+
+    private OffsetDateTime actualDeliveryDate;
+    private OffsetDateTime estimatedArrival;
+
+    private BigDecimal distanceRemainingKm;
+
+    private String forecastConfidence;
+
+    private Boolean isDelayed;
+
+    private String delayReason;
+
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 }
