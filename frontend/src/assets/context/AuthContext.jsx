@@ -254,12 +254,30 @@ export function AuthProvider({ children }) {
     },
   });
 }, []);
+  const updateAuthenticatedUser = useCallback((profile) => {
+    setAuth((current) => {
+      if (!current) return current;
+
+      const firstName = profile.firstName ?? current.user?.firstName ?? "";
+      const lastName = profile.lastName ?? current.user?.lastName ?? "";
+
+      return {
+        ...current,
+        user: {
+          ...current.user,
+          ...profile,
+          name: `${firstName} ${lastName}`.trim() || current.user?.name,
+        },
+      };
+    });
+  }, []);
   const value = useMemo(
     () => ({
       auth,
       isAuthenticated: Boolean(auth?.token),
       logout,
       updateAuth,
+      updateAuthenticatedUser,
       requestOtp,
       verifyOtp,
       resetPassword,
@@ -267,7 +285,7 @@ export function AuthProvider({ children }) {
       users: registeredUsers.map(withoutPassword),
       capabilities: auth?.user ? roleCapabilities[auth.user.role] || [] : [],
     }),
-    [auth, logout, updateAuth, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
+    [auth, logout, updateAuth, updateAuthenticatedUser, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

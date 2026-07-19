@@ -148,7 +148,7 @@ public ForecastResponse getForecast(Long shipmentId) {
 
     Shipment shipment = findShipmentOrThrow(shipmentId);
 
-    LocalDateTime estimatedDate = shipment.getExpectedDeliveryDate();
+    LocalDateTime estimatedDate = shipment.getExpectedDeliveryDate().atStartOfDay();
 
     int confidence = 95;
     String message = "Shipment is on schedule";

@@ -80,7 +80,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                     now);
         }
 
-        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate(), now, reasons);
+        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate().atStartOfDay(), now, reasons);
         long travelShortfallMinutes = computeTravelShortfall(shipment, request, now, reasons);
         long weatherDelayMinutes = computeWeatherDelay(request == null ? null : request.getWeatherCondition(), reasons);
 
@@ -123,7 +123,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         double speedKmh = speedForTraffic(trafficLevel);
         double requiredTravelMinutes = (request.getDistanceRemainingKm() / speedKmh) * 60.0;
 
-        long minutesUntilDue = Math.max(0, Duration.between(now, shipment.getExpectedDeliveryDate()).toMinutes());
+        long minutesUntilDue = Math.max(0, Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
         long shortfall = Math.round(requiredTravelMinutes) - minutesUntilDue;
 
         if (shortfall > 0) {
@@ -173,11 +173,11 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     private DelayPredictionResponse build(Shipment shipment, DelayRisk risk, long predictedDelayMinutes,
                                            String reason, LocalDateTime evaluatedAt) {
         return DelayPredictionResponse.builder()
-                .shipmentId(shipment.getId())
+                .shipmentId(shipment.getShipmentId())
                 .delayRisk(risk)
                 .predictedDelayMinutes(predictedDelayMinutes)
                 .reason(reason)
-                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate())
+                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate().atStartOfDay())
                 .evaluatedAt(evaluatedAt)
                 .build();
     }

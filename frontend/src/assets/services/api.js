@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:8080/api",
+  // In local development Vite proxies this to Spring Boot, avoiding browser CORS.
+  // Deployments can set VITE_API_BASE_URL to their public backend API URL.
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
 });
 
 
@@ -21,6 +23,23 @@ export const register = (data) => API.post("/auth/register", data);
 
 // Roles
 export const getRoles = () => API.get("/roles");
+
+// Profile
+export const getProfile = () => API.get("/profile");
+
+export const updateProfile = (data) => API.put("/profile", data);
+
+// Notifications
+export const getNotifications = () => API.get("/notifications");
+
+export const getUnreadNotificationCount = () =>
+  API.get("/notifications/unread-count");
+
+export const markNotificationAsRead = (notificationId) =>
+  API.put(`/notifications/${notificationId}/read`);
+
+export const markAllNotificationsAsRead = () =>
+  API.put("/notifications/read-all");
 
 // Milestone 2: live delivery monitoring and ETA forecasting
 export const getDeliveryForecast = (trackingNumber) =>
