@@ -19,7 +19,7 @@ import com.shiptrackpro.service.TrackingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import java.util.List;
 import java.util.UUID;
@@ -148,7 +148,7 @@ public ForecastResponse getForecast(Long shipmentId) {
 
     Shipment shipment = findShipmentOrThrow(shipmentId);
 
-    LocalDateTime estimatedDate = shipment.getExpectedDeliveryDate();
+    LocalDate estimatedDate = shipment.getExpectedDeliveryDate();
 
     int confidence = 95;
     String message = "Shipment is on schedule";
