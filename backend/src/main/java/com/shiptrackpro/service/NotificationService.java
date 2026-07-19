@@ -1,9 +1,12 @@
 package com.shiptrackpro.service;
 
+import com.shiptrackpro.dto.NotificationResponse;
 import com.shiptrackpro.entity.Shipment;
 import com.shiptrackpro.entity.User;
 import com.shiptrackpro.enums.NotificationChannel;
 import com.shiptrackpro.enums.NotificationEventType;
+
+import java.util.List;
 
 public interface NotificationService {
 
@@ -15,4 +18,12 @@ public interface NotificationService {
             String title,
             String message
     );
+
+    List<NotificationResponse> getUserNotifications(Long userId);
+
+    long getUnreadNotificationCount(Long userId);
+
+    NotificationResponse markAsRead(Long notificationId, Long userId);
+
+    void markAllAsRead(Long userId);
 }
