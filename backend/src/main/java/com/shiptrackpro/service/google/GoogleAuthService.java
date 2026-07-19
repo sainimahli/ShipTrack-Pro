@@ -6,6 +6,6 @@ import com.shiptrackpro.dto.AuthResponse;
 
 public interface GoogleAuthService {
 
-    AuthResponse googleLogin(String email);
+    AuthResponse googleLogin(String email, String fullName);
 
 }

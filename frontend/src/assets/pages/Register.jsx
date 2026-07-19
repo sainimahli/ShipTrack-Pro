@@ -1,20 +1,44 @@
-import { useContext, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/auth";
+import { getRoles, register as registerApi } from "../services/api";
 
-const roles = ["Customer", "Business Client", "Logistics Operator", "Support Agent", "Administrator"];
+const fallbackRoles = [
+  { roleId: 1, roleName: "CUSTOMER" },
+  { roleId: 2, roleName: "BUSINESS_CLIENT" },
+  { roleId: 3, roleName: "LOGISTICS_OPERATOR" },
+  { roleId: 5, roleName: "ADMINISTRATOR" },
+];
+
+const isSuperAdminRole = (roleName) =>
+  String(roleName).replace(/[^a-z]/gi, "").toUpperCase() === "SUPERADMIN";
+
+const formatRoleName = (roleName) =>
+  roleName
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+const withDefaultRoles = (loadedRoles) => {
+  const availableRoles = loadedRoles.filter((role) => !isSuperAdminRole(role.roleName));
+  const roleNames = new Set(availableRoles.map((role) => role.roleName));
+  const missingRoles = fallbackRoles.filter((role) => !roleNames.has(role.roleName));
+
+  return [...availableRoles, ...missingRoles];
+};
 
 function Register() {
-  const { register, requestOtp, verifyOtp, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState({ type: "", message: "" });
-  const [step, setStep] = useState("details");
-  const [otp, setOtp] = useState("");
+  const [roles, setRoles] = useState([]);
   const [form, setForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
+    phone: "",
     password: "",
-    role: "Customer",
+    confirmPassword: "",
+    roleId: "",
     companyName: "",
     gstNumber: "",
     businessType: "",
@@ -24,62 +48,58 @@ function Register() {
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await getRoles();
+        const loadedRoles = Array.isArray(response.data) ? response.data : [];
+        setRoles(withDefaultRoles(loadedRoles));
+      } catch (error) {
+        console.error("Failed to load roles", error);
+        setRoles(fallbackRoles);
+      }
+    };
+    fetchRoles();
+  }, []);
 
-  const handleOtpChange = (event) => {
-    setOtp(event.target.value);
-  };
+  const selectedRole = roles.find((role) => String(role.roleId) === String(form.roleId));
+  const isBusinessClient = selectedRole?.roleName === "BUSINESS_CLIENT";
 
-  const handleGoogleSignup = () => {
-    const result = googleLogin(null, {
-      name: form.name || "Google User",
-      email: form.email || "google.user@shiptrack.com",
-      role: form.role,
-      company: form.company || "Google Workspace",
-    });
-
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
-    }
-
-    setFeedback({ type: "success", message: "Signed up with Google." });
-    navigate("/dashboard", { replace: true });
-  };
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (step === "details") {
-      if (form.password.length < 6) {
-        setFeedback({ type: "error", message: "Use a password with at least 6 characters." });
-        return;
+    if (form.password !== form.confirmPassword) {
+      setFeedback({
+        type: "error",
+        message: "Passwords do not match.",
+      });
+      return;
+    }
+
+    try {
+      const registrationForm = { ...form };
+      delete registrationForm.confirmPassword;
+
+      const result = await registerApi({
+        ...registrationForm,
+        phone: registrationForm.phone.trim(),
+        roleId: Number(registrationForm.roleId),
+      });
+
+      if (result.status === 200 || result.status === 201) {
+        setFeedback({
+          type: "success",
+          message: result.data?.message || "Registration successful.",
+        });
+
+        navigate("/login");
       }
-
-      const result = requestOtp({ email: form.email, purpose: "signup" });
-      if (!result.ok) {
-        setFeedback({ type: "error", message: result.message });
-        return;
-      }
-
-      setStep("verify");
-      setFeedback({ type: "success", message: result.message });
-      return;
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error.response?.data?.message || "Registration failed.",
+      });
     }
-
-    const verified = verifyOtp({ email: form.email, otp, purpose: "signup" });
-    if (!verified.ok) {
-      setFeedback({ type: "error", message: verified.message });
-      return;
-    }
-
-    const result = register(form);
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
-    }
-
-    setFeedback({ type: "success", message: "Account created successfully." });
-    navigate("/dashboard", { replace: true });
   };
 
   return (
@@ -104,161 +124,163 @@ function Register() {
 
           {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
 
-          <div className="auth-actions">
-            <button className="button secondary" type="button" onClick={handleGoogleSignup}>
-              Continue with Google
-            </button>
-          </div>
-
-          <div className="auth-divider">or create with email</div>
-
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {step === "details" ? (
-              <>
-                <div className="form-field">
-                  <label htmlFor="name">Full name</label>
-                  <input
-                    className="input"
-                    id="name"
-                    name="name"
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter your full name"
-                    value={form.name}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    className="input"
-                    id="email"
-                    name="email"
-                    onChange={handleChange}
-                    required
-                    type="email"
-                    placeholder="Enter your email"
-                    value={form.email}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="password">Password</label>
-                  <input
-                    className="input"
-                    id="password"
-                    minLength={6}
-                    name="password"
-                    onChange={handleChange}
-                    required
-                    type="password"
-                    placeholder="Enter your password"
-                    value={form.password}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="role">Role</label>
-                  <select className="select" id="role" name="role" onChange={handleChange} value={form.role}>
-                    {roles.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {form.role === "Business Client" && (
+         <form className="auth-form" onSubmit={handleSubmit}>
   <>
     <div className="form-field">
-      <label>Company Name</label>
+      <label htmlFor="firstName">First Name</label>
       <input
         className="input"
-        name="companyName"
-        value={form.companyName}
+        id="firstName"
+        name="firstName"
+        value={form.firstName}
         onChange={handleChange}
-        placeholder="Enter company name"
+        required
+        placeholder="Enter your first name"
       />
     </div>
 
     <div className="form-field">
-      <label>GST Number</label>
+      <label htmlFor="lastName">Last Name</label>
       <input
         className="input"
-        name="gstNumber"
-        value={form.gstNumber}
+        id="lastName"
+        name="lastName"
+        value={form.lastName}
         onChange={handleChange}
-        placeholder="Enter GST number"
+        required
+        placeholder="Enter your last name"
       />
     </div>
 
     <div className="form-field">
-      <label>Business Type</label>
+      <label htmlFor="email">Email</label>
       <input
         className="input"
-        name="businessType"
-        value={form.businessType}
+        id="email"
+        name="email"
+        type="email"
+        value={form.email}
         onChange={handleChange}
-        placeholder="e.g. Logistics"
+        required
+        placeholder="Enter your email"
       />
     </div>
 
     <div className="form-field">
-      <label>Website</label>
+      <label htmlFor="phone">Mobile Number (Optional)</label>
       <input
         className="input"
-        type="url"
-        name="website"
-        value={form.website}
+        id="phone"
+        name="phone"
+        type="tel"
+        value={form.phone}
         onChange={handleChange}
-        placeholder="https://example.com"
+        placeholder="Enter your mobile number"
       />
     </div>
+
+    <div className="form-field">
+      <label htmlFor="password">Password</label>
+      <input
+        className="input"
+        id="password"
+        name="password"
+        type="password"
+        value={form.password}
+        onChange={handleChange}
+        required
+        minLength={6}
+        placeholder="Enter your password"
+      />
+    </div>
+
+    <div className="form-field">
+      <label htmlFor="confirmPassword">Confirm Password</label>
+      <input
+        className="input"
+        id="confirmPassword"
+        name="confirmPassword"
+        type="password"
+        value={form.confirmPassword}
+        onChange={handleChange}
+        required
+        placeholder="Re-enter your password"
+      />
+    </div>
+
+    <div className="form-field">
+      <label htmlFor="roleId">Role</label>
+      <select
+        className="select"
+        id="roleId"
+        name="roleId"
+        value={form.roleId}
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select Role</option>
+        {roles.map((role) => (
+          <option key={role.roleId} value={role.roleId}>
+            {formatRoleName(role.roleName)}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {isBusinessClient && (
+      <>
+        <div className="form-field">
+          <label>Company Name</label>
+          <input
+            className="input"
+            name="companyName"
+            value={form.companyName}
+            onChange={handleChange}
+            placeholder="Enter company name"
+          />
+        </div>
+
+        <div className="form-field">
+          <label>GST Number</label>
+          <input
+            className="input"
+            name="gstNumber"
+            value={form.gstNumber}
+            onChange={handleChange}
+            placeholder="Enter GST number"
+          />
+        </div>
+
+        <div className="form-field">
+          <label>Business Type</label>
+          <input
+            className="input"
+            name="businessType"
+            value={form.businessType}
+            onChange={handleChange}
+            placeholder="e.g. Logistics"
+          />
+        </div>
+
+        <div className="form-field">
+          <label>Website</label>
+          <input
+            className="input"
+            type="url"
+            name="website"
+            value={form.website}
+            onChange={handleChange}
+            placeholder="https://example.com"
+          />
+        </div>
+      </>
+    )}
+
+    <button className="button primary" type="submit">
+      Register
+    </button>
   </>
-)}
-
-                
-
-                <button className="button primary" type="submit">
-                  Send verification code
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="auth-otp-card">
-                  <div className="eyebrow">Email verification</div>
-                  <p className="subtle">
-                    Enter the one-time code you received to finish creating your account.
-                  </p>
-                  <div className="form-field">
-                    <label htmlFor="otp">Verification code</label>
-                    <input
-                      className="input"
-                      id="otp"
-                      name="otp"
-                      onChange={handleOtpChange}
-                      required
-                      placeholder="Enter the 6-digit code"
-                      value={otp}
-                    />
-                  </div>
-                </div>
-                <button className="button primary" type="submit">
-                  Verify and create account
-                </button>
-                <button
-                  className="button secondary"
-                  type="button"
-                  onClick={() => {
-                    setStep("details");
-                    setFeedback({ type: "", message: "" });
-                  }}
-                >
-                  Edit details
-                </button>
-              </>
-            )}
-          </form>
+</form>
 
           <p className="auth-switch">
             Already registered? <Link to="/login">Sign in</Link>
@@ -268,10 +290,9 @@ function Register() {
 
       <section className="auth-visual">
         <div className="auth-visual-inner">
-          <h2>Role-based access from the first sprint.</h2>
+          <h2>Register to Manage Your Shipment</h2>
           <p>
-            Customers, operators, support agents, business clients, and administrators each land in
-            the same core platform with permissions ready for backend enforcement.
+            Join a unified platform where customers, operators, and administrators collaborate to ensure smooth and reliable shipment management.
           </p>
         </div>
       </section>

@@ -1,9 +1,8 @@
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/auth";
+import { forgotPassword, verifyOtp, resetPassword,} from "../services/api";
 
 function ForgotPassword() {
-  const { requestOtp, resetPassword } = useContext(AuthContext);
   const navigate = useNavigate();
   const [form, setForm] = useState({
     email: "",
@@ -18,46 +17,83 @@ function ForgotPassword() {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleOtpRequest = (event) => {
-    event.preventDefault();
-    const result = requestOtp({ email: form.email, purpose: "password-reset" });
+const handleOtpRequest = async (event) => {
+  event.preventDefault();
 
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
-    }
-
-    setFeedback({ type: "success", message: result.message });
-    setForm((current) => ({ ...current, step: "verify" }));
-  };
-
-  const handleResetSubmit = (event) => {
-    event.preventDefault();
-
-    if (form.password.length < 6) {
-      setFeedback({ type: "error", message: "Use a password with at least 6 characters." });
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setFeedback({ type: "error", message: "Passwords do not match." });
-      return;
-    }
-
-    const result = resetPassword({
+  try {
+    const response = await forgotPassword({
       email: form.email,
-      otp: form.otp,
-      password: form.password,
     });
 
-    if (!result.ok) {
-      setFeedback({ type: "error", message: result.message });
-      return;
-    }
+    setFeedback({
+      type: "success",
+      message: response.data.message,
+    });
 
-    setFeedback({ type: "success", message: result.message });
-    navigate("/dashboard", { replace: true });
-  };
+    setForm((current) => ({
+      ...current,
+      step: "verify",
+    }));
+  } catch (error) {
+    setFeedback({
+      type: "error",
+      message:
+        error.response?.data?.message || "Failed to send OTP.",
+    });
+  }
+};
+
+ const handleResetSubmit = async (event) => {
+  event.preventDefault();
+
+  if (form.password.length < 6) {
+    setFeedback({
+      type: "error",
+      message: "Use a password with at least 6 characters.",
+    });
+    return;
+  }
+
+  if (form.password !== form.confirmPassword) {
+    setFeedback({
+      type: "error",
+      message: "Passwords do not match.",
+    });
+    return;
+  }
+
+  try {
+    await verifyOtp({
+      email: form.email,
+      otp: form.otp,
+    });
+
+    const response = await resetPassword({
+      email: form.email,
+      otp: form.otp,
+      newPassword: form.password,
+    });
+
+    setFeedback({
+      type: "success",
+      message: response.data.message,
+    });
+
+    navigate("/login", {
+  replace: true,
+  state: {
+    message: "Password reset successfully. Please sign in with your new password.",
+  },
+});
+
+  } catch (error) {
+    setFeedback({
+      type: "error",
+      message:
+        error.response?.data?.message || "Failed to reset password.",
+    });
+  }
+};
 
   return (
     <div className="auth-page">

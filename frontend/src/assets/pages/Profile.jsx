@@ -1,8 +1,26 @@
 import { useContext } from "react";
 import { AuthContext } from "../context/auth";
 
+const roleLabels = {
+  CUSTOMER: "Customer",
+  BUSINESS_CLIENT: "Business Client",
+  LOGISTICS_OPERATOR: "Logistics Operator",
+  SUPPORT_AGENT: "Support Agent",
+  ADMINISTRATOR: "Administrator",
+};
+
+const controlledRoles = {
+  Administrator: ["Logistics Operator", "Business Client", "Customer"],
+  "Business Client": ["Customer"],
+};
+
+const normalizeRole = (role) => roleLabels[role] || role || "Customer";
+
 function Profile() {
   const { auth, capabilities, users } = useContext(AuthContext);
+  const role = normalizeRole(auth.user.role);
+  const visibleRoles = controlledRoles[role] || [];
+  const controlledUsers = users.filter((user) => visibleRoles.includes(normalizeRole(user.role)));
 
   return (
     <div className="page">
@@ -39,7 +57,7 @@ function Profile() {
             <div className="schema-box">
               <strong>Role</strong>
               <p className="subtle" style={{ margin: "6px 0 0" }}>
-                {auth.user.role}
+                {role}
               </p>
             </div>
           </div>
@@ -64,7 +82,7 @@ function Profile() {
                 <div>
                   <strong>{capability}</strong>
                   <p className="subtle" style={{ margin: "4px 0 0" }}>
-                    Permission mapped for {auth.user.role}.
+                    Permission mapped for {role}.
                   </p>
                 </div>
               </div>
@@ -73,9 +91,12 @@ function Profile() {
         </div>
       </section>
 
-      {auth.user.role === "Administrator" && (
+      {visibleRoles.length > 0 && (
         <section className="panel" style={{ marginTop: 18 }}>
-          <h2 className="section-title">Registered Users</h2>
+          <h2 className="section-title">Controlled Users</h2>
+          <p className="subtle" style={{ marginTop: -8 }}>
+            {role} controls {visibleRoles.join(", ")} accounts.
+          </p>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -88,7 +109,7 @@ function Profile() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {controlledUsers.map((user) => (
                   <tr key={user.id}>
                     <td>{user.id}</td>
                     <td>{user.name}</td>

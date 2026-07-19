@@ -25,6 +25,22 @@ public class AdminController {
         );
     }
 
+    @GetMapping("/approved-users")
+    public ResponseEntity<List<PendingUserResponse>> getApprovedUsers() {
+
+        return ResponseEntity.ok(
+                adminService.getApprovedUsers()
+        );
+    }
+
+    @GetMapping("/rejected-users")
+    public ResponseEntity<List<PendingUserResponse>> getRejectedUsers() {
+
+        return ResponseEntity.ok(
+                adminService.getRejectedUsers()
+        );
+    }
+
     @PutMapping("/users/{userId}/approve")
     public ResponseEntity<AuthResponse> approveUser(
             @PathVariable Long userId) {
