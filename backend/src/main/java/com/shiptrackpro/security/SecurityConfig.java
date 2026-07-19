@@ -55,11 +55,10 @@ public class SecurityConfig {
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                                .exceptionHandling(exception -> exception
-                                                .defaultAuthenticationEntryPointFor(
-                                                                restAuthenticationEntryPoint,
-                                                                new org.springframework.security.web.util.matcher.AntPathRequestMatcher(
-                                                                                "/api/**")))
+                        .exceptionHandling(exception -> exception
+                                .authenticationEntryPoint(restAuthenticationEntryPoint)
+                                .accessDeniedHandler((request, response, ex) ->
+                                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden")))
 
                                 .authenticationProvider(authenticationProvider)
 
@@ -67,6 +66,7 @@ public class SecurityConfig {
                                                 .requestMatchers(
                                                                 "/",
                                                                 "/index.html",
+                                                                "/error",
                                                                 "/api/auth/**",
                                                                 "/api/roles/**",
                                                                 // "/api/admin/**",
@@ -80,11 +80,11 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.POST, "/api/shipments")
                                                 .hasAnyRole("CUSTOMER", "BUSINESS_CLIENT", "LOGISTICS_OPERATOR", "ADMINISTRATOR")
                                                 .requestMatchers(HttpMethod.PUT, "/api/shipments/**", "/api/tracking/status")
-                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR")
+                                                .hasAnyRole("LOGISTICS_OPERATOR")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/shipments/**")
                                                 .hasRole("ADMINISTRATOR")
                                                 .requestMatchers(HttpMethod.POST, "/api/tracking/location")
-                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR")
+                                                .hasAnyRole("LOGISTICS_OPERATOR")
                                                 .anyRequest().authenticated())
 
                                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
