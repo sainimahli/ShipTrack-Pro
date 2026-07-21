@@ -37,8 +37,8 @@ public class TrackingServiceImpl implements TrackingService {
 
     private static final String SYSTEM_USER = "SYSTEM";
 
-    private static final Map<ShipmentStatus, Set<ShipmentStatus>> VALID_TRANSITIONS =
-            new EnumMap<>(ShipmentStatus.class);
+    private static final Map<ShipmentStatus, Set<ShipmentStatus>> VALID_TRANSITIONS = new EnumMap<>(
+            ShipmentStatus.class);
 
     static {
 
@@ -46,48 +46,37 @@ public class TrackingServiceImpl implements TrackingService {
                 ShipmentStatus.CREATED,
                 EnumSet.of(
                         ShipmentStatus.PICKED_UP,
-                        ShipmentStatus.CANCELLED
-                )
-        );
+                        ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.PICKED_UP,
                 EnumSet.of(
                         ShipmentStatus.IN_TRANSIT,
-                        ShipmentStatus.CANCELLED
-                )
-        );
+                        ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.IN_TRANSIT,
                 EnumSet.of(
                         ShipmentStatus.OUT_FOR_DELIVERY,
-                        ShipmentStatus.CANCELLED
-                )
-        );
+                        ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.OUT_FOR_DELIVERY,
                 EnumSet.of(
                         ShipmentStatus.DELIVERED,
-                        ShipmentStatus.RETURNED
-                )
-        );
+                        ShipmentStatus.RETURNED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.DELIVERED,
-                EnumSet.noneOf(ShipmentStatus.class)
-        );
+                EnumSet.noneOf(ShipmentStatus.class));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.CANCELLED,
-                EnumSet.noneOf(ShipmentStatus.class)
-        );
+                EnumSet.noneOf(ShipmentStatus.class));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.RETURNED,
-                EnumSet.noneOf(ShipmentStatus.class)
-        );
+                EnumSet.noneOf(ShipmentStatus.class));
     }
 
     private final TrackingEventRepository trackingEventRepository;
@@ -141,7 +130,8 @@ public class TrackingServiceImpl implements TrackingService {
     @Transactional(readOnly = true)
     public TrackingTimelineResponse getTrackingTimeline(String trackingNumber) {
         String normalizedTrackingNumber = normalizeTrackingNumber(trackingNumber);
-        List<TrackingEvent> events = trackingEventRepository.findByTrackingNumberOrderByUpdatedAtAsc(normalizedTrackingNumber);
+        List<TrackingEvent> events = trackingEventRepository
+                .findByTrackingNumberOrderByUpdatedAtAsc(normalizedTrackingNumber);
 
         if (events.isEmpty()) {
             throw notFound(normalizedTrackingNumber);
@@ -170,8 +160,8 @@ public class TrackingServiceImpl implements TrackingService {
         OffsetDateTime expectedDelivery = shipment.getExpectedDeliveryDate() == null
                 ? null
                 : shipment.getExpectedDeliveryDate()
-                .atStartOfDay()
-                .atOffset(java.time.ZoneOffset.UTC);
+                        .atStartOfDay()
+                        .atOffset(java.time.ZoneOffset.UTC);
 
         DeliveryForecastResponse response = new DeliveryForecastResponse();
         response.setTrackingNumber(normalizedTrackingNumber);
@@ -211,8 +201,7 @@ public class TrackingServiceImpl implements TrackingService {
         Shipment shipment = findShipment(trackingNumber);
         validateStatusTransition(
                 shipment.getShipmentStatus(),
-                request.getStatus()
-        );
+                request.getStatus());
 
         TrackingEvent event = new TrackingEvent();
         event.setShipment(shipment);
@@ -225,6 +214,10 @@ public class TrackingServiceImpl implements TrackingService {
         TrackingEvent savedEvent = trackingEventRepository.save(event);
 
         shipment.setShipmentStatus(request.getStatus());
+
+        shipment.setEstimatedArrival(
+                calculateEstimatedArrival(shipment));
+
         shipmentRepository.save(shipment);
         sendShipmentStatusNotifications(shipment, request.getStatus());
 
@@ -289,18 +282,18 @@ public class TrackingServiceImpl implements TrackingService {
         String normalizedTrackingNumber = normalizeTrackingNumber(trackingNumber);
 
         TrackingEvent eventWithLocation = trackingEventRepository
-            .findFirstByTrackingNumberAndLocationNameIsNotNullOrderByUpdatedAtDesc(normalizedTrackingNumber)
-            .orElse(null);
+                .findFirstByTrackingNumberAndLocationNameIsNotNullOrderByUpdatedAtDesc(normalizedTrackingNumber)
+                .orElse(null);
 
         if (eventWithLocation != null && hasLocationData(eventWithLocation)) {
             return eventWithLocation;
         }
 
         return trackingEventRepository.findByTrackingNumberOrderByUpdatedAtAsc(normalizedTrackingNumber)
-            .stream()
-            .filter(this::hasLocationData)
-            .reduce((first, second) -> second)
-            .orElse(null);
+                .stream()
+                .filter(this::hasLocationData)
+                .reduce((first, second) -> second)
+                .orElse(null);
     }
 
     private TrackingEvent findLatestLocationEvent(String trackingNumber) {
@@ -328,6 +321,21 @@ public class TrackingServiceImpl implements TrackingService {
             case CANCELLED, RETURNED -> 0;
             case DELIVERED -> 0;
         };
+    }
+
+    private OffsetDateTime calculateEstimatedArrival(Shipment shipment) {
+
+        if (shipment.getShipmentStatus() == ShipmentStatus.DELIVERED) {
+            return OffsetDateTime.now();
+        }
+
+        if (shipment.getShipmentStatus() == ShipmentStatus.CANCELLED
+                || shipment.getShipmentStatus() == ShipmentStatus.RETURNED) {
+            return null;
+        }
+
+        return OffsetDateTime.now()
+                .plusMinutes(remainingMinutes(shipment.getShipmentStatus()));
     }
 
     private String buildForecastReason(ShipmentStatus status, boolean staleUpdate, long delayMinutes) {
@@ -359,20 +367,18 @@ public class TrackingServiceImpl implements TrackingService {
         response.setUpdatedAt(event.getUpdatedAt());
         return response;
     }
+
     private void validateStatusTransition(
             ShipmentStatus currentStatus,
-            ShipmentStatus newStatus
-    ) {
+            ShipmentStatus newStatus) {
 
         if (currentStatus == newStatus) {
             return;
         }
 
-        Set<ShipmentStatus> allowedStatuses =
-                VALID_TRANSITIONS.getOrDefault(
-                        currentStatus,
-                        EnumSet.noneOf(ShipmentStatus.class)
-                );
+        Set<ShipmentStatus> allowedStatuses = VALID_TRANSITIONS.getOrDefault(
+                currentStatus,
+                EnumSet.noneOf(ShipmentStatus.class));
 
         if (!allowedStatuses.contains(newStatus)) {
 
@@ -381,13 +387,12 @@ public class TrackingServiceImpl implements TrackingService {
                     "Invalid shipment status transition from "
                             + currentStatus
                             + " to "
-                            + newStatus
-            );
+                            + newStatus);
         }
     }
+
     private String getCurrentUsername() {
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null
                 || !authentication.isAuthenticated()
@@ -426,9 +431,9 @@ public class TrackingServiceImpl implements TrackingService {
     private ResponseStatusException notFound(String trackingNumber) {
         return new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
-                "No tracking history found for tracking number: " + trackingNumber
-        );
+                "No tracking history found for tracking number: " + trackingNumber);
     }
+
     private void sendShipmentStatusNotifications(
             Shipment shipment,
             ShipmentStatus status) {
@@ -448,11 +453,10 @@ public class TrackingServiceImpl implements TrackingService {
 
         String title = "Shipment Status Updated";
 
-        String message =
-                "Shipment "
-                        + shipment.getTrackingNumber()
-                        + " status changed to "
-                        + status.name().replace('_', ' ');
+        String message = "Shipment "
+                + shipment.getTrackingNumber()
+                + " status changed to "
+                + status.name().replace('_', ' ');
 
         notificationService.createNotification(
                 user,
@@ -460,8 +464,7 @@ public class TrackingServiceImpl implements TrackingService {
                 eventType,
                 NotificationChannel.PUSH,
                 title,
-                message
-        );
+                message);
     }
 
     private NotificationEventType mapEventType(ShipmentStatus status) {
@@ -479,4 +482,5 @@ public class TrackingServiceImpl implements TrackingService {
             default -> NotificationEventType.SHIPMENT_CREATED;
         };
     }
+
 }

@@ -24,43 +24,46 @@ import java.util.Set;
 /**
  * Rule-based implementation of {@link DelayPredictionService}.
  *
- * <p>Prediction logic, in order:</p>
+ * <p>
+ * Prediction logic, in order:
+ * </p>
  * <ol>
- *     <li>Terminal shipments (DELIVERED, CANCELLED, FAILED_DELIVERY) are
- *         never "at risk" — return LOW / 0 minutes immediately.</li>
- *     <li>If the shipment has no {@code expectedDeliveryDate} set, risk
- *         can't be evaluated — return LOW / 0 minutes with an explanatory
- *         reason rather than guessing.</li>
- *     <li>Compute how overdue the shipment already is (0 if not yet due).</li>
- *     <li>If distance remaining is supplied and the shipment is actively
- *         moving (IN_TRANSIT / OUT_FOR_DELIVERY / PICKED_UP), estimate
- *         travel time needed at the traffic-adjusted speed and add any
- *         shortfall against the time left until the ETA.</li>
- *     <li>Add a flat weather-based delay estimate.</li>
- *     <li>Classify total predicted delay minutes into LOW/MEDIUM/HIGH using
- *         the configurable thresholds.</li>
+ * <li>Terminal shipments (DELIVERED, CANCELLED, FAILED_DELIVERY) are
+ * never "at risk" — return LOW / 0 minutes immediately.</li>
+ * <li>If the shipment has no {@code expectedDeliveryDate} set, risk
+ * can't be evaluated — return LOW / 0 minutes with an explanatory
+ * reason rather than guessing.</li>
+ * <li>Compute how overdue the shipment already is (0 if not yet due).</li>
+ * <li>If distance remaining is supplied and the shipment is actively
+ * moving (IN_TRANSIT / OUT_FOR_DELIVERY / PICKED_UP), estimate
+ * travel time needed at the traffic-adjusted speed and add any
+ * shortfall against the time left until the ETA.</li>
+ * <li>Add a flat weather-based delay estimate.</li>
+ * <li>Classify total predicted delay minutes into LOW/MEDIUM/HIGH using
+ * the configurable thresholds.</li>
  * </ol>
  */
 @Service
 @Transactional(readOnly = true)
 public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionService {
 
-    private static final Set<ShipmentStatus> TERMINAL_STATUSES =
-            EnumSet.of(ShipmentStatus.DELIVERED, ShipmentStatus.CANCELLED, ShipmentStatus.RETURNED);
+    private static final Set<ShipmentStatus> TERMINAL_STATUSES = EnumSet.of(ShipmentStatus.DELIVERED,
+            ShipmentStatus.CANCELLED, ShipmentStatus.RETURNED);
 
-    private static final Set<ShipmentStatus> ACTIVELY_MOVING_STATUSES =
-            EnumSet.of(ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT, ShipmentStatus.OUT_FOR_DELIVERY);
+    private static final Set<ShipmentStatus> ACTIVELY_MOVING_STATUSES = EnumSet.of(ShipmentStatus.PICKED_UP,
+            ShipmentStatus.IN_TRANSIT, ShipmentStatus.OUT_FOR_DELIVERY);
 
     private final ShipmentRepository shipmentRepository;
     private final DelayPredictionProperties properties;
 
     public RuleBasedDelayPredictionServiceImpl(ShipmentRepository shipmentRepository,
-                                                DelayPredictionProperties properties) {
+            DelayPredictionProperties properties) {
         this.shipmentRepository = shipmentRepository;
         this.properties = properties;
     }
 
     @Override
+    @Transactional
     public DelayPredictionResponse predictDelay(Long shipmentId, DelayPredictionRequest request) {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipment not found with id: " + shipmentId));
@@ -70,7 +73,8 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
 
         if (TERMINAL_STATUSES.contains(shipment.getShipmentStatus())) {
             return build(shipment, DelayRisk.LOW, 0,
-                    "Shipment is already in a terminal state (" + shipment.getShipmentStatus() + "); no delay risk applies.",
+                    "Shipment is already in a terminal state (" + shipment.getShipmentStatus()
+                            + "); no delay risk applies.",
                     now);
         }
 
@@ -90,6 +94,13 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         String reason = reasons.isEmpty()
                 ? "No significant delay factors detected; shipment is on schedule."
                 : String.join(" ", reasons);
+
+        // Save prediction into Shipment
+        shipment.setDelayReason(reason);
+        shipment.setIsDelayed(predictedDelayMinutes > 0);
+        shipment.setForecastConfidence(risk.name());
+
+        shipmentRepository.save(shipment);
 
         return build(shipment, risk, predictedDelayMinutes, reason, now);
     }
@@ -111,7 +122,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     }
 
     private long computeTravelShortfall(Shipment shipment, DelayPredictionRequest request,
-                                         LocalDateTime now, List<String> reasons) {
+            LocalDateTime now, List<String> reasons) {
         if (request == null || request.getDistanceRemainingKm() == null) {
             return 0;
         }
@@ -123,7 +134,8 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         double speedKmh = speedForTraffic(trafficLevel);
         double requiredTravelMinutes = (request.getDistanceRemainingKm() / speedKmh) * 60.0;
 
-        long minutesUntilDue = Math.max(0, Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+        long minutesUntilDue = Math.max(0,
+                Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
         long shortfall = Math.round(requiredTravelMinutes) - minutesUntilDue;
 
         if (shortfall > 0) {
@@ -171,7 +183,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     }
 
     private DelayPredictionResponse build(Shipment shipment, DelayRisk risk, long predictedDelayMinutes,
-                                           String reason, LocalDateTime evaluatedAt) {
+            String reason, LocalDateTime evaluatedAt) {
         return DelayPredictionResponse.builder()
                 .shipmentId(shipment.getShipmentId())
                 .delayRisk(risk)
