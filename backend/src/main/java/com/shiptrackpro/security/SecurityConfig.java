@@ -63,7 +63,8 @@ public class SecurityConfig {
                                 "/index.html",
                                 "/api/auth/**",
                                 "/api/roles/**",
-                                "/api/tracking/**"
+                                "/api/tracking/**",
+                                "/api/route/**"
                         ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))

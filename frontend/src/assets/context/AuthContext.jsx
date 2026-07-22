@@ -14,6 +14,14 @@ const demoUsers = [
     company: "ShipTrack Control Tower",
   },
   {
+    id: "USR-004",
+    name: "Google Admin",
+    email: "admin.google@shiptrack.com",
+    password: "google-oauth-admin",
+    role: "Administrator",
+    company: "Google Workspace",
+  },
+  {
     id: "USR-002",
     name: "Rahul Mehta",
     email: "operator@shiptrack.com",
@@ -59,6 +67,20 @@ const getStoredOtpRequests = () => {
 };
 
 const createOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
+
+const getGoogleSeedUser = (options = {}) => {
+  const normalizedEmail = String(options.email || "").trim().toLowerCase();
+  const isAdminFlow = options.role === "Administrator" || normalizedEmail.includes("admin");
+
+  return {
+    id: isAdminFlow ? "USR-GOOGLE-ADMIN" : "USR-GOOGLE",
+    name: isAdminFlow ? (options.name || "Google Admin") : (options.name || "Google User"),
+    email: normalizedEmail || (isAdminFlow ? "admin.google@shiptrack.com" : "google.user@shiptrack.com"),
+    password: isAdminFlow ? "google-oauth-admin" : "google-oauth",
+    role: isAdminFlow ? "Administrator" : (options.role || "Customer"),
+    company: options.company || "Google Workspace",
+  };
+};
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
@@ -109,14 +131,7 @@ export function AuthProvider({ children }) {
 
   const googleLogin = useCallback(
     (externalUser = null, options = {}) => {
-      const user = externalUser || {
-        id: "USR-GOOGLE",
-        name: options.name || "Google User",
-        email: options.email || "google.user@shiptrack.com",
-        password: "google-oauth",
-        role: options.role || "Customer",
-        company: options.company || "Google Workspace",
-      };
+      const user = externalUser || getGoogleSeedUser(options);
 
       const normalizedEmail = user.email.toLowerCase();
       const existingUser = registeredUsers.find(
@@ -158,6 +173,8 @@ export function AuthProvider({ children }) {
       }
 
       const code = createOtpCode();
+      // In a real application, you would send the OTP via email or SMS here.
+      console.log(`[OTP] Generated code for ${normalizedEmail}:`, code);
       setOtpRequests((current) => ({
         ...current,
         [normalizedEmail]: {
@@ -191,6 +208,11 @@ export function AuthProvider({ children }) {
       if (Date.now() > record.expiresAt) {
         return { ok: false, message: "The verification code has expired. Please request a new one." };
       }
+
+      console.log(`[OTP] Verification attempt for ${normalizedEmail}:`, {
+        enteredOtp: String(otp).trim(),
+        expectedOtp: record.code,
+      });
 
       if (String(otp).trim() !== record.code) {
         return { ok: false, message: "The verification code is invalid." };
@@ -234,7 +256,14 @@ export function AuthProvider({ children }) {
   );
 
   const register = useCallback(
-    ({ name, email, password, role, company }) => {
+    ({ name, email, password, role, company, companyName }) => {
+      if (!email) {
+        return { ok: false, message: "Email is required." };
+      }
+      if (!name) {
+        return { ok: false, message: "Name is required." };
+      }
+
       const normalizedEmail = email.trim().toLowerCase();
       const exists = registeredUsers.some(
         (candidate) => candidate.email.toLowerCase() === normalizedEmail,
@@ -250,7 +279,7 @@ export function AuthProvider({ children }) {
         email: email.trim(),
         password,
         role,
-        company: company.trim() || "ShipTrack Pro",
+        company: (company || companyName || "").trim() || "ShipTrack Pro",
       };
 
       setRegisteredUsers((users) => [...users, newUser]);

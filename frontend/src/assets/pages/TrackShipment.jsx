@@ -7,10 +7,15 @@ function statusClass(status) {
 }
 
 function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown time";
+  }
+
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 const forecastByStatus = {
@@ -106,7 +111,7 @@ function TrackShipment() {
         remaining: serverForecast.predictedDelayMinutes > 0
           ? `${serverForecast.predictedDelayMinutes} min delay forecast`
           : `${serverForecast.confidencePercentage}% forecast confidence`,
-        risk: serverForecast.riskLevel.replaceAll("_", " "),
+        risk: (serverForecast.riskLevel || "").replaceAll("_", " ") || "UNKNOWN",
         message: serverForecast.reason,
       }
     : localForecast;

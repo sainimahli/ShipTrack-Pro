@@ -2,10 +2,17 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 
-const roles = ["Customer", "Business Client", "Logistics Operator", "Support Agent", "Administrator"];
+const roles = [
+  "Customer",
+  "Business Client",
+  "Logistics Operator",
+  "Support Agent",
+  "Administrator",
+];
 
 function Register() {
-  const { register, requestOtp, verifyOtp, googleLogin } = useContext(AuthContext);
+  const { register, requestOtp, verifyOtp, googleLogin } =
+    useContext(AuthContext);
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [step, setStep] = useState("details");
@@ -22,7 +29,10 @@ function Register() {
   });
 
   const handleChange = (event) => {
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+    setForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
   };
 
   const handleOtpChange = (event) => {
@@ -51,7 +61,10 @@ function Register() {
 
     if (step === "details") {
       if (form.password.length < 6) {
-        setFeedback({ type: "error", message: "Use a password with at least 6 characters." });
+        setFeedback({
+          type: "error",
+          message: "Use a password with at least 6 characters.",
+        });
         return;
       }
 
@@ -100,11 +113,14 @@ function Register() {
 
           <div className="eyebrow">Account setup</div>
           <h1>Create your ShipTrack account</h1>
-          <p className="subtle">Choose the role that matches your milestone workflow access.</p>
+          <p className="subtle">
+            Choose the role that matches your milestone workflow access.
+          </p>
 
-          {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
+          {feedback.message && (
+            <div className={`alert ${feedback.type}`}>{feedback.message}</div>
+          )}
 
-          
           <form className="auth-form" onSubmit={handleSubmit}>
             {step === "details" ? (
               <>
@@ -152,7 +168,13 @@ function Register() {
 
                 <div className="form-field">
                   <label htmlFor="role">Role</label>
-                  <select className="select" id="role" name="role" onChange={handleChange} value={form.role}>
+                  <select
+                    className="select"
+                    id="role"
+                    name="role"
+                    onChange={handleChange}
+                    value={form.role}
+                  >
                     {roles.map((role) => (
                       <option key={role} value={role}>
                         {role}
@@ -162,55 +184,53 @@ function Register() {
                 </div>
 
                 {form.role === "Business Client" && (
-  <>
-    <div className="form-field">
-      <label>Company Name</label>
-      <input
-        className="input"
-        name="companyName"
-        value={form.companyName}
-        onChange={handleChange}
-        placeholder="Enter company name"
-      />
-    </div>
+                  <>
+                    <div className="form-field">
+                      <label>Company Name</label>
+                      <input
+                        className="input"
+                        name="companyName"
+                        value={form.companyName}
+                        onChange={handleChange}
+                        placeholder="Enter company name"
+                      />
+                    </div>
 
-    <div className="form-field">
-      <label>GST Number</label>
-      <input
-        className="input"
-        name="gstNumber"
-        value={form.gstNumber}
-        onChange={handleChange}
-        placeholder="Enter GST number"
-      />
-    </div>
+                    <div className="form-field">
+                      <label>GST Number</label>
+                      <input
+                        className="input"
+                        name="gstNumber"
+                        value={form.gstNumber}
+                        onChange={handleChange}
+                        placeholder="Enter GST number"
+                      />
+                    </div>
 
-    <div className="form-field">
-      <label>Business Type</label>
-      <input
-        className="input"
-        name="businessType"
-        value={form.businessType}
-        onChange={handleChange}
-        placeholder="e.g. Logistics"
-      />
-    </div>
+                    <div className="form-field">
+                      <label>Business Type</label>
+                      <input
+                        className="input"
+                        name="businessType"
+                        value={form.businessType}
+                        onChange={handleChange}
+                        placeholder="e.g. Logistics"
+                      />
+                    </div>
 
-    <div className="form-field">
-      <label>Website</label>
-      <input
-        className="input"
-        type="url"
-        name="website"
-        value={form.website}
-        onChange={handleChange}
-        placeholder="https://example.com"
-      />
-    </div>
-  </>
-)}
-
-                
+                    <div className="form-field">
+                      <label>Website</label>
+                      <input
+                        className="input"
+                        type="url"
+                        name="website"
+                        value={form.website}
+                        onChange={handleChange}
+                        placeholder="https://example.com"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <button className="button primary" type="submit">
                   Send verification code
@@ -221,7 +241,8 @@ function Register() {
                 <div className="auth-otp-card">
                   <div className="eyebrow">Email verification</div>
                   <p className="subtle">
-                    Enter the one-time code you received to finish creating your account.
+                    Enter the one-time code you received to finish creating your
+                    account.
                   </p>
                   <div className="form-field">
                     <label htmlFor="otp">Verification code</label>
@@ -263,8 +284,9 @@ function Register() {
         <div className="auth-visual-inner">
           <h2>Role-based access from the first sprint.</h2>
           <p>
-            Customers, operators, support agents, business clients, and administrators each land in
-            the same core platform with permissions ready for backend enforcement.
+            Customers, operators, support agents, business clients, and
+            administrators each land in the same core platform with permissions
+            ready for backend enforcement.
           </p>
         </div>
       </section>
