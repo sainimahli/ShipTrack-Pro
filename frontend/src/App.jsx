@@ -10,15 +10,29 @@ import CreateShipment from "./assets/pages/CreateShipment";
 import Dashboard from "./assets/pages/Dashboard";
 import ForgotPassword from "./assets/pages/ForgotPassword";
 import Login from "./assets/pages/Login";
+import ManageUsers from "./assets/pages/ManageUsers";
+import OAuth2Success from "./assets/pages/OAuth2Success";
 import Profile from "./assets/pages/Profile";
 import Register from "./assets/pages/Register";
 import ShipmentList from "./assets/pages/ShipmentList";
 import TrackShipment from "./assets/pages/TrackShipment";
-import OAuth2Success from "./assets/pages/OAuth2Success";
+
+const roleLabels = {
+  ADMINISTRATOR: "Administrator",
+};
+
+const normalizeRole = (role) => roleLabels[role] || role || "Customer";
+
+const canManageUsers = (role) => normalizeRole(role) === "Administrator";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useContext(AuthContext);
   return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }) {
+  const { auth } = useContext(AuthContext);
+  return canManageUsers(auth?.user?.role) ? children : <Navigate to="/dashboard" replace />;
 }
 
 function PublicRoute({ children }) {
@@ -39,6 +53,7 @@ function AppLayout() {
             <Route path="/shipments/new" element={<CreateShipment />} />
             <Route path="/track" element={<TrackShipment />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>

@@ -1,10 +1,33 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/auth";
 import { getRoles, register as registerApi } from "../services/api";
 
+const fallbackRoles = [
+  { roleId: 1, roleName: "CUSTOMER" },
+  { roleId: 2, roleName: "BUSINESS_CLIENT" },
+  { roleId: 3, roleName: "LOGISTICS_OPERATOR" },
+  { roleId: 5, roleName: "ADMINISTRATOR" },
+];
+
+const isSuperAdminRole = (roleName) =>
+  String(roleName).replace(/[^a-z]/gi, "").toUpperCase() === "SUPERADMIN";
+
+const formatRoleName = (roleName) =>
+  roleName
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+const withDefaultRoles = (loadedRoles) => {
+  const availableRoles = loadedRoles.filter((role) => !isSuperAdminRole(role.roleName));
+  const roleNames = new Set(availableRoles.map((role) => role.roleName));
+  const missingRoles = fallbackRoles.filter((role) => !roleNames.has(role.roleName));
+
+  return [...availableRoles, ...missingRoles];
+};
+
 function Register() {
-  const { googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [roles, setRoles] = useState([]);
@@ -15,7 +38,7 @@ function Register() {
     phone: "",
     password: "",
     confirmPassword: "",
-    roleId: "Customer",
+    roleId: "",
     companyName: "",
     gstNumber: "",
     businessType: "",
@@ -28,37 +51,56 @@ function Register() {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-       const response = await getRoles();
-console.log(response.data);
-setRoles(response.data);
+const response = await getRoles();
+const loadedRoles = Array.isArray(response.data) ? response.data : [];
+setRoles(withDefaultRoles(loadedRoles));
       } catch (error) {
         console.error("Failed to load roles", error);
+        setRoles(fallbackRoles);
       }
     };
     fetchRoles();
   }, []);
+
+  const selectedRole = roles.find((role) => String(role.roleId) === String(form.roleId));
+  const isBusinessClient = selectedRole?.roleName === "BUSINESS_CLIENT";
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-  
-try {
-    const result = await registerApi(form);
 
-    if (result.status === 200 || result.status === 201) {
+    if (form.password !== form.confirmPassword) {
+      setFeedback({
+        type: "error",
+        message: "Passwords do not match.",
+      });
+      return;
+    }
+
+    try {
+      const registrationForm = { ...form };
+      delete registrationForm.confirmPassword;
+
+      const result = await registerApi({
+        ...registrationForm,
+        phone: registrationForm.phone.trim(),
+        roleId: Number(registrationForm.roleId),
+      });
+
+      if (result.status === 200 || result.status === 201) {
         setFeedback({
-            type: "success",
-            message: "Registration successful."
+          type: "success",
+          message: result.data?.message || "Registration successful.",
         });
 
         navigate("/login");
-    }
-} catch (error) {
-    setFeedback({
+      }
+    } catch (error) {
+      setFeedback({
         type: "error",
-        message: error.response?.data?.message || "Registration failed."
-    });
-}
-return;
-};
+        message: error.response?.data?.message || "Registration failed.",
+      });
+    }
+  };
 
   return (
     <div className="auth-page">
@@ -177,17 +219,19 @@ return;
         required
       >
         <option value="">Select Role</option>
- {roles
+<option value="">Select Role</option>
+
+{roles
   .filter((role) => role.roleName !== "ADMIN")
   .map((role) => (
     <option key={role.roleId} value={role.roleId}>
-      {role.roleName}
+      {formatRoleName(role.roleName)}
     </option>
   ))}
       </select>
     </div>
 
-    {Number(form.roleId) === 2 && (
+    {isBusinessClient && (
       <>
         <div className="form-field">
           <label>Company Name</label>

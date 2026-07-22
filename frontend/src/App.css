@@ -294,6 +294,37 @@ a {
   margin-bottom: 18px;
 }
 
+.user-tabs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.user-tab {
+  align-items: center;
+  background: #f6f9fc;
+  border: 1px solid #cbd8e5;
+  border-radius: 8px;
+  color: var(--ink);
+  display: flex;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+.user-tab.active {
+  background: #e7f5f8;
+  border-color: var(--brand);
+  color: var(--brand-strong);
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -386,6 +417,11 @@ a {
   color: var(--danger);
 }
 
+.button.compact {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
@@ -407,6 +443,11 @@ a {
   color: #2456a6;
 }
 
+.badge.pending-approval {
+  background: #fff7db;
+  color: #8a5d00;
+}
+
 .badge.picked-up {
   background: #edf7ef;
   color: #21713b;
@@ -422,13 +463,19 @@ a {
   color: #8a5d00;
 }
 
+.badge.pending {
+  background: #fff7db;
+  color: #8a5d00;
+}
+
 .badge.delivered {
   background: #e5f7ee;
   color: #137449;
 }
 
 .badge.failed-delivery,
-.badge.cancelled {
+.badge.cancelled,
+.badge.rejected {
   background: #fff0ec;
   color: #a33d1c;
 }
@@ -508,6 +555,94 @@ a {
   font-size: 13px;
 }
 
+.live-monitoring {
+  align-items: center;
+  background: linear-gradient(135deg, #0f334d, #17645d);
+  border-radius: 10px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 18px 22px;
+}
+
+.live-monitoring .eyebrow,
+.live-monitoring span,
+.live-monitoring small {
+  color: #cce9e6;
+  display: block;
+}
+
+.live-monitoring strong {
+  display: block;
+  font-size: 20px;
+  margin: 5px 0;
+}
+
+.live-monitoring > div:last-child {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-risk {
+  background: #e1f5eb;
+  border-radius: 999px;
+  color: #176144 !important;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.live-risk.high-risk,
+.live-risk.stopped {
+  background: #fdeceb;
+  color: #96362f !important;
+}
+
+.live-risk.watch {
+  background: #fff4dc;
+  color: #89610d !important;
+}
+
+.tracking-map-panel {
+  margin-bottom: 18px;
+}
+
+.tracking-map {
+  border: 0;
+  border-radius: 8px;
+  display: block;
+  height: 280px;
+  margin: 0 0 14px;
+  width: 100%;
+}
+
+.forecast-panel {
+  border-top: 4px solid #2579a9;
+}
+
+.forecast-details {
+  align-items: center;
+  background: #f5fafb;
+  border: 1px solid #dce9ed;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0;
+  padding: 12px;
+}
+
+.forecast-details span {
+  color: #66758a;
+  font-size: 13px;
+}
+
+.forecast-details strong {
+  color: #17364e;
+}
+
 .route-strip {
   align-items: center;
   display: grid;
@@ -563,6 +698,156 @@ a {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px;
+}
+
+.admin-shipment-overview {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.admin-shipment-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.admin-shipment-panel.wide {
+  grid-column: 1 / -1;
+}
+
+.admin-workspace {
+  margin-bottom: 18px;
+}
+
+.requested-shipments {
+  margin-bottom: 18px;
+}
+
+.requested-shipments-heading {
+  align-items: flex-start;
+}
+
+.requested-shipment-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shipment-request {
+  border: 1px solid #e1cf9f;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.shipment-request-header,
+.shipment-request-meta {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.shipment-request-header strong {
+  color: var(--ink);
+  display: block;
+  margin-top: 4px;
+}
+
+.shipment-request-route {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shipment-request-route div {
+  background: #f7fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+}
+
+.shipment-request-route span,
+.shipment-request-route small,
+.shipment-request-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shipment-request-route strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.shipment-request-meta {
+  justify-content: flex-start;
+}
+
+.shipment-request-meta span + span::before {
+  color: #a0adbb;
+  content: "|";
+  margin-right: 12px;
+}
+
+.requested-empty {
+  background: #f7fafc;
+  border: 1px dashed #b9c7d6;
+  border-radius: 8px;
+  color: var(--muted);
+  padding: 22px;
+  text-align: center;
+}
+
+.lifecycle-form {
+  background: #f7fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.history-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.compact-timeline {
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.roman-list,
+.feature-list {
+  color: #29384d;
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.roman-list {
+  list-style-type: lower-roman;
+}
+
+.feature-list li::marker {
+  color: var(--brand);
+}
+
+.status-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.live-delivery-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .auth-page {
@@ -706,9 +991,18 @@ a {
   .grid-2,
   .grid-3,
   .grid-4,
+  .admin-shipment-overview,
   .form-grid,
   .schema-grid,
   .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .live-delivery-list {
+    grid-template-columns: 1fr;
+  }
+
+  .requested-shipment-grid {
     grid-template-columns: 1fr;
   }
 
@@ -742,11 +1036,29 @@ a {
     flex-direction: column;
   }
 
+  .user-tabs {
+    grid-template-columns: 1fr;
+  }
+
   .route-strip {
     grid-template-columns: 1fr;
   }
 
   .route-arrow {
     text-align: left;
+  }
+
+  .filters .input {
+    min-width: 0 !important;
+  }
+
+  .shipment-request-header,
+  .shipment-request-route {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .shipment-request-header {
+    display: grid;
   }
 }

@@ -36,6 +36,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -67,15 +68,22 @@ public class AuthServiceImpl implements AuthService {
         private final SecureRandom secureRandom = new SecureRandom();
 
         @Override
+        @Transactional
         public AuthResponse register(RegisterRequest request) {
 
-                if (userRepository.existsByEmail(request.getEmail())) {
+                String email = normalizeRequired(request.getEmail(), "Email is required.").toLowerCase();
+                String phone = normalizeOptional(request.getPhone());
+                String password = normalizeRequired(request.getPassword(), "Password is required.");
+
+                if (request.getRoleId() == null) {
+                        throw new RuntimeException("Please select a role.");
+                }
+
+                if (userRepository.existsByEmail(email)) {
                         throw new EmailAlreadyExistsException("Email already exists.");
                 }
 
-                if (request.getPhone() != null &&
-                                !request.getPhone().isBlank() &&
-                                userRepository.existsByPhone(request.getPhone())) {
+                if (phone != null && userRepository.existsByPhone(phone)) {
 
                         throw new EmailAlreadyExistsException("Phone number already exists.");
                 }
@@ -83,19 +91,31 @@ public class AuthServiceImpl implements AuthService {
                 Role role = roleRepository.findById(request.getRoleId())
                                 .orElseThrow(() -> new RuntimeException("Invalid role selected."));
 
+                String roleName = role.getRoleName();
+
+                if (roleName != null && roleName.replaceAll("[^A-Za-z]", "").equalsIgnoreCase("SUPERADMIN")) {
+                        throw new RuntimeException("The Super Admin role is no longer available.");
+                }
+
+                if ("BUSINESS_CLIENT".equalsIgnoreCase(roleName) &&
+                                normalizeOptional(request.getCompanyName()) == null) {
+
+                        throw new RuntimeException("Company name is required.");
+                }
+
                 User user = new User();
 
-                user.setFirstName(request.getFirstName());
-                user.setLastName(request.getLastName());
-                user.setEmail(request.getEmail());
-                user.setPhone(request.getPhone());
+                user.setFirstName(normalizeRequired(request.getFirstName(), "First name is required."));
+                user.setLastName(normalizeRequired(request.getLastName(), "Last name is required."));
+                user.setEmail(email);
+                user.setPhone(phone);
 
                 user.setPassword(
-                                passwordEncoder.encode(request.getPassword()));
+                                passwordEncoder.encode(password));
 
                 user.setRole(role);
 
-                if ("CUSTOMER".equalsIgnoreCase(role.getRoleName())) {
+                if ("CUSTOMER".equalsIgnoreCase(roleName)) {
 
                         user.setRegistrationStatus(
                                         RegistrationStatus.APPROVED);
@@ -110,21 +130,15 @@ public class AuthServiceImpl implements AuthService {
                 user.setActive(true);
 
                 User savedUser = userRepository.save(user);
-                if ("BUSINESS_CLIENT".equalsIgnoreCase(role.getRoleName())) {
-
-                        if (request.getCompanyName() == null ||
-                                        request.getCompanyName().isBlank()) {
-
-                                throw new RuntimeException("Company name is required.");
-                        }
+                if ("BUSINESS_CLIENT".equalsIgnoreCase(roleName)) {
 
                         BusinessClient businessClient = new BusinessClient();
 
                         businessClient.setUser(savedUser);
-                        businessClient.setCompanyName(request.getCompanyName());
-                        businessClient.setGstNumber(request.getGstNumber());
-                        businessClient.setBusinessType(request.getBusinessType());
-                        businessClient.setWebsite(request.getWebsite());
+                        businessClient.setCompanyName(normalizeRequired(request.getCompanyName(), "Company name is required."));
+                        businessClient.setGstNumber(normalizeOptional(request.getGstNumber()));
+                        businessClient.setBusinessType(normalizeOptional(request.getBusinessType()));
+                        businessClient.setWebsite(normalizeOptional(request.getWebsite()));
 
                         businessClientRepository.save(businessClient);
                 }
@@ -142,6 +156,24 @@ public class AuthServiceImpl implements AuthService {
                                 null,
                                 savedUser.getRole().getRoleName(),
                                 "Registration request submitted successfully. Please wait for Admin approval.");
+        }
+
+        private String normalizeRequired(String value, String message) {
+                String normalized = normalizeOptional(value);
+
+                if (normalized == null) {
+                        throw new RuntimeException(message);
+                }
+
+                return normalized;
+        }
+
+        private String normalizeOptional(String value) {
+                if (value == null || value.isBlank()) {
+                        return null;
+                }
+
+                return value.trim();
         }
 
         @Override

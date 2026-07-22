@@ -22,8 +22,16 @@ export const register = (data) => API.post("/auth/register", data);
 // Roles
 export const getRoles = () => API.get("/roles");
 
+// Milestone 2: live delivery monitoring and ETA forecasting
+export const getDeliveryForecast = (trackingNumber) =>
+  API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
+
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
+
+export const getApprovedUsers = () => API.get("/admin/approved-users");
+
+export const getRejectedUsers = () => API.get("/admin/rejected-users");
 
 export const approveUser = (id) => API.put(`/admin/users/${id}/approve`);
 

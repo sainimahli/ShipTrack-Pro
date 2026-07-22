@@ -7,6 +7,7 @@ const titles = {
   "/shipments": ["Shipment Management", "Create, monitor, and update shipment lifecycle records"],
   "/shipments/new": ["Create Shipment", "Register a new package into the tracking workflow"],
   "/track": ["Tracking Dashboard", "Search by tracking number and view delivery progress"],
+  "/users/manage": ["Manage Users", "Review pending, approved, and rejected account registrations"],
   "/profile": ["Profile & Access", "JWT session preview and role capabilities"],
 };
 

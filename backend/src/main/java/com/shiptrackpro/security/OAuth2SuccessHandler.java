@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -22,6 +23,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     @Autowired
     private GoogleAuthService googleAuthService;
 
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     @Override
     public void onAuthenticationSuccess( 
             HttpServletRequest request,
@@ -33,19 +37,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         String name = oauthUser.getAttribute("name");
         String email = oauthUser.getAttribute("email");
-        System.out.println("Google User: " + name);
-        System.out.println("Email: " + email);
+        Boolean emailVerified = oauthUser.getAttribute("email_verified");
 
         try {
+    if (email == null || email.isBlank() || !Boolean.TRUE.equals(emailVerified)) {
+        throw new IllegalArgumentException("Google did not provide a verified email address.");
+    }
 
-    AuthResponse authResponse = googleAuthService.googleLogin(email);
-
-    System.out.println("JWT Token: " + authResponse.getToken());
-    System.out.println("Role: " + authResponse.getRole());
+    AuthResponse authResponse = googleAuthService.googleLogin(email, name);
 
     response.sendRedirect(
-            "http://localhost:5173/dashboard/success?token="
-                    + authResponse.getToken());
+            frontendUrl + "/dashboard/success?token="
+                    + URLEncoder.encode(authResponse.getToken(), StandardCharsets.UTF_8));
 
 } catch (RuntimeException ex) {
 
@@ -54,7 +57,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             StandardCharsets.UTF_8);
 
     response.sendRedirect(
-            "http://localhost:5173/login?error=" + error);
+            frontendUrl + "/login?error=" + error);
 }
     }
 }
