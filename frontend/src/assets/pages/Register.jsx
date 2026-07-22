@@ -2,6 +2,19 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getRoles, register as registerApi } from "../services/api";
 
+<<<<<<< HEAD
+const roles = [
+  "Customer",
+  "Business Client",
+  "Logistics Operator",
+  "Support Agent",
+  "Administrator",
+];
+
+function Register() {
+  const { register, requestOtp, verifyOtp, googleLogin } =
+    useContext(AuthContext);
+=======
 const fallbackRoles = [
   { roleId: 1, roleName: "CUSTOMER" },
   { roleId: 2, roleName: "BUSINESS_CLIENT" },
@@ -28,6 +41,7 @@ const withDefaultRoles = (loadedRoles) => {
 };
 
 function Register() {
+>>>>>>> main
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [roles, setRoles] = useState([]);
@@ -46,14 +60,17 @@ function Register() {
   });
 
   const handleChange = (event) => {
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+    setForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
   };
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const response = await getRoles();
-        const loadedRoles = Array.isArray(response.data) ? response.data : [];
-        setRoles(withDefaultRoles(loadedRoles));
+const response = await getRoles();
+const loadedRoles = Array.isArray(response.data) ? response.data : [];
+setRoles(withDefaultRoles(loadedRoles));
       } catch (error) {
         console.error("Failed to load roles", error);
         setRoles(fallbackRoles);
@@ -68,6 +85,15 @@ function Register() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+<<<<<<< HEAD
+    if (step === "details") {
+      if (form.password.length < 6) {
+        setFeedback({
+          type: "error",
+          message: "Use a password with at least 6 characters.",
+        });
+        return;
+=======
     if (form.password !== form.confirmPassword) {
       setFeedback({
         type: "error",
@@ -93,6 +119,7 @@ function Register() {
         });
 
         navigate("/login");
+>>>>>>> main
       }
     } catch (error) {
       setFeedback({
@@ -120,10 +147,168 @@ function Register() {
 
           <div className="eyebrow">Account setup</div>
           <h1>Create your ShipTrack account</h1>
-          <p className="subtle">Choose the role that matches your milestone workflow access.</p>
+          <p className="subtle">
+            Choose the role that matches your milestone workflow access.
+          </p>
 
-          {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
+          {feedback.message && (
+            <div className={`alert ${feedback.type}`}>{feedback.message}</div>
+          )}
 
+<<<<<<< HEAD
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {step === "details" ? (
+              <>
+                <div className="form-field">
+                  <label htmlFor="name">Full name</label>
+                  <input
+                    className="input"
+                    id="name"
+                    name="name"
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter your full name"
+                    value={form.name}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    className="input"
+                    id="email"
+                    name="email"
+                    onChange={handleChange}
+                    required
+                    type="email"
+                    placeholder="Enter your email"
+                    value={form.email}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    className="input"
+                    id="password"
+                    minLength={6}
+                    name="password"
+                    onChange={handleChange}
+                    required
+                    type="password"
+                    placeholder="Enter your password"
+                    value={form.password}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="role">Role</label>
+                  <select
+                    className="select"
+                    id="role"
+                    name="role"
+                    onChange={handleChange}
+                    value={form.role}
+                  >
+                    {roles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {form.role === "Business Client" && (
+                  <>
+                    <div className="form-field">
+                      <label>Company Name</label>
+                      <input
+                        className="input"
+                        name="companyName"
+                        value={form.companyName}
+                        onChange={handleChange}
+                        placeholder="Enter company name"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>GST Number</label>
+                      <input
+                        className="input"
+                        name="gstNumber"
+                        value={form.gstNumber}
+                        onChange={handleChange}
+                        placeholder="Enter GST number"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>Business Type</label>
+                      <input
+                        className="input"
+                        name="businessType"
+                        value={form.businessType}
+                        onChange={handleChange}
+                        placeholder="e.g. Logistics"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>Website</label>
+                      <input
+                        className="input"
+                        type="url"
+                        name="website"
+                        value={form.website}
+                        onChange={handleChange}
+                        placeholder="https://example.com"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <button className="button primary" type="submit">
+                  Send verification code
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="auth-otp-card">
+                  <div className="eyebrow">Email verification</div>
+                  <p className="subtle">
+                    Enter the one-time code you received to finish creating your
+                    account.
+                  </p>
+                  <div className="form-field">
+                    <label htmlFor="otp">Verification code</label>
+                    <input
+                      className="input"
+                      id="otp"
+                      name="otp"
+                      onChange={handleOtpChange}
+                      required
+                      placeholder="Enter the 6-digit code"
+                      value={otp}
+                    />
+                  </div>
+                </div>
+                <button className="button primary" type="submit">
+                  Verify and create account
+                </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => {
+                    setStep("details");
+                    setFeedback({ type: "", message: "" });
+                  }}
+                >
+                  Edit details
+                </button>
+              </>
+            )}
+          </form>
+=======
          <form className="auth-form" onSubmit={handleSubmit}>
   <>
     <div className="form-field">
@@ -219,11 +404,15 @@ function Register() {
         required
       >
         <option value="">Select Role</option>
-        {roles.map((role) => (
-          <option key={role.roleId} value={role.roleId}>
-            {formatRoleName(role.roleName)}
-          </option>
-        ))}
+<option value="">Select Role</option>
+
+{roles
+  .filter((role) => role.roleName !== "ADMIN")
+  .map((role) => (
+    <option key={role.roleId} value={role.roleId}>
+      {formatRoleName(role.roleName)}
+    </option>
+  ))}
       </select>
     </div>
 
@@ -281,6 +470,7 @@ function Register() {
     </button>
   </>
 </form>
+>>>>>>> main
 
           <p className="auth-switch">
             Already registered? <Link to="/login">Sign in</Link>
@@ -292,7 +482,13 @@ function Register() {
         <div className="auth-visual-inner">
           <h2>Register to Manage Your Shipment</h2>
           <p>
+<<<<<<< HEAD
+            Customers, operators, support agents, business clients, and
+            administrators each land in the same core platform with permissions
+            ready for backend enforcement.
+=======
             Join a unified platform where customers, operators, and administrators collaborate to ensure smooth and reliable shipment management.
+>>>>>>> main
           </p>
         </div>
       </section>
