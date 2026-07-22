@@ -1,30 +1,17 @@
 package com.shiptrackpro.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
-/**
- * Payload for updating an existing shipment's mutable details.
- *
- * <p>Same shape as {@link CreateShipmentRequest} today, but kept as a
- * distinct class (per requirements) so the two can diverge independently —
- * e.g. if update should later stop allowing {@code senderUserId} changes,
- * or gain fields Create doesn't need. Still excludes {@code id},
- * {@code trackingNumber}, {@code shipmentStatus}, {@code createdBy}, and
- * the audit timestamps, which remain system-managed and untouched by
- * updates.</p>
- */
 @Getter
 @Setter
 @Builder
@@ -32,46 +19,29 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class UpdateShipmentRequest {
 
-    @NotBlank(message = "Sender name is required")
-    @Size(max = 150)
-    private String senderName;
+    
 
-    @NotBlank(message = "Sender phone is required")
-    @Size(max = 20)
-    private String senderPhone;
+    @NotNull(message = "Sender address ID is required")
+    private Long senderAddressId;
 
-    private Long senderUserId;
+    @NotNull(message = "Receiver address ID is required")
+    private Long receiverAddressId;
 
-    @NotBlank(message = "Receiver name is required")
-    @Size(max = 150)
-    private String receiverName;
+    private Long originWarehouseId;
 
-    @NotBlank(message = "Receiver phone is required")
-    @Size(max = 20)
-    private String receiverPhone;
+    private Long destinationWarehouseId;
 
-    private Long receiverUserId;
+    private Long assignedDriverId;
 
-    @NotNull(message = "Origin address is required")
-    @Valid
-    private AddressRequest originAddress;
+    private Long assignedVehicleId;
 
-    @NotNull(message = "Destination address is required")
-    @Valid
-    private AddressRequest destinationAddress;
+    @NotNull(message = "Total weight is required")
+    @Positive(message = "Total weight must be greater than zero")
+    private BigDecimal totalWeightKg;
 
-    @NotNull(message = "Package weight is required")
-    @Positive(message = "Package weight must be greater than zero")
-    private Double packageWeight;
-
-    @NotBlank(message = "Shipment type is required")
-    @Size(max = 30)
+    @NotNull(message = "Shipment type is required")
     private String shipmentType;
 
-    @Size(max = 50)
-    private String packageType;
-
     @Future(message = "Expected delivery date must be in the future")
-    private LocalDateTime expectedDeliveryDate;
-
+    private LocalDate expectedDeliveryDate;
 }

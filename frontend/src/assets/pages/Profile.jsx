@@ -1,5 +1,6 @@
-import { useContext } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/auth";
+import { getProfile, updateProfile } from "../services/api";
 
 const roleLabels = {
   CUSTOMER: "Customer",
@@ -9,117 +10,170 @@ const roleLabels = {
   ADMINISTRATOR: "Administrator",
 };
 
-const controlledRoles = {
-  Administrator: ["Logistics Operator", "Business Client", "Customer"],
-  "Business Client": ["Customer"],
-};
-
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 
 function Profile() {
-  const { auth, capabilities, users } = useContext(AuthContext);
-  const role = normalizeRole(auth.user.role);
-  const visibleRoles = controlledRoles[role] || [];
-  const controlledUsers = users.filter((user) => visibleRoles.includes(normalizeRole(user.role)));
+  const { capabilities, updateAuthenticatedUser } = useContext(AuthContext);
+  const [profile, setProfile] = useState(null);
+  const [form, setForm] = useState({ firstName: "", lastName: "", phone: "" });
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState({ type: "", message: "" });
+
+  const loadProfile = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getProfile();
+      const currentProfile = response.data;
+      setProfile(currentProfile);
+      setForm({
+        firstName: currentProfile.firstName || "",
+        lastName: currentProfile.lastName || "",
+        phone: currentProfile.phone || "",
+      });
+      updateAuthenticatedUser(currentProfile);
+    } catch {
+      setFeedback({ type: "error", message: "Your profile could not be loaded. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateAuthenticatedUser]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setFeedback({ type: "", message: "" });
+    try {
+      await updateProfile(form);
+      const updatedProfile = { ...profile, ...form };
+      setProfile(updatedProfile);
+      updateAuthenticatedUser(updatedProfile);
+      setIsEditing(false);
+      setFeedback({ type: "success", message: "Profile updated successfully." });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error.response?.data?.message || "Profile could not be updated. Please try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setForm({
+      firstName: profile?.firstName || "",
+      lastName: profile?.lastName || "",
+      phone: profile?.phone || "",
+    });
+    setFeedback({ type: "", message: "" });
+    setIsEditing(false);
+  };
+
+  const role = normalizeRole(profile?.role);
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <div className="eyebrow">Authentication and RBAC</div>
+          <div className="eyebrow">Account settings</div>
           <h1>Profile management</h1>
-          <p className="subtle">Review the active JWT-style session and role permissions.</p>
+          <p className="subtle">Manage your account details and review your role-based access.</p>
         </div>
       </div>
 
-      <section className="grid grid-2">
-        <div className="panel">
-          <h2 className="section-title">Account</h2>
-          <div className="workflow-list">
-            <div className="schema-box">
-              <strong>Name</strong>
-              <p className="subtle" style={{ margin: "6px 0 0" }}>
-                {auth.user.name}
-              </p>
-            </div>
-            <div className="schema-box">
-              <strong>Email</strong>
-              <p className="subtle" style={{ margin: "6px 0 0" }}>
-                {auth.user.email}
-              </p>
-            </div>
-            <div className="schema-box">
-              <strong>Company</strong>
-              <p className="subtle" style={{ margin: "6px 0 0" }}>
-                {auth.user.company}
-              </p>
-            </div>
-            <div className="schema-box">
-              <strong>Role</strong>
-              <p className="subtle" style={{ margin: "6px 0 0" }}>
-                {role}
-              </p>
-            </div>
-          </div>
-        </div>
+      {feedback.message && <p className={`form-feedback ${feedback.type}`}>{feedback.message}</p>}
 
-        <div className="panel">
-          <h2 className="section-title">Session</h2>
-          <div className="schema-box" style={{ wordBreak: "break-all" }}>
-            <strong>JWT preview</strong>
-            <p className="subtle" style={{ margin: "8px 0 0" }}>
-              {auth.token}
-            </p>
-          </div>
-
-          <h2 className="section-title" style={{ marginTop: 20 }}>
-            Role Capabilities
-          </h2>
-          <div className="workflow-list">
-            {capabilities.map((capability, index) => (
-              <div className="workflow-step" key={capability}>
-                <div className="step-number">{index + 1}</div>
+      {isLoading ? (
+        <section className="panel"><p className="subtle">Loading your profile...</p></section>
+      ) : profile && (
+        <section className="grid grid-2">
+          <form className="panel profile-card" onSubmit={handleSave}>
+            <div className="panel-header compact">
+              <div className="profile-identity">
+                <div className="profile-monogram" aria-hidden="true">
+                  {`${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}` || "U"}
+                </div>
                 <div>
-                  <strong>{capability}</strong>
-                  <p className="subtle" style={{ margin: "4px 0 0" }}>
-                    Permission mapped for {role}.
-                  </p>
+                  <div className="profile-card-kicker">Personal account</div>
+                  <h2 className="section-title">{`${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Your profile"}</h2>
+                  <p className="subtle">Your personal information is only visible to you.</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              {!isEditing && (
+                <button className="button secondary" onClick={() => setIsEditing(true)} type="button">
+                  Edit profile
+                </button>
+              )}
+            </div>
 
-      {visibleRoles.length > 0 && (
-        <section className="panel" style={{ marginTop: 18 }}>
-          <h2 className="section-title">Controlled Users</h2>
-          <p className="subtle" style={{ marginTop: -8 }}>
-            {role} controls {visibleRoles.join(", ")} accounts.
-          </p>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>User ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Company</th>
-                </tr>
-              </thead>
-              <tbody>
-                {controlledUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.id}</td>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>{user.company}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="profile-form-grid form-grid">
+              <label>
+                First name
+                <input disabled={!isEditing} name="firstName" onChange={handleChange} value={form.firstName} />
+              </label>
+              <label>
+                Last name
+                <input disabled={!isEditing} name="lastName" onChange={handleChange} value={form.lastName} />
+              </label>
+              <label>
+                Email
+                <input disabled value={profile.email || ""} />
+              </label>
+              <label>
+                Phone
+                <input disabled={!isEditing} name="phone" onChange={handleChange} value={form.phone} />
+              </label>
+              <label>
+                Role
+                <input disabled value={role} />
+              </label>
+              <label>
+                Account status
+                <input disabled value={profile.registrationStatus || "Active"} />
+              </label>
+            </div>
+
+            {isEditing && (
+              <div className="form-actions">
+                <button className="button primary" disabled={isSaving} type="submit">
+                  {isSaving ? "Saving..." : "Save changes"}
+                </button>
+                <button className="button secondary" disabled={isSaving} onClick={handleCancel} type="button">
+                  Cancel
+                </button>
+              </div>
+            )}
+          </form>
+
+          <div className="panel">
+            <h2 className="section-title">Role capabilities</h2>
+            <p className="subtle">Permissions assigned to your {role} account.</p>
+            <div className="workflow-list">
+              {capabilities.length ? capabilities.map((capability, index) => (
+                <div className="workflow-step" key={capability}>
+                  <div className="step-number">{index + 1}</div>
+                  <div><strong>{capability}</strong></div>
+                </div>
+              )) : <p className="subtle">No additional capabilities are configured for this role.</p>}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2 className="section-title">Account activity</h2>
+            <p className="subtle">
+              Activity history is not available yet. It requires a backend activity endpoint before it can be shown securely.
+            </p>
           </div>
         </section>
       )}

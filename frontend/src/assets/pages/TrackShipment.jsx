@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
 import { getDeliveryForecast } from "../services/api";
 
@@ -44,6 +44,7 @@ function TrackShipment() {
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const shipment = useMemo(
     () =>
@@ -58,10 +59,15 @@ function TrackShipment() {
     setSubmittedTracking(trackingNumber);
   };
 
-  useEffect(() => {
-    const refreshTimer = window.setInterval(() => setLastCheckedAt(new Date()), 30_000);
-    return () => window.clearInterval(refreshTimer);
+  const refreshLiveTracking = useCallback(() => {
+    setLastCheckedAt(new Date());
+    setRefreshVersion((version) => version + 1);
   }, []);
+
+  useEffect(() => {
+    const refreshTimer = window.setInterval(refreshLiveTracking, 30_000);
+    return () => window.clearInterval(refreshTimer);
+  }, [refreshLiveTracking]);
 
   useEffect(() => {
     if (!shipment) {
@@ -81,7 +87,7 @@ function TrackShipment() {
     return () => {
       ignoreResponse = true;
     };
-  }, [shipment]);
+  }, [shipment, refreshVersion]);
 
   const latestEvent = shipment?.history?.at(-1);
   const localForecast = shipment ? getForecast(shipment) : null;
@@ -155,13 +161,22 @@ function TrackShipment() {
               <div>
                 <div className="eyebrow">Location services</div>
                 <h2 className="section-title" style={{ marginTop: 6 }}>Live route map</h2>
+                <p className="subtle" style={{ margin: "4px 0 0" }}>
+                  Auto-refreshes every 30 seconds · Last synced {formatDateTime(lastCheckedAt)}
+                </p>
               </div>
-              <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank">Open in Google Maps</a>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <button className="button secondary compact" onClick={refreshLiveTracking} type="button">
+                  Refresh now
+                </button>
+                <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank">Open in Google Maps</a>
+              </div>
             </div>
             <iframe
               className="tracking-map"
+              key={`${shipment.trackingNumber}-${refreshVersion}`}
               title={`Current shipment location for ${shipment.trackingNumber}`}
-              src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+              src={`https://www.google.com/maps?q=${mapQuery}&output=embed&refresh=${refreshVersion}`}
             />
             <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {latestEvent?.location || "Location update pending"}. Route: {shipment.senderCity} to {shipment.receiverCity}.</p>
           </section>

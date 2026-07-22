@@ -1,27 +1,10 @@
 package com.shiptrackpro.entity;
 
 import com.shiptrackpro.enums.ShipmentStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
+import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 
-/**
- * Immutable tracking history row for a shipment.
- * Each event records a point-in-time state of a shipment's journey.
- * Events are never updated or deleted—only appended.
- */
 @Entity
 @Table(
         name = "tracking_events",
@@ -38,14 +21,18 @@ public class TrackingEvent {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shipment_id", referencedColumnName = "id")
+    @JoinColumn(
+            name = "shipment_id",
+            referencedColumnName = "shipment_id",
+            nullable = false
+    )
     private Shipment shipment;
 
     @Column(name = "tracking_number", length = 50)
     private String trackingNumberCache;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "shipment_status", nullable = false, length = 30)
+    @Column(name = "shipment_status", nullable = false)
     private ShipmentStatus status;
 
     @Column(name = "latitude")
@@ -54,13 +41,13 @@ public class TrackingEvent {
     @Column(name = "longitude")
     private Double longitude;
 
-    @Column(name = "location_name", length = 150)
+    @Column(name = "location_name")
     private String locationName;
 
-    @Column(name = "description", length = 500)
+    @Column(name = "description")
     private String description;
 
-    @Column(name = "updated_by", length = 100)
+    @Column(name = "updated_by")
     private String updatedBy;
 
     @Column(name = "updated_at", nullable = false)
@@ -87,10 +74,9 @@ public class TrackingEvent {
 
     @Transient
     public String getTrackingNumber() {
-        if (shipment != null) {
-            return shipment.getTrackingNumber();
-        }
-        return trackingNumberCache;
+        return shipment != null
+                ? shipment.getTrackingNumber()
+                : trackingNumberCache;
     }
 
     public void setTrackingNumber(String trackingNumber) {
