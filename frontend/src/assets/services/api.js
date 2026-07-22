@@ -1,5 +1,39 @@
 import axios from "axios";
 
+<<<<<<< HEAD
+const apiClient = axios.create({
+  baseURL: "/api",
+  timeout: 5000,
+});
+
+/**
+ * Fetch delivery forecast for a tracking number.
+ * Falls back to a locally generated mock when the backend endpoint is unavailable.
+ */
+export function getDeliveryForecast(trackingNumber) {
+  if (!trackingNumber) return Promise.reject(new Error("trackingNumber required"));
+
+  const url = `/forecast/${encodeURIComponent(trackingNumber)}`;
+
+  return apiClient.get(url).catch(() => {
+    const now = new Date();
+    // mock: ETA 2 hours from now
+    return Promise.resolve({
+      data: {
+        predictedDeliveryAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        predictedDelayMinutes: 0,
+        confidencePercentage: 88,
+        riskLevel: "ON_TRACK",
+        reason: "Estimated from last known checkpoint (mock)",
+      },
+    });
+  });
+}
+
+export default {
+  getDeliveryForecast,
+};
+=======
 const API = axios.create({
   // In local development Vite proxies this to Spring Boot, avoiding browser CORS.
   // Deployments can set VITE_API_BASE_URL to their public backend API URL.
@@ -64,3 +98,4 @@ export const verifyOtp = (data) => API.post("/auth/verify-otp", data);
 export const resetPassword = (data) => API.post("/auth/reset-password", data);
 
 export default API;
+>>>>>>> main
