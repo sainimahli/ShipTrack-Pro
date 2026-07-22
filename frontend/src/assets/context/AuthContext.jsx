@@ -50,8 +50,19 @@ const createToken = (user) =>
 
 const getStoredAuth = () => {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
-    return value ? JSON.parse(value) : null;
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!token) {
+      return null;
+    }
+
+    return {
+      token,
+      user: {
+        role,
+      },
+    };
   } catch {
     return null;
   }
@@ -84,6 +95,19 @@ const getGoogleSeedUser = (options = {}) => {
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (token) {
+    setAuth({
+      token,
+      user: {
+        role,
+      },
+    });
+  }
+}, []);
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     try {
       const saved = localStorage.getItem("shiptrack_users");
@@ -98,36 +122,24 @@ export function AuthProvider({ children }) {
     localStorage.setItem("shiptrack_users", JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
-  useEffect(() => {
-    if (auth) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+ useEffect(() => {
+  if (auth?.token) {
+    localStorage.setItem("token", auth.token);
+
+    if (auth.user?.role) {
+      localStorage.setItem("role", auth.user.role);
     }
-  }, [auth]);
+  } else {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+  }
+}, [auth]);
 
   useEffect(() => {
     localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpRequests));
   }, [otpRequests]);
 
-  const login = useCallback(
-    ({ email, password }) => {
-      const normalizedEmail = email.trim().toLowerCase();
-      const user = registeredUsers.find(
-        (candidate) =>
-          candidate.email.toLowerCase() === normalizedEmail && candidate.password === password,
-      );
-
-      if (!user) {
-        return { ok: false, message: "Email or password is incorrect." };
-      }
-
-      const safeUser = withoutPassword(user);
-      setAuth({ token: createToken(user), user: safeUser });
-      return { ok: true, user: safeUser };
-    },
-    [registeredUsers],
-  );
+ 
 
   const googleLogin = useCallback(
     (externalUser = null, options = {}) => {
@@ -255,6 +267,7 @@ export function AuthProvider({ children }) {
     [registeredUsers, verifyOtp],
   );
 
+<<<<<<< HEAD
   const register = useCallback(
     ({ name, email, password, role, company, companyName }) => {
       if (!email) {
@@ -290,15 +303,41 @@ export function AuthProvider({ children }) {
     [registeredUsers],
   );
 
+=======
+>>>>>>> main
   const logout = useCallback(() => setAuth(null), []);
+  const updateAuth = useCallback((token, role) => {
+  setAuth({
+    token,
+    user: {
+      role,
+    },
+  });
+}, []);
+  const updateAuthenticatedUser = useCallback((profile) => {
+    setAuth((current) => {
+      if (!current) return current;
 
+      const firstName = profile.firstName ?? current.user?.firstName ?? "";
+      const lastName = profile.lastName ?? current.user?.lastName ?? "";
+
+      return {
+        ...current,
+        user: {
+          ...current.user,
+          ...profile,
+          name: `${firstName} ${lastName}`.trim() || current.user?.name,
+        },
+      };
+    });
+  }, []);
   const value = useMemo(
     () => ({
       auth,
       isAuthenticated: Boolean(auth?.token),
-      login,
       logout,
-      register,
+      updateAuth,
+      updateAuthenticatedUser,
       requestOtp,
       verifyOtp,
       resetPassword,
@@ -306,7 +345,7 @@ export function AuthProvider({ children }) {
       users: registeredUsers.map(withoutPassword),
       capabilities: auth?.user ? roleCapabilities[auth.user.role] || [] : [],
     }),
-    [auth, login, logout, register, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
+    [auth, logout, updateAuth, updateAuthenticatedUser, registeredUsers, requestOtp, verifyOtp, resetPassword, googleLogin],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

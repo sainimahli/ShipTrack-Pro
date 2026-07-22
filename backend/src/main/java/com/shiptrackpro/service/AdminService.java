@@ -8,6 +8,10 @@ public interface AdminService {
 
     List<PendingUserResponse> getPendingUsers();
 
+    List<PendingUserResponse> getApprovedUsers();
+
+    List<PendingUserResponse> getRejectedUsers();
+
     void approveUser(Long userId);
 
     void rejectUser(Long userId);

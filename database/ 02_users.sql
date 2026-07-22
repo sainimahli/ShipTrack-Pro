@@ -14,6 +14,7 @@ CREATE TABLE users (
     CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );
 
+
 CREATE INDEX idx_users_role_id ON users(role_id);
 
 CREATE TRIGGER trg_users_updated_at

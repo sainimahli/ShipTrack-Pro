@@ -19,7 +19,24 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<PendingUserResponse> getPendingUsers() {
 
-        return userRepository.findByRegistrationStatus(RegistrationStatus.PENDING)
+        return getUsersByStatus(RegistrationStatus.PENDING);
+    }
+
+    @Override
+    public List<PendingUserResponse> getApprovedUsers() {
+
+        return getUsersByStatus(RegistrationStatus.APPROVED);
+    }
+
+    @Override
+    public List<PendingUserResponse> getRejectedUsers() {
+
+        return getUsersByStatus(RegistrationStatus.REJECTED);
+    }
+
+    private List<PendingUserResponse> getUsersByStatus(RegistrationStatus status) {
+
+        return userRepository.findByRegistrationStatus(status)
                 .stream()
                 .map(user -> new PendingUserResponse(
                         user.getUserId(),
@@ -27,6 +44,7 @@ public class AdminServiceImpl implements AdminService {
                         user.getLastName(),
                         user.getEmail(),
                         user.getRole().getRoleName(),
+                        user.getPhone(),
                         user.getRegistrationStatus().name()
                 ))
                 .toList();

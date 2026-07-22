@@ -1,6 +1,7 @@
 package com.shiptrackpro.service;
 
 import com.shiptrackpro.dto.TrackingLocationResponse;
+import com.shiptrackpro.dto.DeliveryForecastResponse;
 import com.shiptrackpro.dto.TrackingStatusResponse;
 import com.shiptrackpro.dto.TrackingTimelineResponse;
 import com.shiptrackpro.dto.UpdateLocationRequest;
@@ -13,6 +14,8 @@ public interface TrackingService {
     TrackingTimelineResponse getTrackingTimeline(String trackingNumber);
 
     TrackingLocationResponse getTrackingLocation(String trackingNumber);
+
+    DeliveryForecastResponse getDeliveryForecast(String trackingNumber);
 
     TrackingStatusResponse updateTrackingStatus(UpdateTrackingStatusRequest request);
 

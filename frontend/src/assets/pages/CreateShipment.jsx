@@ -16,15 +16,31 @@ const initialForm = {
   assignedTo: "Logistics Operator",
 };
 
-const allowedCreateRoles = ["Business Client", "Logistics Operator", "Administrator"];
+const roleLabels = {
+  CUSTOMER: "Customer",
+  BUSINESS_CLIENT: "Business Client",
+  LOGISTICS_OPERATOR: "Logistics Operator",
+  ADMINISTRATOR: "Administrator",
+};
+
+const normalizeRole = (role) => roleLabels[role] || role || "Customer";
+
+const allowedCreateRoles = [
+  "Customer",
+  "Business Client",
+  "Logistics Operator",
+  "Administrator",
+];
 
 function CreateShipment() {
   const { auth } = useContext(AuthContext);
   const { createShipment } = useContext(ShipmentContext);
   const [form, setForm] = useState(initialForm);
   const [created, setCreated] = useState(null);
+  const role = normalizeRole(auth.user.role);
+  const isCustomer = role === "Customer";
 
-  const canCreate = useMemo(() => allowedCreateRoles.includes(auth.user.role), [auth.user.role]);
+  const canCreate = useMemo(() => allowedCreateRoles.includes(role), [role]);
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -34,7 +50,11 @@ function CreateShipment() {
     event.preventDefault();
     if (!canCreate) return;
 
-    const shipment = createShipment(form);
+    const requiresApproval = role !== "Administrator";
+    const shipment = createShipment({
+      ...form,
+      requestStatus: requiresApproval ? "Pending Approval" : "Created",
+    });
     setCreated(shipment);
     setForm(initialForm);
   };
@@ -44,8 +64,12 @@ function CreateShipment() {
       <div className="page-header">
         <div>
           <div className="eyebrow">Shipment management</div>
-          <h1>Create shipment</h1>
-          <p className="subtle">Capture sender, receiver, package, ETA, and delivery information.</p>
+          <h1>{isCustomer ? "Request shipment" : "Create shipment"}</h1>
+          <p className="subtle">
+            {isCustomer
+              ? "Submit sender, receiver, package, ETA, and delivery details for pickup."
+              : "Capture sender, receiver, package, ETA, and delivery information."}
+          </p>
         </div>
         <Link className="button secondary" to="/shipments">
           View shipments
@@ -54,13 +78,13 @@ function CreateShipment() {
 
       {!canCreate && (
         <div className="alert error" style={{ marginBottom: 18 }}>
-          Your current role can view and track shipments but cannot create new records.
+          Your current role can view and track shipments but cannot create shipment records.
         </div>
       )}
 
       {created && (
         <div className="alert success" style={{ marginBottom: 18 }}>
-          Shipment {created.trackingNumber} created and added to the tracking dashboard.
+          Shipment {created.trackingNumber} {created.status === "Pending Approval" ? "submitted for approval" : "created"}.
         </div>
       )}
 
@@ -144,7 +168,6 @@ function CreateShipment() {
               id="weight"
               name="weight"
               onChange={handleChange}
-              placeholder="12 kg"
               required
               placeholder="Enter Package Weight"
             />
@@ -196,7 +219,7 @@ function CreateShipment() {
 
         <div className="toolbar" style={{ margin: "22px 0 0" }}>
           <button className="button primary" disabled={!canCreate} type="submit">
-            Create shipment
+            {isCustomer ? "Request shipment" : "Create shipment"}
           </button>
           <button
             className="button secondary"
