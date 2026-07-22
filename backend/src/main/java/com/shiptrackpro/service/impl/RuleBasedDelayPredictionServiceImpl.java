@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.time.LocalDate;
+
 
 /**
  * Rule-based implementation of {@link DelayPredictionService}.
@@ -111,8 +113,8 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     // same DTO/entity shape without inheriting this class.
     // ------------------------------------------------------------------
 
-    private long computeOverdueMinutes(LocalDateTime expectedDeliveryDate, LocalDateTime now, List<String> reasons) {
-        long minutesUntilDue = Duration.between(now, expectedDeliveryDate).toMinutes();
+    private long computeOverdueMinutes(LocalDate expectedDeliveryDate, LocalDateTime now, List<String> reasons)  {
+        long minutesUntilDue = Duration.between(now, expectedDeliveryDate.atStartOfDay()).toMinutes();
         if (minutesUntilDue < 0) {
             long overdueBy = -minutesUntilDue;
             reasons.add("Shipment is already " + overdueBy + " minute(s) past its estimated delivery time.");
@@ -133,9 +135,10 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         TrafficLevel trafficLevel = request.getTrafficLevel() != null ? request.getTrafficLevel() : TrafficLevel.MEDIUM;
         double speedKmh = speedForTraffic(trafficLevel);
         double requiredTravelMinutes = (request.getDistanceRemainingKm() / speedKmh) * 60.0;
-
         long minutesUntilDue = Math.max(0,
-                Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+        Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+         
+
         long shortfall = Math.round(requiredTravelMinutes) - minutesUntilDue;
 
         if (shortfall > 0) {
