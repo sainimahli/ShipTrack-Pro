@@ -41,38 +41,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    @Autowired
-    private RoleRepository roleRepository;
+        @Autowired
+        private RoleRepository roleRepository;
 
-    @Autowired
-    private BusinessClientRepository businessClientRepository;
+        @Autowired
+        private BusinessClientRepository businessClientRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+        @Autowired
+        private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+        @Autowired
+        private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private JwtService jwtService;
+        @Autowired
+        private JwtService jwtService;
 
-<<<<<<< HEAD
-    @Override
-    public AuthResponse register(RegisterRequest request) {
-
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email already exists.");
-        }
-
-        if (request.getPhone() != null &&
-                !request.getPhone().isBlank() &&
-                userRepository.existsByPhone(request.getPhone())) {
-
-            throw new EmailAlreadyExistsException("Phone number already exists.");
-=======
         @Autowired
         private EmailService emailService;
 
@@ -98,7 +84,6 @@ public class AuthServiceImpl implements AuthService {
                 }
 
                 if (phone != null && userRepository.existsByPhone(phone)) {
-
                         throw new EmailAlreadyExistsException("Phone number already exists.");
                 }
 
@@ -113,7 +98,6 @@ public class AuthServiceImpl implements AuthService {
 
                 if ("BUSINESS_CLIENT".equalsIgnoreCase(roleName) &&
                                 normalizeOptional(request.getCompanyName()) == null) {
-
                         throw new RuntimeException("Company name is required.");
                 }
 
@@ -124,46 +108,35 @@ public class AuthServiceImpl implements AuthService {
                 user.setEmail(email);
                 user.setPhone(phone);
 
-                user.setPassword(
-                                passwordEncoder.encode(password));
+                user.setPassword(passwordEncoder.encode(password));
 
                 user.setRole(role);
 
                 if ("CUSTOMER".equalsIgnoreCase(roleName)) {
-
-                        user.setRegistrationStatus(
-                                        RegistrationStatus.APPROVED);
-
+                        user.setRegistrationStatus(RegistrationStatus.APPROVED);
                 } else {
-
-                        user.setRegistrationStatus(
-                                        RegistrationStatus.PENDING);
-
+                        user.setRegistrationStatus(RegistrationStatus.PENDING);
                 }
 
                 user.setActive(true);
 
                 User savedUser = userRepository.save(user);
+
                 if ("BUSINESS_CLIENT".equalsIgnoreCase(roleName)) {
-
                         BusinessClient businessClient = new BusinessClient();
-
                         businessClient.setUser(savedUser);
                         businessClient.setCompanyName(normalizeRequired(request.getCompanyName(), "Company name is required."));
                         businessClient.setGstNumber(normalizeOptional(request.getGstNumber()));
                         businessClient.setBusinessType(normalizeOptional(request.getBusinessType()));
                         businessClient.setWebsite(normalizeOptional(request.getWebsite()));
-
                         businessClientRepository.save(businessClient);
                 }
 
                 if (savedUser.getRegistrationStatus() == RegistrationStatus.APPROVED) {
-
                         return new AuthResponse(
                                         null,
                                         savedUser.getRole().getRoleName(),
                                         "Registration successful. You can login now.");
-
                 }
 
                 return new AuthResponse(
@@ -174,11 +147,9 @@ public class AuthServiceImpl implements AuthService {
 
         private String normalizeRequired(String value, String message) {
                 String normalized = normalizeOptional(value);
-
                 if (normalized == null) {
                         throw new RuntimeException(message);
                 }
-
                 return normalized;
         }
 
@@ -186,7 +157,6 @@ public class AuthServiceImpl implements AuthService {
                 if (value == null || value.isBlank()) {
                         return null;
                 }
-
                 return value.trim();
         }
 
@@ -197,13 +167,11 @@ public class AuthServiceImpl implements AuthService {
                                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
 
                 if (user.getRegistrationStatus() == RegistrationStatus.PENDING) {
-                        throw new PendingApprovalException(
-                                        "Your account is waiting for Admin approval.");
+                        throw new PendingApprovalException("Your account is waiting for Admin approval.");
                 }
 
                 if (user.getRegistrationStatus() == RegistrationStatus.REJECTED) {
-                        throw new RegistrationRejectedException(
-                                        "Your registration request has been rejected.");
+                        throw new RegistrationRejectedException("Your registration request has been rejected.");
                 }
 
                 authenticationManager.authenticate(
@@ -212,7 +180,6 @@ public class AuthServiceImpl implements AuthService {
                                                 request.getPassword()));
 
                 Map<String, Object> claims = new HashMap<>();
-
                 claims.put("role", user.getRole().getRoleName());
 
                 String token = jwtService.generateToken(claims, user);
@@ -221,131 +188,13 @@ public class AuthServiceImpl implements AuthService {
                                 token,
                                 user.getRole().getRoleName(),
                                 "Login successful.");
->>>>>>> main
         }
 
-        Role role = roleRepository.findById(request.getRoleId())
-                .orElseThrow(() -> new RuntimeException("Invalid role selected."));
-
-        User user = new User();
-
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
-
-        user.setPassword(
-                passwordEncoder.encode(request.getPassword()));
-
-        user.setRole(role);
-
-        if ("CUSTOMER".equalsIgnoreCase(role.getRoleName())) {
-
-            user.setRegistrationStatus(
-                    RegistrationStatus.APPROVED);
-
-        } else {
-
-            user.setRegistrationStatus(
-                    RegistrationStatus.PENDING);
-
-        }
-<<<<<<< HEAD
-
-        user.setActive(true);
-
-        User savedUser = userRepository.save(user);
-        if ("BUSINESS_CLIENT".equalsIgnoreCase(role.getRoleName())) {
-
-            if (request.getCompanyName() == null ||
-                    request.getCompanyName().isBlank()) {
-
-                throw new RuntimeException("Company name is required.");
-            }
-
-            BusinessClient businessClient = new BusinessClient();
-
-            businessClient.setUser(savedUser);
-            businessClient.setCompanyName(request.getCompanyName());
-            businessClient.setGstNumber(request.getGstNumber());
-            businessClient.setBusinessType(request.getBusinessType());
-            businessClient.setWebsite(request.getWebsite());
-
-            businessClientRepository.save(businessClient);
+        @Override
+        public AuthResponse googleLogin(String email) {
+                return null;
         }
 
-        if (savedUser.getRegistrationStatus() == RegistrationStatus.APPROVED) {
-
-            return new AuthResponse(
-                    null,
-                    savedUser.getRole().getRoleName(),
-                    "Registration successful. You can login now.");
-
-        }
-
-        return new AuthResponse(
-                null,
-                savedUser.getRole().getRoleName(),
-                "Registration request submitted successfully. Please wait for Admin approval.");
-    }
-
-    @Override
-    public AuthResponse login(LoginRequest request) {
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
-
-        if (user.getRegistrationStatus() == RegistrationStatus.PENDING) {
-            throw new PendingApprovalException(
-                    "Your account is waiting for Admin approval.");
-        }
-
-        if (user.getRegistrationStatus() == RegistrationStatus.REJECTED) {
-            throw new RegistrationRejectedException(
-                    "Your registration request has been rejected.");
-        }
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()));
-
-        String token = jwtService.generateToken(user);
-
-        return new AuthResponse(
-                token,
-                user.getRole().getRoleName(),
-                "Login successful.");
-    }
-
-    // Google Sign-In for oAuth2 login
-
-    @Override
-    public AuthResponse googleLogin(String email) {
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidCredentialsException(
-                        "Account not found. Please register first."));
-
-        if (user.getRegistrationStatus() == RegistrationStatus.PENDING) {
-            throw new PendingApprovalException(
-                    "Your account is waiting for Admin approval.");
-        }
-
-        if (user.getRegistrationStatus() == RegistrationStatus.REJECTED) {
-            throw new RegistrationRejectedException(
-                    "Your registration request has been rejected.");
-        }
-
-        String token = jwtService.generateToken(user);
-
-        return new AuthResponse(
-                token,
-                user.getRole().getRoleName(),
-                "Google login successful.");
-    }
-}
-=======
         @Override
         public void forgotPassword(ForgotPasswordRequest request) {
 
@@ -354,35 +203,26 @@ public class AuthServiceImpl implements AuthService {
                                 new RuntimeException("No account found with this email."));
 
                 PasswordResetToken token = new PasswordResetToken();
-
                 token.setUser(user);
 
                 String otp = generateOtp();
-
                 token.setOtp(otp);
-
-                token.setExpiresAt(
-                        OffsetDateTime.now().plusMinutes(10));
-
+                token.setExpiresAt(OffsetDateTime.now().plusMinutes(10));
                 token.setIsUsed(false);
 
                 passwordResetTokenRepository.save(token);
-
                 emailService.sendOtpEmail(user.getEmail(), otp);
         }
+
         @Override
         public void verifyOtp(VerifyOtpRequest request) {
 
                 User user = userRepository.findByEmail(request.getEmail())
-                        .orElseThrow(() ->
-                                new RuntimeException("User not found."));
+                        .orElseThrow(() -> new RuntimeException("User not found."));
 
                 PasswordResetToken token = passwordResetTokenRepository
-                        .findTopByUserAndOtpAndIsUsedFalseOrderByCreatedAtDesc(
-                                user,
-                                request.getOtp())
-                        .orElseThrow(() ->
-                                new InvalidOtpException("Invalid OTP."));
+                        .findTopByUserAndOtpAndIsUsedFalseOrderByCreatedAtDesc(user, request.getOtp())
+                        .orElseThrow(() -> new InvalidOtpException("Invalid OTP."));
 
                 if (token.getExpiresAt().isBefore(OffsetDateTime.now())) {
                         throw new OtpExpiredException("OTP has expired.");
@@ -393,34 +233,25 @@ public class AuthServiceImpl implements AuthService {
         public void resetPassword(ResetPasswordRequest request) {
 
                 User user = userRepository.findByEmail(request.getEmail())
-                        .orElseThrow(() ->
-                                new RuntimeException("User not found."));
+                        .orElseThrow(() -> new RuntimeException("User not found."));
 
                 PasswordResetToken token = passwordResetTokenRepository
-                        .findTopByUserAndOtpAndIsUsedFalseOrderByCreatedAtDesc(
-                                user,
-                                request.getOtp())
-                        .orElseThrow(() ->
-                                new InvalidOtpException("Invalid OTP."));
+                        .findTopByUserAndOtpAndIsUsedFalseOrderByCreatedAtDesc(user, request.getOtp())
+                        .orElseThrow(() -> new InvalidOtpException("Invalid OTP."));
 
                 if (token.getExpiresAt().isBefore(OffsetDateTime.now())) {
                         throw new OtpExpiredException("OTP has expired.");
                 }
 
-                user.setPassword(
-                        passwordEncoder.encode(request.getNewPassword()));
-
+                user.setPassword(passwordEncoder.encode(request.getNewPassword()));
                 userRepository.save(user);
 
                 token.setIsUsed(true);
-
                 passwordResetTokenRepository.save(token);
         }
+
         private String generateOtp() {
-
                 int otp = 100000 + secureRandom.nextInt(900000);
-
                 return String.valueOf(otp);
         }
 }
->>>>>>> main

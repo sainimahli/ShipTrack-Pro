@@ -64,7 +64,15 @@ public class TrackingServiceImpl implements TrackingService {
                 ShipmentStatus.OUT_FOR_DELIVERY,
                 EnumSet.of(
                         ShipmentStatus.DELIVERED,
-                        ShipmentStatus.RETURNED));
+                        ShipmentStatus.FAILED_DELIVERY,
+                        ShipmentStatus.CANCELLED));
+
+        VALID_TRANSITIONS.put(
+                ShipmentStatus.FAILED_DELIVERY,
+                EnumSet.of(
+                        ShipmentStatus.OUT_FOR_DELIVERY,
+                        ShipmentStatus.RETURNED,
+                        ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.DELIVERED,
@@ -318,8 +326,8 @@ public class TrackingServiceImpl implements TrackingService {
             case PICKED_UP -> 960;
             case IN_TRANSIT -> 480;
             case OUT_FOR_DELIVERY -> 120;
-            case CANCELLED, RETURNED -> 0;
-            case DELIVERED -> 0;
+            case FAILED_DELIVERY -> 240;
+            case CANCELLED, RETURNED, DELIVERED -> 0;
         };
     }
 
@@ -330,7 +338,8 @@ public class TrackingServiceImpl implements TrackingService {
         }
 
         if (shipment.getShipmentStatus() == ShipmentStatus.CANCELLED
-                || shipment.getShipmentStatus() == ShipmentStatus.RETURNED) {
+                || shipment.getShipmentStatus() == ShipmentStatus.RETURNED
+                || shipment.getShipmentStatus() == ShipmentStatus.FAILED_DELIVERY) {
             return null;
         }
 
@@ -341,6 +350,9 @@ public class TrackingServiceImpl implements TrackingService {
     private String buildForecastReason(ShipmentStatus status, boolean staleUpdate, long delayMinutes) {
         if (status == ShipmentStatus.CANCELLED || status == ShipmentStatus.RETURNED) {
             return "This shipment is no longer progressing through delivery.";
+        }
+        if (status == ShipmentStatus.FAILED_DELIVERY) {
+            return "Delivery attempt failed. A re-attempt or return will be scheduled.";
         }
         if (delayMinutes > 0) {
             return "Current " + status + " progress indicates a forecast delay of about " + delayMinutes + " minutes.";
@@ -478,6 +490,8 @@ public class TrackingServiceImpl implements TrackingService {
             case OUT_FOR_DELIVERY -> NotificationEventType.OUT_FOR_DELIVERY;
 
             case DELIVERED -> NotificationEventType.DELIVERED;
+
+            case FAILED_DELIVERY -> NotificationEventType.SHIPMENT_CREATED;
 
             default -> NotificationEventType.SHIPMENT_CREATED;
         };

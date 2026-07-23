@@ -50,39 +50,15 @@ public class SecurityConfig {
                         HttpSecurity http,
                         AuthenticationProvider authenticationProvider) throws Exception {
 
-<<<<<<< HEAD
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exception -> exception.defaultAuthenticationEntryPointFor(
-                        restAuthenticationEntryPoint,
-                        new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/**")))
-                .authenticationProvider(authenticationProvider())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/",
-                                "/index.html",
-                                "/api/auth/**",
-                                "/api/roles/**",
-                                "/api/tracking/**",
-                                "/api/route/**"
-                        ).permitAll()
-                        .anyRequest().authenticated())
-                .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-=======
                 http
                                 .csrf(csrf -> csrf.disable())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
->>>>>>> main
 
-                        .exceptionHandling(exception -> exception
-                                .authenticationEntryPoint(restAuthenticationEntryPoint)
-                                .accessDeniedHandler((request, response, ex) ->
-                                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden")))
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint(restAuthenticationEntryPoint)
+                                                .accessDeniedHandler((request, response, ex) ->
+                                                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden")))
 
                                 .authenticationProvider(authenticationProvider)
 
@@ -93,8 +69,8 @@ public class SecurityConfig {
                                                                 "/error",
                                                                 "/api/auth/**",
                                                                 "/api/roles/**",
-                                                                // "/api/admin/**",
-                                                                
+                                                                "/api/tracking/**",
+                                                                "/api/route/**",
                                                                 "/oauth2/**",
                                                                 "/login/oauth2/**"
                                                         )

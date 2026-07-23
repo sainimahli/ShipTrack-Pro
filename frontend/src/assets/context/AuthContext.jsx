@@ -95,19 +95,21 @@ const getGoogleSeedUser = (options = {}) => {
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
-  useEffect(() => {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
 
-  if (token) {
-    setAuth({
-      token,
-      user: {
-        role,
-      },
-    });
-  }
-}, []);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (token) {
+      setAuth({
+        token,
+        user: {
+          role,
+        },
+      });
+    }
+  }, []);
+
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     try {
       const saved = localStorage.getItem("shiptrack_users");
@@ -122,24 +124,22 @@ export function AuthProvider({ children }) {
     localStorage.setItem("shiptrack_users", JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
- useEffect(() => {
-  if (auth?.token) {
-    localStorage.setItem("token", auth.token);
+  useEffect(() => {
+    if (auth?.token) {
+      localStorage.setItem("token", auth.token);
 
-    if (auth.user?.role) {
-      localStorage.setItem("role", auth.user.role);
+      if (auth.user?.role) {
+        localStorage.setItem("role", auth.user.role);
+      }
+    } else {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
     }
-  } else {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-  }
-}, [auth]);
+  }, [auth]);
 
   useEffect(() => {
     localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpRequests));
   }, [otpRequests]);
-
- 
 
   const googleLogin = useCallback(
     (externalUser = null, options = {}) => {
@@ -185,7 +185,6 @@ export function AuthProvider({ children }) {
       }
 
       const code = createOtpCode();
-      // In a real application, you would send the OTP via email or SMS here.
       console.log(`[OTP] Generated code for ${normalizedEmail}:`, code);
       setOtpRequests((current) => ({
         ...current,
@@ -267,53 +266,17 @@ export function AuthProvider({ children }) {
     [registeredUsers, verifyOtp],
   );
 
-<<<<<<< HEAD
-  const register = useCallback(
-    ({ name, email, password, role, company, companyName }) => {
-      if (!email) {
-        return { ok: false, message: "Email is required." };
-      }
-      if (!name) {
-        return { ok: false, message: "Name is required." };
-      }
-
-      const normalizedEmail = email.trim().toLowerCase();
-      const exists = registeredUsers.some(
-        (candidate) => candidate.email.toLowerCase() === normalizedEmail,
-      );
-
-      if (exists) {
-        return { ok: false, message: "An account with this email already exists." };
-      }
-
-      const newUser = {
-        id: `USR-${String(registeredUsers.length + 1).padStart(3, "0")}`,
-        name: name.trim(),
-        email: email.trim(),
-        password,
-        role,
-        company: (company || companyName || "").trim() || "ShipTrack Pro",
-      };
-
-      setRegisteredUsers((users) => [...users, newUser]);
-      const safeUser = withoutPassword(newUser);
-      setAuth({ token: createToken(newUser), user: safeUser });
-      return { ok: true, user: safeUser };
-    },
-    [registeredUsers],
-  );
-
-=======
->>>>>>> main
   const logout = useCallback(() => setAuth(null), []);
+
   const updateAuth = useCallback((token, role) => {
-  setAuth({
-    token,
-    user: {
-      role,
-    },
-  });
-}, []);
+    setAuth({
+      token,
+      user: {
+        role,
+      },
+    });
+  }, []);
+
   const updateAuthenticatedUser = useCallback((profile) => {
     setAuth((current) => {
       if (!current) return current;
@@ -331,6 +294,7 @@ export function AuthProvider({ children }) {
       };
     });
   }, []);
+
   const value = useMemo(
     () => ({
       auth,

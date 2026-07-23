@@ -23,6 +23,17 @@ function formatDateTime(value) {
   );
 }
 
+const VALID_NEXT_STATUSES = {
+  "Created":          ["Picked Up", "Cancelled"],
+  "Picked Up":        ["In Transit", "Cancelled"],
+  "In Transit":       ["Out for Delivery", "Cancelled"],
+  "Out for Delivery": ["Delivered", "Failed Delivery", "Cancelled"],
+  "Failed Delivery":  ["Out for Delivery", "Returned", "Cancelled"],
+  "Delivered":        [],
+  "Cancelled":        [],
+  "Returned":         [],
+};
+
 function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStatus, cancelShipment, rejectShipment, close }) {
   const [details, setDetails] = useState(() => ({
     senderName: shipment.senderName,
@@ -147,7 +158,7 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
             <div className="form-field">
               <label htmlFor="status">Shipment status</label>
               <select className="select" disabled={isCancelled || isDelivered || isPendingApproval} id="status" onChange={(e) => setNextStatus(e.target.value)} value={nextStatus}>
-                {statuses.filter((item) => !["Pending Approval", "Rejected"].includes(item)).map((item) => <option key={item}>{item}</option>)}
+                {[shipment.status, ...(VALID_NEXT_STATUSES[shipment.status] || [])].map((item) => <option key={item}>{item}</option>)}
               </select>
             </div>
             <div className="form-field" style={{ marginTop: 14 }}>

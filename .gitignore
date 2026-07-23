@@ -14,6 +14,7 @@ backend/.factorypath
 backend/.springBeans
 backend/.env
 backend/.env.*
+!backend/.env.example
 backend/logs/
 backend/*.log
 backend/hs_err_pid*.log
