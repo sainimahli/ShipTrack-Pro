@@ -26,6 +26,9 @@ public enum ShipmentStatus {
     /** Package has been delivered to the receiver. */
     DELIVERED,
 
+    /** Delivery attempt failed; package may be retried or returned. */
+    FAILED_DELIVERY,
+
     /** Shipment was cancelled; terminal state used by the soft-delete flow. */
     CANCELLED,
 
