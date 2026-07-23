@@ -1,58 +1,18 @@
-<<<<<<< HEAD
-import { useContext, useEffect, useMemo, useState } from "react";
-=======
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
->>>>>>> main
 import { ShipmentContext } from "../context/shipments";
-import { getDeliveryForecast } from "../services/api";
+import { AuthContext } from "../context/auth";
+import { getDeliveryForecast, getMapConfig, updateTrackingLocation, updateTrackingStatus } from "../services/api";
+import { loadGoogleMaps } from "../services/mapsLoader";
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
 }
 
 function formatDateTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Unknown time";
-  }
-
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(date);
-}
-
-const forecastByStatus = {
-  Created: { remaining: "1 day", risk: "ON TRACK" },
-  "Picked Up": { remaining: "16 hours", risk: "ON TRACK" },
-  "In Transit": { remaining: "8 hours", risk: "ON TRACK" },
-  "Out for Delivery": { remaining: "2 hours", risk: "ON TRACK" },
-  Delivered: { remaining: "Delivered", risk: "DELIVERED" },
-  "Failed Delivery": { remaining: "Delivery needs attention", risk: "HIGH RISK" },
-  Cancelled: { remaining: "Cancelled", risk: "STOPPED" },
-  Rejected: { remaining: "Rejected", risk: "STOPPED" },
-};
-
-const shipmentSteps = [
-  "Created",
-  "Picked Up",
-  "In Transit",
-  "Out for Delivery",
-  "Delivered",
-];
-
-function getForecast(shipment) {
-  const forecast = forecastByStatus[shipment.status] || { remaining: "Under review", risk: "WATCH" };
-  const isDelayed = shipment.status === "Failed Delivery";
-  return {
-    ...forecast,
-    eta: shipment.eta || "Calculating ETA",
-    message: isDelayed
-      ? "A delivery exception was recorded. Operations should review the route and contact the receiver."
-      : shipment.status === "Delivered"
-        ? "Delivery is complete and the final tracking update has been recorded."
-        : `The shipment is ${shipment.status.toLowerCase()} and is forecast to reach its destination on schedule.`,
-  };
+  }).format(new Date(value));
 }
 
 const forecastByStatus = {
@@ -78,25 +38,484 @@ function getForecast(shipment) {
         ? "Delivery is complete and the final tracking update has been recorded."
         : `The shipment is ${shipment.status.toLowerCase()} and is forecast to reach its destination on schedule.`,
   };
+}
+
+const locationCoords = {
+  mumbai: { lat: 19.0760, lng: 72.8777 },
+  delhi: { lat: 28.6139, lng: 77.2090 },
+  "new delhi": { lat: 28.6139, lng: 77.2090 },
+  bengaluru: { lat: 12.9716, lng: 77.5946 },
+  bangalore: { lat: 12.9716, lng: 77.5946 },
+  hyderabad: { lat: 17.3850, lng: 78.4867 },
+  pune: { lat: 18.5204, lng: 73.8567 },
+  chennai: { lat: 13.0827, lng: 80.2707 },
+  thambaram: { lat: 12.9249, lng: 80.1240 },
+  tambaram: { lat: 12.9249, lng: 80.1240 },
+  nagpur: { lat: 21.1466, lng: 79.0849 },
+  kurnool: { lat: 15.8281, lng: 78.0373 },
+  lucknow: { lat: 26.8467, lng: 80.9462 },
+  kanpur: { lat: 26.4499, lng: 80.3319 },
+  tiruvannamalai: { lat: 12.2272, lng: 79.0700 },
+  vellore: { lat: 12.9165, lng: 79.1325 },
+  coimbatore: { lat: 11.0168, lng: 76.9558 },
+  madurai: { lat: 9.9252, lng: 78.1198 },
+  trichy: { lat: 10.7905, lng: 78.7047 },
+  salem: { lat: 11.6643, lng: 78.1460 },
+  pondicherry: { lat: 11.9416, lng: 79.8083 },
+  puducherry: { lat: 11.9416, lng: 79.8083 },
+  tirupati: { lat: 13.6288, lng: 79.4192 },
+};
+
+function getCoords(location) {
+  if (!location) return { lat: 13.0827, lng: 80.2707 };
+  const key = location.toLowerCase().trim();
+  if (locationCoords[key]) {
+    return locationCoords[key];
+  }
+  for (const [name, coords] of Object.entries(locationCoords)) {
+    if (key.includes(name) || name.includes(key)) {
+      return coords;
+    }
+  }
+
+  // Stable hash offset fallback to prevent overlapping routes for unrecognized cities
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const baseLat = 13.0827;
+  const baseLng = 80.2707;
+  const latOffset = ((Math.abs(hash) % 200) - 100) / 100; // -1.0 to +1.0 degree
+  const lngOffset = ((Math.abs(hash * 31) % 200) - 100) / 100; // -1.0 to +1.0 degree
+
+  return {
+    lat: baseLat + latOffset,
+    lng: baseLng + lngOffset
+  };
+}
+
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
+
+function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
+  const [mapProvider, setMapProvider] = useState("loading");
+  const [googleInstance, setGoogleInstance] = useState(null);
+  const [leafletReady, setLeafletReady] = useState(false);
+
+  useEffect(() => {
+    let timeoutId = setTimeout(() => {
+      console.warn("Google Maps load timed out, falling back to Leaflet.");
+      setMapProvider("leaflet");
+    }, 3500);
+
+    loadGoogleMaps()
+      .then((google) => {
+        clearTimeout(timeoutId);
+        setGoogleInstance(google);
+        setMapProvider("google");
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        console.error("Google Maps failed to load inside LiveTrackingMap:", err);
+        setMapProvider("leaflet");
+      });
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  const points = useMemo(() => {
+    if (!shipment) return [];
+
+    const senderCoords = getCoords(shipment.senderCity);
+    const resolvedPoints = [{
+      lat: senderCoords.lat,
+      lng: senderCoords.lng,
+      label: `Origin: ${shipment.senderCity}`,
+      isOrigin: true
+    }];
+
+    if (shipment.history && shipment.history.length > 0) {
+      shipment.history.forEach((event, idx) => {
+        const coords = event.latitude != null && event.longitude != null
+          ? { lat: Number(event.latitude), lng: Number(event.longitude) }
+          : getCoords(event.location);
+
+        const prev = resolvedPoints[resolvedPoints.length - 1];
+        if (prev.lat !== coords.lat || prev.lng !== coords.lng) {
+          resolvedPoints.push({
+            lat: coords.lat,
+            lng: coords.lng,
+            label: `${event.status} at ${event.location}`,
+            isCheckpoint: true,
+            isLatest: idx === shipment.history.length - 1
+          });
+        } else if (idx === shipment.history.length - 1) {
+          prev.isLatest = true;
+          prev.label = `${event.status} at ${event.location}`;
+        }
+      });
+    }
+
+    const receiverCoords = getCoords(shipment.receiverCity);
+    const lastPoint = resolvedPoints[resolvedPoints.length - 1];
+    if (lastPoint.lat !== receiverCoords.lat || lastPoint.lng !== receiverCoords.lng) {
+      resolvedPoints.push({
+        lat: receiverCoords.lat,
+        lng: receiverCoords.lng,
+        label: `Destination: ${shipment.receiverCity}`,
+        isDestination: true
+      });
+    }
+
+    return resolvedPoints;
+  }, [shipment]);
+
+  useEffect(() => {
+    if (mapProvider !== "google" || !googleInstance || !shipment) return;
+
+    const containerId = `leaflet-live-map-${shipment.trackingNumber}-${mapId}`;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const google = googleInstance;
+    const origin = getCoords(shipment.senderCity);
+    const destination = getCoords(shipment.receiverCity);
+
+    const map = new google.maps.Map(container, {
+      center: origin,
+      zoom: 6,
+      mapTypeControl: false,
+      fullscreenControl: false,
+    });
+
+    const trafficLayer = new google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
+
+    const directionsService = new google.maps.DirectionsService();
+    const directionsRenderer = new google.maps.DirectionsRenderer({
+      map: map,
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: "#2563eb",
+        strokeWeight: 4,
+        strokeOpacity: 0.8
+      }
+    });
+
+    const markers = [];
+
+    directionsService.route(
+      {
+        origin: new google.maps.LatLng(origin.lat, origin.lng),
+        destination: new google.maps.LatLng(destination.lat, destination.lng),
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK) {
+          directionsRenderer.setDirections(result);
+          if (onRouteCalculated && result.routes[0]?.legs[0]) {
+            const leg = result.routes[0].legs[0];
+            onRouteCalculated({
+              distance: leg.distance.text,
+              duration: leg.duration.text
+            });
+          }
+        } else {
+          console.warn("Google Directions Request failed, rendering straight fallback polyline:", status);
+          if (onRouteCalculated) {
+            const dist = calculateHaversineDistance(origin.lat, origin.lng, destination.lat, destination.lng);
+            const formattedDistance = `${Math.round(dist)} km (straight line)`;
+            const hours = dist / 60;
+            const h = Math.floor(hours);
+            const m = Math.round((hours - h) * 60);
+            const formattedDuration = `${h} hrs ${m} mins`;
+            onRouteCalculated({
+              distance: formattedDistance,
+              duration: formattedDuration
+            });
+          }
+          const fallbackPath = new google.maps.Polyline({
+            path: points.map(p => ({ lat: p.lat, lng: p.lng })),
+            geodesic: true,
+            strokeColor: "#2563eb",
+            strokeOpacity: 0.7,
+            strokeWeight: 4,
+            map: map
+          });
+          markers.push(fallbackPath);
+
+          const bounds = new google.maps.LatLngBounds();
+          points.forEach(p => bounds.extend(new google.maps.LatLng(p.lat, p.lng)));
+          map.fitBounds(bounds);
+        }
+      }
+    );
+    points.forEach((point) => {
+      let iconUrl = "https://maps.google.com/mapfiles/ms/icons/grey.png";
+      if (point.isOrigin) {
+        iconUrl = "https://maps.google.com/mapfiles/ms/icons/green-dot.png";
+      } else if (point.isDestination) {
+        iconUrl = "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
+      } else if (point.isLatest) {
+        iconUrl = {
+          url: "https://cdn-icons-png.flaticon.com/512/750/750953.png",
+          scaledSize: new google.maps.Size(32, 32),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(16, 16)
+        };
+      }
+
+      const marker = new google.maps.Marker({
+        position: { lat: point.lat, lng: point.lng },
+        map: map,
+        title: point.label,
+        icon: iconUrl
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div style="font-family: sans-serif; font-size: 13px;"><b>${point.label}</b></div>`
+      });
+
+      marker.addListener("click", () => {
+        infoWindow.open(map, marker);
+      });
+
+      if (point.isLatest) {
+        infoWindow.open(map, marker);
+      }
+
+      markers.push(marker);
+    });
+
+    return () => {
+      markers.forEach(m => m.setMap(null));
+      directionsRenderer.setMap(null);
+      trafficLayer.setMap(null);
+    };
+  }, [mapProvider, googleInstance, shipment, points, mapId]);
+
+  useEffect(() => {
+    if (mapProvider !== "leaflet") return;
+    if (window.L) {
+      setLeafletReady(true);
+      return;
+    }
+
+    const cssExists = document.getElementById("leaflet-css");
+    if (!cssExists) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.id = "leaflet-css";
+      document.head.appendChild(link);
+    }
+
+    const jsExists = document.getElementById("leaflet-js");
+    if (!jsExists) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.id = "leaflet-js";
+      script.onload = () => setLeafletReady(true);
+      document.head.appendChild(script);
+    } else {
+      const interval = setInterval(() => {
+        if (window.L) {
+          setLeafletReady(true);
+          clearInterval(interval);
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [mapProvider]);
+
+  useEffect(() => {
+    if (mapProvider !== "leaflet" || !leafletReady || !window.L || !shipment) return;
+
+    const containerId = `leaflet-live-map-${shipment.trackingNumber}-${mapId}`;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const L = window.L;
+    const origin = getCoords(shipment.senderCity);
+    const destination = getCoords(shipment.receiverCity);
+    
+    if (onRouteCalculated) {
+      const dist = calculateHaversineDistance(origin.lat, origin.lng, destination.lat, destination.lng);
+      const formattedDistance = `${Math.round(dist)} km (straight line)`;
+      const hours = dist / 60;
+      const h = Math.floor(hours);
+      const m = Math.round((hours - h) * 60);
+      const formattedDuration = `${h} hrs ${m} mins`;
+      onRouteCalculated({
+        distance: formattedDistance,
+        duration: formattedDuration
+      });
+    }
+
+    const mapCenter = points.length > 0
+      ? { lat: points[points.length - 1].lat, lng: points[points.length - 1].lng }
+      : { lat: 12.9249, lng: 80.1240 };
+
+    const map = L.map(containerId, {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([mapCenter.lat, mapCenter.lng], 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    const createCustomIcon = (color, isLatest) => {
+      return L.divIcon({
+        className: 'custom-map-marker',
+        html: `<div class="marker-pin" style="background-color: ${color}; ${isLatest ? 'box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.4); animation: pulse-marker 1.5s infinite;' : ''}"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      });
+    };
+
+    const pathCoords = points.map(p => [p.lat, p.lng]);
+    if (pathCoords.length > 1) {
+      L.polyline(pathCoords, {
+        color: '#2563eb',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '5, 10'
+      }).addTo(map);
+    }
+
+    points.forEach(point => {
+      let color = '#64748b';
+      if (point.isOrigin) color = '#10b981';
+      if (point.isDestination) color = '#ef4444';
+      if (point.isLatest) color = '#2563eb';
+
+      const marker = L.marker([point.lat, point.lng], {
+        icon: createCustomIcon(color, point.isLatest)
+      }).addTo(map);
+
+      marker.bindPopup(`<b>${point.label}</b>`);
+
+      if (point.isLatest) {
+        marker.openPopup();
+      }
+    });
+
+    if (pathCoords.length > 1) {
+      map.fitBounds(L.latLngBounds(pathCoords), { padding: [40, 40] });
+    }
+
+    return () => {
+      map.remove();
+    };
+  }, [mapProvider, leafletReady, shipment, points, mapId]);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 350 }}>
+      <div 
+        id={`leaflet-live-map-${shipment.trackingNumber}-${mapId}`} 
+        style={{ width: '100%', height: '100%', minHeight: 350, borderRadius: 12, border: '1px solid #e2e8f0' }} 
+      />
+      {mapProvider === "loading" && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: 12 }}>
+          <p className="subtle">Loading live tracking map...</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatusStepper({ currentStatus }) {
+  const steps = [
+    { key: "Created", label: "Created" },
+    { key: "Picked Up", label: "Picked Up" },
+    { key: "In Transit", label: "In Transit" },
+    { key: "Out for Delivery", label: "Out for Delivery" },
+    { key: "Delivered", label: "Delivered" }
+  ];
+
+  const statusIndexMap = {
+    "Pending Approval": -1,
+    "Rejected": -1,
+    "Created": 0,
+    "Picked Up": 1,
+    "In Transit": 2,
+    "Out for Delivery": 3,
+    "Delivered": 4,
+    "Failed Delivery": 3,
+    "Cancelled": -1
+  };
+
+  const currentIndex = statusIndexMap[currentStatus] ?? 0;
+
+  return (
+    <div className="status-stepper">
+      {steps.map((step, idx) => {
+        const isCompleted = idx < currentIndex;
+        const isActive = idx === currentIndex;
+        const isPending = idx > currentIndex;
+        
+        let stepClass = "step-pending";
+        if (isCompleted) stepClass = "step-completed";
+        if (isActive) stepClass = "step-active";
+
+        return (
+          <div key={step.key} className={`step-item ${stepClass}`}>
+            <div className="step-node-container">
+              <div className="step-line" style={{ display: idx === 0 ? 'none' : 'block' }} />
+              <div className="step-node">
+                {isCompleted ? (
+                  <svg className="step-icon" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14 }}>
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span className="step-number">{idx + 1}</span>
+                )}
+              </div>
+            </div>
+            <div className="step-label">
+              <span className="step-title">{step.label}</span>
+              {isActive && <span className="step-badge">Active</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function TrackShipment() {
-  const { shipments } = useContext(ShipmentContext);
+  const { shipments, fetchShipments } = useContext(ShipmentContext);
+  const { auth } = useContext(AuthContext);
   const [trackingNumber, setTrackingNumber] = useState(shipments[0]?.trackingNumber || "");
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
-<<<<<<< HEAD
-  const demoTrackingNumbers = [
-  "STP10024591",
-  "STP10024592",
-  "STP10024593",
-  "STP10024594",
-  "STP10024595",
-];
-=======
-  const [refreshVersion, setRefreshVersion] = useState(0);
->>>>>>> main
+  const [mapConfig, setMapConfig] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [showLiveTracking, setShowLiveTracking] = useState(false);
+
+  // Simulator state variables
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simProgressMsg, setSimProgressMsg] = useState("");
+  const [simErrorMsg, setSimErrorMsg] = useState("");
+
+  const [routeDetails, setRouteDetails] = useState({ distance: "", duration: "" });
+  const handleRouteCalculated = useCallback((details) => {
+    setRouteDetails(details);
+  }, []);
+
+  const userRole = auth?.user?.role;
+  const isOperatorOrAdmin = ["LOGISTICS_OPERATOR", "ADMINISTRATOR", "Logistics Operator", "Administrator"].includes(userRole);
 
   const shipment = useMemo(
     () =>
@@ -106,31 +525,77 @@ function TrackShipment() {
     [shipments, submittedTracking],
   );
 
+  const distanceToDestination = useMemo(() => {
+    if (!shipment) return null;
+    const destCoords = getCoords(shipment.receiverCity);
+    
+    const latestWithCoords = [...shipment.history]
+      .reverse()
+      .find(h => h.latitude !== null && h.longitude !== null);
+      
+    if (latestWithCoords) {
+      return calculateHaversineDistance(
+        Number(latestWithCoords.latitude), 
+        Number(latestWithCoords.longitude), 
+        destCoords.lat, 
+        destCoords.lng
+      );
+    }
+    
+    const latestEvent = shipment.history?.at(-1);
+    if (latestEvent?.location) {
+      const currentCoords = getCoords(latestEvent.location);
+      return calculateHaversineDistance(
+        currentCoords.lat,
+        currentCoords.lng,
+        destCoords.lat,
+        destCoords.lng
+      );
+    }
+    
+    return null;
+  }, [shipment]);
+
+  const isNearDestination = useMemo(() => {
+    if (distanceToDestination === null || !shipment) return false;
+    const isActive = ["Picked Up", "In Transit", "Out for Delivery"].includes(shipment.status);
+    return isActive && distanceToDestination <= 50;
+  }, [distanceToDestination, shipment?.status]);
+
   const handleSubmit = (event) => {
     event.preventDefault();
     setSubmittedTracking(trackingNumber);
   };
 
-<<<<<<< HEAD
+  // Regular timestamp refresh
   useEffect(() => {
     const refreshTimer = window.setInterval(() => setLastCheckedAt(new Date()), 30_000);
     return () => window.clearInterval(refreshTimer);
   }, []);
 
+  // Polling for the active shipment status/checkpoints in real-time
   useEffect(() => {
-=======
-  const refreshLiveTracking = useCallback(() => {
-    setLastCheckedAt(new Date());
-    setRefreshVersion((version) => version + 1);
+    if (!shipment) return;
+
+    const isActive = ["Picked Up", "In Transit", "Out for Delivery"].includes(shipment.status);
+    if (!isActive) return;
+
+    console.log(`Live polling active for tracking number: ${shipment.trackingNumber}`);
+    const pollTimer = window.setInterval(() => {
+      fetchShipments();
+      setLastCheckedAt(new Date());
+    }, 8000); // Poll every 8 seconds
+
+    return () => window.clearInterval(pollTimer);
+  }, [shipment?.trackingNumber, shipment?.status, fetchShipments]);
+
+  useEffect(() => {
+    getMapConfig()
+      .then((response) => setMapConfig(response.data))
+      .catch(() => setMapConfig(null));
   }, []);
 
   useEffect(() => {
-    const refreshTimer = window.setInterval(refreshLiveTracking, 30_000);
-    return () => window.clearInterval(refreshTimer);
-  }, [refreshLiveTracking]);
-
-  useEffect(() => {
->>>>>>> main
     if (!shipment) {
       setServerForecast(null);
       return undefined;
@@ -148,11 +613,172 @@ function TrackShipment() {
     return () => {
       ignoreResponse = true;
     };
-<<<<<<< HEAD
   }, [shipment]);
-=======
-  }, [shipment, refreshVersion]);
->>>>>>> main
+
+  useEffect(() => {
+    if (!mapConfig?.apiKey) {
+      setMapReady(false);
+      return;
+    }
+
+    const existingScript = document.getElementById("google-maps-script");
+    if (existingScript) {
+      if (window.google?.maps) {
+        setMapReady(true);
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${mapConfig.apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setMapReady(true);
+    document.body.appendChild(script);
+  }, [mapConfig]);
+
+  const simulateNextStep = async () => {
+    if (!shipment) return;
+    setSimErrorMsg("");
+
+    const currentStatus = shipment.status;
+    const startCity = shipment.senderCity;
+    const endCity = shipment.receiverCity;
+
+    const startCoords = getCoords(startCity);
+    const endCoords = getCoords(endCity);
+
+    // Calculate 10 intermediate points (1 to 10)
+    const totalSteps = 10;
+    const steps = [];
+    for (let i = 1; i <= totalSteps; i++) {
+      const ratio = i / totalSteps;
+      const lat = startCoords.lat + ratio * (endCoords.lat - startCoords.lat);
+      const lng = startCoords.lng + ratio * (endCoords.lng - startCoords.lng);
+      
+      let stepStatus = "In Transit";
+      let locationName = `Transit Checkpoint ${i}`;
+      let description = `En route between ${startCity} and ${endCity}`;
+      
+      if (i === 1) {
+        stepStatus = "Picked Up";
+        locationName = `${startCity} Hub`;
+        description = `Shipment picked up at origin: ${startCity}`;
+      } else if (i === totalSteps) {
+        stepStatus = "Out for Delivery";
+        locationName = `${endCity} Hub`;
+        description = `Arrived at destination hub: ${endCity}, dispatching for delivery`;
+      }
+      
+      steps.push({
+        lat: Number(lat.toFixed(6)),
+        lng: Number(lng.toFixed(6)),
+        locationName,
+        description,
+        status: stepStatus
+      });
+    }
+
+    // Count how many simulated coordinate steps are already recorded in history
+    const simulatedEvents = shipment.history.filter(h => h.latitude !== null && h.longitude !== null);
+    const currentStepIndex = simulatedEvents.length;
+
+    try {
+      if (currentStatus === "Created" || currentStatus === "Pending Approval") {
+        setSimProgressMsg("Transitioning status to Picked Up...");
+        await updateTrackingStatus({
+          trackingNumber: shipment.trackingNumber,
+          status: "PICKED_UP",
+          description: `Shipment picked up at origin: ${startCity}`
+        });
+
+        setSimProgressMsg("Adding origin checkpoint coordinate...");
+        await updateTrackingLocation({
+          trackingNumber: shipment.trackingNumber,
+          locationName: `${startCity} Hub`,
+          description: `Pickup point setup`,
+          latitude: startCoords.lat,
+          longitude: startCoords.lng
+        });
+
+        setSimProgressMsg("Shipment picked up successfully.");
+      } 
+      else if (currentStatus === "Picked Up" || currentStatus === "In Transit") {
+        if (currentStepIndex < totalSteps) {
+          const nextStep = steps[currentStepIndex];
+          setSimProgressMsg(`Simulating movement: ${nextStep.locationName}...`);
+
+          const backendStatus = nextStep.status === "In Transit" ? "IN_TRANSIT" : "OUT_FOR_DELIVERY";
+          await updateTrackingStatus({
+            trackingNumber: shipment.trackingNumber,
+            status: backendStatus,
+            description: nextStep.description
+          });
+
+          await updateTrackingLocation({
+            trackingNumber: shipment.trackingNumber,
+            locationName: nextStep.locationName,
+            description: nextStep.description,
+            latitude: nextStep.lat,
+            longitude: nextStep.lng
+          });
+
+          setSimProgressMsg(`Simulation update sent: ${nextStep.locationName}`);
+        } else {
+          setSimProgressMsg("Transitioning status to Out for Delivery...");
+          await updateTrackingStatus({
+            trackingNumber: shipment.trackingNumber,
+            status: "OUT_FOR_DELIVERY",
+            description: `Out for delivery in destination city: ${endCity}`
+          });
+        }
+      } 
+      else if (currentStatus === "Out for Delivery") {
+        setSimProgressMsg("Completing delivery...");
+        await updateTrackingStatus({
+          trackingNumber: shipment.trackingNumber,
+          status: "DELIVERED",
+          description: `Delivered safely to receiver ${shipment.receiverName}`
+        });
+
+        await updateTrackingLocation({
+          trackingNumber: shipment.trackingNumber,
+          locationName: `${endCity} Receiver Address`,
+          description: `Final delivery completed`,
+          latitude: endCoords.lat,
+          longitude: endCoords.lng
+        });
+
+        setSimProgressMsg("Delivery marked as completed!");
+      } 
+      else {
+        setSimProgressMsg("Shipment is already delivered or cancelled.");
+      }
+
+      await fetchShipments();
+    } catch (err) {
+      console.error("Simulation error:", err);
+      setSimErrorMsg("Failed to post simulation checkpoint. Ensure you have proper role rights.");
+    }
+  };
+
+  // Auto-simulation hook
+  useEffect(() => {
+    if (!isSimulating || !shipment) return;
+
+    if (["Delivered", "Cancelled", "Rejected"].includes(shipment.status)) {
+      setIsSimulating(false);
+      setSimProgressMsg("Simulation completed.");
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      simulateNextStep();
+    }, 4500);
+
+    return () => clearInterval(intervalId);
+  }, [isSimulating, shipment?.status, shipment?.history?.length]);
 
   const latestEvent = shipment?.history?.at(-1);
   const localForecast = shipment ? getForecast(shipment) : null;
@@ -162,17 +788,90 @@ function TrackShipment() {
         remaining: serverForecast.predictedDelayMinutes > 0
           ? `${serverForecast.predictedDelayMinutes} min delay forecast`
           : `${serverForecast.confidencePercentage}% forecast confidence`,
-<<<<<<< HEAD
-        risk: (serverForecast.riskLevel || "").replaceAll("_", " ") || "UNKNOWN",
-=======
         risk: serverForecast.riskLevel.replaceAll("_", " "),
->>>>>>> main
         message: serverForecast.reason,
       }
     : localForecast;
-  const mapQuery = shipment
-    ? encodeURIComponent(latestEvent?.location || `${shipment.receiverCity}, India`)
-    : "";
+  
+  const estimatedDelay = serverForecast 
+    ? serverForecast.predictedDelayMinutes 
+    : (shipment?.traffic?.delayMinutes ?? 0);
+
+  const trafficSeverity = serverForecast
+    ? (serverForecast.predictedDelayMinutes > 240 ? "Heavy" : serverForecast.predictedDelayMinutes > 0 ? "Moderate" : "Low")
+    : (shipment?.traffic?.severity ?? "Low");
+
+  const vehicle = shipment?.vehicle;
+
+  function getRiskClass(risk) {
+    if (!risk) return "on-track";
+    const normalized = risk.toLowerCase().replaceAll(" ", "-");
+    if (normalized === "high") return "high-risk";
+    return normalized;
+  }
+  const currentRoute = shipment ? `${shipment.senderCity} → ${shipment.receiverCity}` : "";
+
+  const renderSimulatorPanel = () => {
+    if (!isOperatorOrAdmin || !shipment) return null;
+
+    const currentStatus = shipment.status;
+    const isCompleted = ["Delivered", "Cancelled", "Rejected"].includes(currentStatus);
+    const simulatedEvents = shipment.history.filter(h => h.latitude !== null && h.longitude !== null);
+    const currentStepIndex = simulatedEvents.length;
+    const totalSteps = 10;
+    
+    return (
+      <section className="panel simulator-panel" style={{ marginBottom: 18 }}>
+        <div className="simulator-header">
+          <div className={`pulse-indicator ${isSimulating ? "simulating" : "idle"}`} />
+          <div>
+            <div className="eyebrow" style={{ color: "var(--brand)" }}>Operator Tools</div>
+            <h2 className="section-title" style={{ marginTop: 2 }}>GPS & Delivery Simulator</h2>
+          </div>
+        </div>
+        <p className="subtle" style={{ margin: "8px 0 16px" }}>
+          Simulate a real vehicle traveling from <strong>{shipment.senderCity}</strong> to <strong>{shipment.receiverCity}</strong>. Updates database coordinates and shipment status in real-time.
+        </p>
+
+        <div className="simulator-progress-bar">
+          <div className="simulator-progress-fill" style={{ width: `${Math.min(100, (currentStepIndex / totalSteps) * 100)}%` }} />
+          <span className="progress-label">Route Progress: {Math.min(100, Math.round((currentStepIndex / totalSteps) * 100))}% ({currentStepIndex}/{totalSteps} steps)</span>
+        </div>
+
+        <div className="simulator-actions" style={{ marginTop: 16, display: "flex", gap: 10 }}>
+          <button 
+            type="button"
+            className={`button ${isSimulating ? "secondary" : "primary"}`} 
+            onClick={() => setIsSimulating(!isSimulating)}
+            disabled={isCompleted}
+          >
+            {isSimulating ? "Pause Simulation" : "Start Auto-Simulation"}
+          </button>
+          
+          <button 
+            type="button"
+            className="button secondary" 
+            onClick={simulateNextStep}
+            disabled={isSimulating || isCompleted}
+          >
+            Simulate Next Step
+          </button>
+        </div>
+
+        {simProgressMsg && (
+          <div className="simulator-status-msg" style={{ marginTop: 12, fontSize: 13, color: "var(--brand)", display: "flex", alignItems: "center", gap: 6 }}>
+            <span className="spinner-dot">●</span> {simProgressMsg}
+          </div>
+        )}
+
+        {simErrorMsg && (
+          <div className="alert danger" style={{ marginTop: 12, padding: "8px 12px", fontSize: 13 }}>
+            {simErrorMsg}
+          </div>
+        )}
+      </section>
+    );
+  };
 
   return (
     <div className="page">
@@ -203,28 +902,6 @@ function TrackShipment() {
             Track shipment
           </button>
         </form>
-        <div className="demo-trackings">
-
-    <span className="demo-title">
-        Quick Demo
-    </span>
-
-    {demoTrackingNumbers.map(number=>(
-        <button
-            key={number}
-            type="button"
-            className="tracking-chip"
-
-            onClick={()=>{
-                setTrackingNumber(number);
-                setSubmittedTracking(number);
-            }}
-        >
-            {number}
-        </button>
-    ))}
-
-</div>
       </section>
 
       {!shipment && (
@@ -235,6 +912,16 @@ function TrackShipment() {
 
       {shipment && (
         <>
+          {isNearDestination && (
+            <div className="near-destination-alert" style={{ marginBottom: 18 }}>
+              <span className="near-dest-bell">🔔</span>
+              <div>
+                <strong>Near Destination Proximity Alert</strong>
+                <p>The shipment is currently <strong>{distanceToDestination.toFixed(1)} km</strong> away from the destination ({shipment.receiverCity}). Prepare for delivery!</p>
+              </div>
+            </div>
+          )}
+
           <section className="live-monitoring" aria-label="Live delivery monitoring">
             <div>
               <div className="eyebrow">Live delivery monitoring</div>
@@ -242,223 +929,55 @@ function TrackShipment() {
               <span>Latest checkpoint: {latestEvent?.status || shipment.status}</span>
             </div>
             <div>
-              <span className={`live-risk ${forecast.risk.toLowerCase().replaceAll(" ", "-")}`}>{forecast.risk}</span>
-<<<<<<< HEAD
-              <div className="live-pulse">
-
-<span></span>
-
-LIVE
-
-</div>
-              <small>Checked {formatDateTime(lastCheckedAt)}</small>
-            </div>
-          </section>
-<section className="journey-card">
-
-<div className="journey-header">
-
-<div>
-
-<h3>Shipment Journey</h3>
-
-<p>Real-time movement across logistics hubs</p>
-
-</div>
-
-<div className="journey-distance">
-
-<strong>640 km</strong>
-
-<span>of 810 km</span>
-
-</div>
-
-</div>
-
-<div className="journey-progress">
-
-<div
-className="journey-progress-fill"
-style={{width:`${shipment.progress}%`}}
-></div>
-
-</div>
-
-<div className="journey-cities">
-
-<div>
-
-<strong>{shipment.senderCity}</strong>
-
-<small>Origin</small>
-
-</div>
-
-<div>
-
-<strong>{latestEvent?.location}</strong>
-
-<small>Current Hub</small>
-
-</div>
-
-<div>
-
-<strong>{shipment.receiverCity}</strong>
-
-<small>Destination</small>
-
-</div>
-
-</div>
-
-</section>
-=======
+              <button 
+                type="button"
+                className={`live-risk ${getRiskClass(forecast.risk)} live-watch-button`}
+                onClick={() => setShowLiveTracking(true)}
+              >
+                {forecast.risk}
+              </button>
               <small>Checked {formatDateTime(lastCheckedAt)}</small>
             </div>
           </section>
 
->>>>>>> main
+          {renderSimulatorPanel()}
+ 
           <section className="tracking-map-panel panel" aria-label="Live delivery map">
             <div className="toolbar">
               <div>
                 <div className="eyebrow">Location services</div>
                 <h2 className="section-title" style={{ marginTop: 6 }}>Live route map</h2>
-<<<<<<< HEAD
               </div>
               <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank">Open in Google Maps</a>
             </div>
-            <iframe
-              className="tracking-map"
-              title={`Current shipment location for ${shipment.trackingNumber}`}
-              src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
-=======
-                <p className="subtle" style={{ margin: "4px 0 0" }}>
-                  Auto-refreshes every 30 seconds · Last synced {formatDateTime(lastCheckedAt)}
-                </p>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <button className="button secondary compact" onClick={refreshLiveTracking} type="button">
-                  Refresh now
-                </button>
-                <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank">Open in Google Maps</a>
-              </div>
+            <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 350, marginBottom: 14 }}>
+              <LiveTrackingMap shipment={shipment} mapId="panel" onRouteCalculated={handleRouteCalculated} />
             </div>
-            <iframe
-              className="tracking-map"
-              key={`${shipment.trackingNumber}-${refreshVersion}`}
-              title={`Current shipment location for ${shipment.trackingNumber}`}
-              src={`https://www.google.com/maps?q=${mapQuery}&output=embed&refresh=${refreshVersion}`}
->>>>>>> main
-            />
-            <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {latestEvent?.location || "Location update pending"}. Route: {shipment.senderCity} to {shipment.receiverCity}.</p>
+            <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {latestEvent?.location || "Location update pending"}. Route: {currentRoute}.</p>
+          </section>
+
+          <section className="grid grid-2" style={{ marginBottom: 18 }}>
+            <article className="panel forecast-panel">
+              <div className="eyebrow">Vehicle status</div>
+              <h2 className="section-title" style={{ marginTop: 6 }}>{vehicle?.name || "Vehicle assigned"}</h2>
+              <div className="forecast-details"><span>Driver</span><strong>{vehicle?.driver || "Awaiting assignment"}</strong></div>
+              <div className="forecast-details"><span>Speed</span><strong>{vehicle?.speedKmph || 0} km/h</strong></div>
+              <p className="subtle">Current vehicle heading and live movement are reflected in the map marker.</p>
+            </article>
+            <article className="panel forecast-panel">
+              <div className="eyebrow">Traffic & ETA</div>
+              <h2 className="section-title" style={{ marginTop: 6 }}>{trafficSeverity} traffic</h2>
+              <div className="forecast-details"><span>Total Distance</span><strong>{routeDetails.distance || "Calculating..."}</strong></div>
+              <div className="forecast-details"><span>Est. Travel Time</span><strong>{routeDetails.duration || "Calculating..."}</strong></div>
+              <div className="forecast-details"><span>Delay estimate</span><strong>{estimatedDelay} min</strong></div>
+              <div className="forecast-details"><span>ETA window</span><strong>{forecast?.eta || shipment.eta}</strong></div>
+              <p className="subtle">The ETA adjusts using traffic severity and recent movement updates for this route.</p>
+            </article>
           </section>
 
           <section className="grid grid-2" style={{ marginBottom: 18 }}>
             <article className="panel forecast-panel">
               <div className="eyebrow">ETA prediction</div>
-<<<<<<< HEAD
-              <section className="driver-card">
-
-<img
-src="https://ui-avatars.com/api/?name=Driver"
-alt=""
-/>
-
-<div>
-
-<h3>Assigned Driver</h3>
-
-<p>Rahul Sharma</p>
-
-<small>ID : DRV-1024</small>
-
-</div>
-
-<div>
-
-<strong>Vehicle</strong>
-
-<p>MH12AB4587</p>
-
-</div>
-
-<div>
-
-<strong>Contact</strong>
-
-<p>+91 98XXXXXX34</p>
-
-</div>
-
-</section>
-              <div className="confidence">
-
-<div className="confidence-title">
-
-AI Delivery Confidence
-
-</div>
-<div className="risk-meter">
-
-<div className="risk-title">
-
-Shipment Risk
-
-</div>
-
-<div className="risk-bar">
-
-<div className="risk-fill"></div>
-
-</div>
-
-<span>Low Risk (8%)</span>
-
-</div>
-
-<div className="confidence-bar">
-
-<div
-
-className="confidence-fill"
-
-style={{width:"94%"}}
-
->
-
-</div>
-
-</div>
-
-<strong>94%</strong>
-
-</div>
-              <div className="panel health-card">
-
-<h2>
-
-Delivery Health
-
-</h2>
-
-<ul>
-
-<li>🛰 GPS Connected</li>
-
-<li>🚚 Vehicle Active</li>
-
-<li>🟢 Route Healthy</li>
-
-<li>📡 Last Sync : Just Now</li>
-
-</ul>
-
-</div>
-
-=======
->>>>>>> main
               <h2 className="section-title" style={{ marginTop: 6 }}>{forecast.eta}</h2>
               <div className="forecast-details"><span>Forecast window</span><strong>{forecast.remaining}</strong></div>
               <p className="subtle">{forecast.message}</p>
@@ -471,124 +990,11 @@ Delivery Health
             </article>
           </section>
 
-<<<<<<< HEAD
-<section className="summary-cards">
-
-<div className="summary-card">
-
-📦
-
-<h4>Package</h4>
-
-<p>{shipment.packageType}</p>
-
-</div>
-
-<div className="summary-card">
-
-🚚
-
-<h4>Courier</h4>
-
-<p>ShipTrack Express</p>
-
-</div>
-
-<div className="summary-card">
-
-📍
-
-<h4>Current Hub</h4>
-
-<p>{latestEvent?.location}</p>
-
-</div>
-
-<div className="summary-card">
-
-⭐
-
-<h4>Priority</h4>
-
-<p>{shipment.priority}</p>
-
-</div>
-<section className="ai-card">
-
-<h3>AI Shipment Insights</h3>
-
-<div className="ai-grid">
-
-<div>
-
-<h4>Weather</h4>
-
-<p>Clear Route ☀</p>
-
-</div>
-
-<div>
-
-<h4>Traffic</h4>
-
-<p>Moderate</p>
-
-</div>
-
-<div>
-
-<h4>Delay Risk</h4>
-
-<p>Low (6%)</p>
-
-</div>
-
-<div>
-
-<h4>Vehicle Speed</h4>
-
-<p>62 km/h</p>
-
-</div>
-
-</div>
-
-</section>
-</section>
-=======
->>>>>>> main
           <section className="grid grid-2">
           <div className="panel">
             <div className="toolbar">
               <div>
                 <div className="eyebrow">Tracking number</div>
-                <div className="delivery-score">
-
-<div>
-
-<h3>Delivery Score</h3>
-
-<span>97%</span>
-
-</div>
-
-<div>
-
-<h3>AI Reliability</h3>
-
-<span>Excellent</span>
-
-</div>
-
-<div>
-
-<h3>Risk Level</h3>
-
-<span className="green">Very Low</span>
-
-</div>
-
-</div>
                 <h2 className="section-title" style={{ marginTop: 6 }}>
                   {shipment.trackingNumber}
                 </h2>
@@ -608,86 +1014,25 @@ Delivery Health
               </div>
             </div>
 
-<div className="shipment-stepper">
-
-{shipmentSteps.map((step,index)=>{
-
-const currentIndex=shipmentSteps.indexOf(shipment.status);
-
-const active=index<=currentIndex;
-
-return(
-
-<div className="step-item" key={step}>
-
-<div className={`step-circle ${active?"active":""}`}>
-
-{active?"✓":index+1}
-
-</div>
-
-<div className="step-label">
-
-{step}
-
-</div>
-
-{index!==shipmentSteps.length-1 &&
-
-<div className={`step-line ${index<currentIndex?"active":""}`}>
-
-<div className="line-glow"></div>
-
-</div>
-
-}
-
-</div>
-
-);
-
-})}
-
-</div>
+            <div className="grid grid-2" style={{ marginTop: 18 }}>
+              <div className="schema-box">
+                <strong>Route summary</strong>
+                <p className="subtle" style={{ margin: "6px 0 0" }}>{currentRoute}</p>
+              </div>
+              <div className="schema-box">
+                <strong>Traffic status</strong>
+                <p className="subtle" style={{ margin: "6px 0 0" }}>{trafficSeverity} · {estimatedDelay} min delay</p>
+              </div>
+            </div>
 
             <div style={{ marginTop: 18 }}>
               <div className="toolbar" style={{ marginBottom: 8 }}>
                 <strong>Delivery progress</strong>
-                <div className="eta-countdown">
-
-⏳ Estimated Arrival
-
-<h2>08 : 42 : 15</h2>
-
-<p>Hours Remaining</p>
-
-</div>
                 <span className="subtle">{shipment.progress}%</span>
               </div>
               <div className="progress-track">
                 <div className="progress-fill" style={{ width: `${shipment.progress}%` }} />
               </div>
-              <div className="status-timeline">
-  {shipmentSteps.map((step, index) => {
-    const active =
-      shipmentSteps.indexOf(shipment.status) >= index;
-
-    return (
-      <div
-        key={step}
-        className={`status-step ${
-          active ? "active" : ""
-        }`}
-      >
-        <div className="status-circle">
-          {active ? "✓" : index + 1}
-        </div>
-
-        <span>{step}</span>
-      </div>
-    );
-  })}
-</div>
             </div>
 
             <div className="grid grid-2" style={{ marginTop: 18 }}>
@@ -719,158 +1064,11 @@ return(
           </div>
 
           <div className="panel">
-<div className="tracking-stats">
-
-<div className="stat-box">
-
-🚚
-
-<h2>640 km</h2>
-
-<p>Distance Covered</p>
-
-<span>+34 km today</span>
-
-</div>
-
-<div className="stat-box">
-
-📍
-
-<h2>4 / 6</h2>
-
-<p>Stops Completed</p>
-
-<span>2 remaining</span>
-
-</div>
-
-<div className="stat-box">
-
-⏱
-
-<h2>18 hrs</h2>
-
-<p>Total Transit</p>
-
-<span>On Schedule</span>
-
-</div>
-
-<div className="stat-box">
-
-📦
-
-<h2>{shipment.progress}%</h2>
-
-<p>Shipment Progress</p>
-
-<span>Live Updated</span>
-
-</div>
-
-</div>
-<div className="current-stage">
-
-<div className="stage-header">
-
-<div>
-
-🚚 CURRENT STAGE
-
-<h2>{shipment.status}</h2>
-
-</div>
-
-<div className="health-badge">
-
-🟢 Healthy
-
-</div>
-
-</div>
-
-<p>
-
-Package is currently moving towards destination.
-
-</p>
-
-<div className="eta-mini">
-
-⏰ ETA : {shipment.eta}
-
-</div>
-
-<div className="vehicle-mini">
-
-🚛 Vehicle : ST-TRK-204
-
-</div>
-
-<div className="driver-mini">
-
-👨 Driver : Rajesh Kumar
-
-</div>
-
-</div>
-<section className="kpi-grid">
-
-<div className="kpi">
-
-<h4>Temperature</h4>
-
-<strong>22°C</strong>
-
-</div>
-
-<div className="kpi">
-
-<h4>Humidity</h4>
-
-<strong>48%</strong>
-
-</div>
-
-<div className="kpi">
-
-<h4>Battery</h4>
-
-<strong>92%</strong>
-
-</div>
-
-<div className="kpi">
-
-<h4>GPS Accuracy</h4>
-
-<strong>99%</strong>
-
-</div>
-
-</section>
             <h2 className="section-title">Tracking Timeline</h2>
             <ul className="timeline">
               {shipment.history.map((event) => (
                 <li className="timeline-item" key={`${event.status}-${event.timestamp}`}>
-                  <div className={`timeline-dot ${event.status===shipment.status?"live":""}`}>
-
-{event.status==="Delivered"
-?"✅"
-
-:event.status==="Out for Delivery"
-?"🚚"
-
-:event.status==="In Transit"
-?"🚛"
-
-:event.status==="Picked Up"
-?"📦"
-
-:"📝"}
-
-</div>
+                  <div className="timeline-dot" />
                   <div>
                     <div className="timeline-title">{event.status}</div>
                     <div className="timeline-meta">{event.location}</div>
@@ -881,6 +1079,90 @@ Package is currently moving towards destination.
             </ul>
           </div>
           </section>
+          
+          {showLiveTracking && (
+            <div className="live-modal-overlay" onClick={() => setShowLiveTracking(false)}>
+              <div className="live-modal-card" onClick={(e) => e.stopPropagation()}>
+                <div className="live-modal-header">
+                  <div>
+                    <h2>Live Shipment Tracking</h2>
+                    <p>Tracking Number: <strong>{shipment.trackingNumber}</strong> | Route: {shipment.senderCity} → {shipment.receiverCity}</p>
+                  </div>
+                  <button className="close-btn" onClick={() => setShowLiveTracking(false)} aria-label="Close modal">×</button>
+                </div>
+                <div className="live-modal-body">
+                  <div className="live-modal-map-sec">
+                    <div className="live-modal-card-title">Live Current Location Map</div>
+                    <div style={{ flex: 1, minHeight: 350 }}>
+                      <LiveTrackingMap shipment={shipment} onRouteCalculated={handleRouteCalculated} />
+                    </div>
+                    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="subtle" style={{ fontSize: 13, color: '#334155' }}>Current Location: <strong>{latestEvent?.location || shipment.receiverCity}</strong></span>
+                      <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank" style={{ margin: 0 }}>Open in Google Maps</a>
+                    </div>
+                  </div>
+                  <div className="live-modal-info-sec">
+                    <div>
+                      <div className="live-modal-card-title">Delivery Status updates</div>
+                      <StatusStepper currentStatus={shipment.status} />
+                    </div>
+                    
+                    <div>
+                      <div className="live-modal-card-title">Latest Checkpoint Details</div>
+                      <div className="checkpoint-card">
+                        <div className="checkpoint-card-header">
+                          <div className="checkpoint-title">{latestEvent?.location || shipment.receiverCity}</div>
+                          <div className="checkpoint-time">{formatDateTime(latestEvent?.timestamp || lastCheckedAt)}</div>
+                        </div>
+                        <div className="checkpoint-grid">
+                          <div className="checkpoint-item">
+                            <span>Status</span>
+                            <strong>{latestEvent?.status || shipment.status}</strong>
+                          </div>
+                          <div className="checkpoint-item">
+                            <span>Delivery Forecast</span>
+                            <strong>{forecast.risk}</strong>
+                          </div>
+                          <div className="checkpoint-item">
+                            <span>Vehicle / Driver</span>
+                            <strong>{vehicle?.name || "Awaiting Driver"} ({vehicle?.driver || "N/A"})</strong>
+                          </div>
+                          <div className="checkpoint-item">
+                            <span>Current Speed</span>
+                            <strong>{vehicle?.speedKmph || 0} km/h</strong>
+                          </div>
+                          <div className="checkpoint-item">
+                            <span>ETA Estimate</span>
+                            <strong>{forecast.eta || shipment.eta}</strong>
+                          </div>
+                          <div className="checkpoint-item">
+                            <span>Delay Status</span>
+                            <strong>{estimatedDelay > 0 ? `${estimatedDelay} min` : "No Delay"}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="live-modal-card-title">Checkpoint Timeline</div>
+                      <ul className="timeline" style={{ marginTop: 8 }}>
+                        {shipment.history.map((event, idx) => (
+                          <li className="timeline-item" key={`${event.status}-${event.timestamp}-${idx}`}>
+                            <div className="timeline-dot" style={{ borderColor: idx === shipment.history.length - 1 ? 'var(--brand)' : '#94a3b8' }} />
+                            <div>
+                              <div className="timeline-title" style={{ fontWeight: idx === shipment.history.length - 1 ? 800 : 600 }}>{event.status}</div>
+                              <div className="timeline-meta">{event.location}</div>
+                              <div className="timeline-meta">{formatDateTime(event.timestamp)}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

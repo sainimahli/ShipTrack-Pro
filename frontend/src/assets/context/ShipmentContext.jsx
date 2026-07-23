@@ -1,122 +1,235 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useContext } from "react";
 import { ShipmentContext } from "./shipments";
+import { AuthContext } from "./auth";
+import API from "../services/api";
 
-const STORAGE_KEY = "shiptrack_shipments";
+const locationCoords = {
+  mumbai: { lat: 19.0760, lng: 72.8777 },
+  delhi: { lat: 28.6139, lng: 77.2090 },
+  "new delhi": { lat: 28.6139, lng: 77.2090 },
+  bengaluru: { lat: 12.9716, lng: 77.5946 },
+  bangalore: { lat: 12.9716, lng: 77.5946 },
+  hyderabad: { lat: 17.3850, lng: 78.4867 },
+  pune: { lat: 18.5204, lng: 73.8567 },
+  chennai: { lat: 13.0827, lng: 80.2707 },
+  thambaram: { lat: 12.9249, lng: 80.1240 },
+  tambaram: { lat: 12.9249, lng: 80.1240 },
+  nagpur: { lat: 21.1466, lng: 79.0849 },
+  kurnool: { lat: 15.8281, lng: 78.0373 },
+  lucknow: { lat: 26.8467, lng: 80.9462 },
+  kanpur: { lat: 26.4499, lng: 80.3319 },
+  tiruvannamalai: { lat: 12.2272, lng: 79.0700 },
+  vellore: { lat: 12.9165, lng: 79.1325 },
+  coimbatore: { lat: 11.0168, lng: 76.9558 },
+  madurai: { lat: 9.9252, lng: 78.1198 },
+  trichy: { lat: 10.7905, lng: 78.7047 },
+  salem: { lat: 11.6643, lng: 78.1460 },
+  pondicherry: { lat: 11.9416, lng: 79.8083 },
+  puducherry: { lat: 11.9416, lng: 79.8083 },
+  tirupati: { lat: 13.6288, lng: 79.4192 },
+};
 
-const initialShipments = [
-  {
-    id: "SHP-2026-001",
-    trackingNumber: "STP10024591",
-    senderName: "Apex Retail Pvt Ltd",
-    senderCity: "Mumbai",
-    receiverName: "NorthMart Warehouse",
-    receiverCity: "Delhi",
-    packageType: "Electronics",
-    weight: "18.5 kg",
-    deliveryAddress: "Plot 42, Okhla Industrial Estate, New Delhi",
-    status: "In Transit",
-    eta: "2026-07-05",
-    priority: "Express",
-    createdAt: "2026-07-01",
-    progress: 58,
-    assignedTo: "Logistics Operator",
-    history: [
-      {
-        status: "Created",
-        location: "Mumbai Fulfillment Hub",
-        timestamp: "2026-07-01T09:30:00",
-      },
-      {
-        status: "Picked Up",
-        location: "Andheri East, Mumbai",
-        timestamp: "2026-07-01T14:20:00",
-      },
-      {
-        status: "In Transit",
-        location: "Nagpur Linehaul Center",
-        timestamp: "2026-07-02T22:40:00",
-      },
-    ],
-  },
-  {
-    id: "SHP-2026-002",
-    trackingNumber: "STP10024592",
-    senderName: "Urban Furnishings",
-    senderCity: "Bengaluru",
-    receiverName: "HomeLane Studio",
-    receiverCity: "Hyderabad",
-    packageType: "Furniture",
-    weight: "42 kg",
-    deliveryAddress: "Road 12, Banjara Hills, Hyderabad",
-    status: "Out for Delivery",
-    eta: "2026-07-03",
-    priority: "Standard",
-    createdAt: "2026-06-30",
-    progress: 84,
-    assignedTo: "Logistics Operator",
-    history: [
-      {
-        status: "Created",
-        location: "Bengaluru Warehouse",
-        timestamp: "2026-06-30T11:00:00",
-      },
-      {
-        status: "Picked Up",
-        location: "Peenya, Bengaluru",
-        timestamp: "2026-06-30T15:00:00",
-      },
-      {
-        status: "In Transit",
-        location: "Kurnool Transit Hub",
-        timestamp: "2026-07-02T06:20:00",
-      },
-      {
-        status: "Out for Delivery",
-        location: "Hyderabad Last-Mile Center",
-        timestamp: "2026-07-03T08:45:00",
-      },
-    ],
-  },
-  {
-    id: "SHP-2026-003",
-    trackingNumber: "STP10024593",
-    senderName: "MedCare Supplies",
-    senderCity: "Pune",
-    receiverName: "City Clinic",
-    receiverCity: "Chennai",
-    packageType: "Medical Supplies",
-    weight: "7.2 kg",
-    deliveryAddress: "Mount Road, Chennai",
-    status: "Delivered",
-    eta: "2026-07-02",
-    priority: "Critical",
-    createdAt: "2026-06-29",
-    progress: 100,
-    assignedTo: "Logistics Operator",
-    history: [
-      {
-        status: "Created",
-        location: "Pune Distribution Center",
-        timestamp: "2026-06-29T10:10:00",
-      },
-      {
-        status: "Picked Up",
-        location: "Hinjewadi, Pune",
-        timestamp: "2026-06-29T13:30:00",
-      },
-      {
-        status: "In Transit",
-        location: "Bengaluru Transit Hub",
-        timestamp: "2026-07-01T03:00:00",
-      },
-      {
-        status: "Delivered",
-        location: "City Clinic, Chennai",
-        timestamp: "2026-07-02T16:35:00",
-      },
-    ],
-  },
+function getCoords(location) {
+  if (!location) return { lat: 13.0827, lng: 80.2707 };
+  const key = location.toLowerCase().trim();
+  if (locationCoords[key]) {
+    return locationCoords[key];
+  }
+  for (const [name, coords] of Object.entries(locationCoords)) {
+    if (key.includes(name) || name.includes(key)) {
+      return coords;
+    }
+  }
+
+  // Stable hash offset fallback to prevent overlapping routes for unrecognized cities
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const baseLat = 13.0827;
+  const baseLng = 80.2707;
+  const latOffset = ((Math.abs(hash) % 200) - 100) / 100; // -1.0 to +1.0 degree
+  const lngOffset = ((Math.abs(hash * 31) % 200) - 100) / 100; // -1.0 to +1.0 degree
+
+  return {
+    lat: baseLat + latOffset,
+    lng: baseLng + lngOffset
+  };
+}
+
+const statusMapFrontendToBackend = {
+  "Pending Approval": "CREATED",
+  "Created": "CREATED",
+  "Picked Up": "PICKED_UP",
+  "In Transit": "IN_TRANSIT",
+  "Out for Delivery": "OUT_FOR_DELIVERY",
+  "Delivered": "DELIVERED",
+  "Failed Delivery": "CANCELLED",
+  "Cancelled": "CANCELLED",
+  "Rejected": "CANCELLED",
+};
+
+const mapStatusToFrontend = (backendStatus) => {
+  return backendStatus === "CREATED" ? "Created" :
+         backendStatus === "PICKED_UP" ? "Picked Up" :
+         backendStatus === "IN_TRANSIT" ? "In Transit" :
+         backendStatus === "OUT_FOR_DELIVERY" ? "Out for Delivery" :
+         backendStatus === "DELIVERED" ? "Delivered" :
+         backendStatus === "FAILED_DELIVERY" ? "Failed Delivery" :
+         backendStatus === "CANCELLED" ? "Cancelled" :
+         backendStatus === "REJECTED" ? "Rejected" : "Created";
+};
+
+const driversList = [
+  "Ramesh Pawar",
+  "Suresh Kumar",
+  "Amit Verma",
+  "Vijay Singh",
+  "Rajesh Patel",
+  "Priya Singh",
+  "Karan Johar",
+  "Sunita Williams"
 ];
+
+const vehiclesList = [
+  "MH-12-AB-2018",
+  "DL-01-XY-5678",
+  "KA-03-MN-9012",
+  "TN-07-PQ-3456",
+  "HR-26-Z-7890",
+  "UP-32-AB-1234",
+  "MH-02-CD-5678"
+];
+
+function getStableIndex(trackingNumber, arrayLength) {
+  let hash = 0;
+  for (let i = 0; i < trackingNumber.length; i++) {
+    hash = trackingNumber.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % arrayLength;
+}
+
+function getDynamicVehicleAndTraffic(trackingNumber, status) {
+  const isMoving = ["Picked Up", "In Transit", "Out for Delivery"].includes(status);
+  
+  if (!isMoving) {
+    return {
+      vehicle: {
+        name: status === "Delivered" ? vehiclesList[getStableIndex(trackingNumber, vehiclesList.length)] : "Awaiting assignment",
+        driver: status === "Delivered" ? driversList[getStableIndex(trackingNumber, driversList.length)] : "Awaiting assignment",
+        speedKmph: 0,
+        heading: 0
+      },
+      traffic: {
+        severity: "Low",
+        delayMinutes: 0
+      }
+    };
+  }
+
+  const driverIndex = getStableIndex(trackingNumber, driversList.length);
+  const vehicleIndex = getStableIndex(trackingNumber, vehiclesList.length);
+  
+  let speed = 50;
+  let heading = getStableIndex(trackingNumber, 360);
+  let severity = "Low";
+  let delay = getStableIndex(trackingNumber, 15);
+
+  if (status === "Picked Up") {
+    speed = 40 + (getStableIndex(trackingNumber, 15));
+    severity = getStableIndex(trackingNumber, 2) === 0 ? "Low" : "Moderate";
+    delay = getStableIndex(trackingNumber, 10);
+  } else if (status === "In Transit") {
+    speed = 55 + (getStableIndex(trackingNumber, 25));
+    severity = getStableIndex(trackingNumber, 3) === 0 ? "Low" : (getStableIndex(trackingNumber, 3) === 1 ? "Moderate" : "Heavy");
+    delay = 10 + getStableIndex(trackingNumber, 30);
+  } else if (status === "Out for Delivery") {
+    speed = 15 + (getStableIndex(trackingNumber, 15));
+    severity = getStableIndex(trackingNumber, 2) === 0 ? "Moderate" : "Heavy";
+    delay = 5 + getStableIndex(trackingNumber, 20);
+  }
+
+  return {
+    vehicle: {
+      name: vehiclesList[vehicleIndex],
+      driver: driversList[driverIndex],
+      speedKmph: speed,
+      heading: heading
+    },
+    traffic: {
+      severity: severity,
+      delayMinutes: delay
+    }
+  };
+}
+
+const mapBackendToFrontend = async (item) => {
+  let history = [];
+  try {
+    const res = await API.get(`/tracking/timeline/${encodeURIComponent(item.trackingNumber)}`);
+    if (res.data && res.data.events) {
+      history = res.data.events.map(event => ({
+        status: mapStatusToFrontend(event.status),
+        location: event.locationName || item.originAddress?.city || "Unknown",
+        timestamp: event.updatedAt || new Date().toISOString(),
+        latitude: event.latitude,
+        longitude: event.longitude,
+        description: event.description
+      }));
+    }
+  } catch (err) {
+    history = [{
+      status: mapStatusToFrontend(item.shipmentStatus),
+      location: item.originAddress?.city || "Origin Hub",
+      timestamp: item.createdAt || new Date().toISOString(),
+    }];
+  }
+
+  const progressMap = {
+    "Pending Approval": 0,
+    "Created": 12,
+    "Picked Up": 28,
+    "In Transit": 58,
+    "Out for Delivery": 84,
+    "Delivered": 100,
+    "Failed Delivery": 72,
+    "Rejected": 0,
+    "Cancelled": 0,
+  };
+
+  const statusStr = mapStatusToFrontend(item.shipmentStatus);
+  const progressVal = progressMap[statusStr] ?? 12;
+  const dynamicDetails = getDynamicVehicleAndTraffic(item.trackingNumber, statusStr);
+
+  return {
+    id: item.id,
+    trackingNumber: item.trackingNumber,
+    senderName: item.senderName,
+    senderCity: item.originAddress?.city || "Unknown",
+    receiverName: item.receiverName,
+    receiverCity: item.destinationAddress?.city || "Unknown",
+    packageType: item.packageType || "General Cargo",
+    weight: `${item.packageWeight} kg`,
+    deliveryAddress: `${item.destinationAddress?.line1 || ""}, ${item.destinationAddress?.line2 || ""}, ${item.destinationAddress?.city || ""}`.trim().replace(/^,\s*|,\s*$/g, ""),
+    status: statusStr,
+    eta: (item.expectedDeliveryDate && typeof item.expectedDeliveryDate === "string") 
+      ? item.expectedDeliveryDate.substring(0, 10) 
+      : (Array.isArray(item.expectedDeliveryDate) 
+         ? `${item.expectedDeliveryDate[0]}-${String(item.expectedDeliveryDate[1]).padStart(2, '0')}-${String(item.expectedDeliveryDate[2]).padStart(2, '0')}`
+         : ""),
+    priority: item.shipmentType || "Standard",
+    createdAt: (item.createdAt && typeof item.createdAt === "string") 
+      ? item.createdAt.substring(0, 10) 
+      : (Array.isArray(item.createdAt) 
+         ? `${item.createdAt[0]}-${String(item.createdAt[1]).padStart(2, '0')}-${String(item.createdAt[2]).padStart(2, '0')}`
+         : new Date().toISOString().substring(0, 10)),
+    progress: progressVal,
+    assignedTo: "Logistics Operator",
+    history: history,
+    vehicle: dynamicDetails.vehicle,
+    traffic: dynamicDetails.traffic
+  };
+};
 
 const statusProgress = {
   "Pending Approval": 0,
@@ -130,126 +243,205 @@ const statusProgress = {
   Cancelled: 0,
 };
 
-const getStoredShipments = () => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : initialShipments;
-  } catch {
-    return initialShipments;
-  }
-};
-
 export function ShipmentProvider({ children }) {
-  const [shipments, setShipments] = useState(getStoredShipments);
+  const [shipments, setShipments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { auth } = useContext(AuthContext);
+
+  const fetchShipments = useCallback(async () => {
+    if (!auth?.token) {
+      setShipments([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await API.get("/shipments");
+      const list = response.data || [];
+      const mapped = await Promise.all(list.map(mapBackendToFrontend));
+      mapped.sort((a, b) => b.id - a.id);
+      setShipments(mapped);
+    } catch (error) {
+      console.error("Failed to fetch shipments:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [auth?.token]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(shipments));
-  }, [shipments]);
+    fetchShipments();
+  }, [fetchShipments]);
 
   const createShipment = useCallback(
-    (shipment) => {
-      const nextNumber = shipments.length + 1;
-      const created = {
-        ...shipment,
-        id: `SHP-2026-${String(nextNumber + 3).padStart(3, "0")}`,
-        trackingNumber: `STP${String(10024593 + nextNumber).padStart(8, "0")}`,
-        status: shipment.requestStatus || "Created",
-        createdAt: new Date().toISOString().slice(0, 10),
-        progress: statusProgress[shipment.requestStatus] ?? statusProgress.Created,
-        history: [
-          {
-            status: shipment.requestStatus || "Created",
-            location: shipment.senderCity,
-            timestamp: new Date().toISOString(),
+    async (shipmentData) => {
+      try {
+        const payload = {
+          senderName: shipmentData.senderName,
+          senderPhone: "9999999999",
+          senderUserId: null,
+          receiverName: shipmentData.receiverName,
+          receiverPhone: "9999999999",
+          receiverUserId: null,
+          originAddress: {
+            line1: "Origin Address Line 1",
+            line2: "",
+            city: shipmentData.senderCity,
+            state: "",
+            postalCode: "111111",
+            country: "India"
           },
-        ],
-      };
+          destinationAddress: {
+            line1: shipmentData.deliveryAddress || "Destination Address Line 1",
+            line2: "",
+            city: shipmentData.receiverCity,
+            state: "",
+            postalCode: "222222",
+            country: "India"
+          },
+          packageWeight: parseFloat(shipmentData.weight) || 1.0,
+          shipmentType: shipmentData.priority || "Standard",
+          packageType: shipmentData.packageType || "General Cargo",
+          expectedDeliveryDate: shipmentData.eta ? `${shipmentData.eta}T18:00:00` : null
+        };
 
-      setShipments((items) => [created, ...items]);
-      return created;
+        const response = await API.post("/shipments", payload);
+        const createdItem = response.data;
+
+        await fetchShipments();
+
+        const mapped = await mapBackendToFrontend(createdItem);
+        return mapped;
+      } catch (error) {
+        console.error("Failed to create shipment:", error);
+        throw error;
+      }
     },
-    [shipments.length],
+    [fetchShipments]
   );
 
-  const updateStatus = useCallback((trackingNumber, status, location) => {
-    setShipments((items) =>
-      items.map((shipment) => {
-        if (shipment.trackingNumber !== trackingNumber) return shipment;
+  const updateStatus = useCallback(async (trackingNumber, status, location) => {
+    try {
+      const backendStatus = statusMapFrontendToBackend[status] || "CREATED";
+      
+      await API.put("/tracking/status", {
+        trackingNumber,
+        status: backendStatus,
+        description: `Status updated to ${status}`
+      });
 
-        return {
-          ...shipment,
-          status,
-          progress: statusProgress[status] ?? shipment.progress,
-          history: [
-            ...shipment.history,
-            {
-              status,
-              location: location || shipment.receiverCity,
-              timestamp: new Date().toISOString(),
-            },
-          ],
-        };
-      }),
-    );
-  }, []);
+      if (location) {
+        await API.post("/tracking/location", {
+          trackingNumber,
+          locationName: location,
+          description: `Location checkpoint: ${location}`,
+          latitude: getCoords(location).lat,
+          longitude: getCoords(location).lng
+        });
+      }
 
-  const updateShipment = useCallback((trackingNumber, changes) => {
-    setShipments((items) =>
-      items.map((shipment) =>
-        shipment.trackingNumber === trackingNumber
-          ? { ...shipment, ...changes }
-          : shipment,
-      ),
-    );
-  }, []);
+      await fetchShipments();
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  }, [fetchShipments]);
 
-  const cancelShipment = useCallback((trackingNumber, location) => {
-    setShipments((items) =>
-      items.map((shipment) => {
-        if (shipment.trackingNumber !== trackingNumber || shipment.status === "Cancelled") {
-          return shipment;
+  const updateShipment = useCallback(async (trackingNumber, changes) => {
+    try {
+      const existing = shipments.find(s => s.trackingNumber === trackingNumber);
+      if (!existing) return;
+
+      const payload = {
+        senderName: changes.senderName || existing.senderName,
+        senderPhone: "9999999999",
+        senderUserId: null,
+        receiverName: changes.receiverName || existing.receiverName,
+        receiverPhone: "9999999999",
+        receiverUserId: null,
+        packageWeight: changes.weight ? parseFloat(changes.weight) : parseFloat(existing.weight),
+        shipmentType: changes.priority || existing.priority,
+        packageType: changes.packageType || existing.packageType,
+        expectedDeliveryDate: changes.eta ? `${changes.eta}T18:00:00` : `${existing.eta}T18:00:00`,
+        originAddress: {
+          line1: "Origin Address Line 1",
+          line2: "",
+          city: changes.senderCity || existing.senderCity,
+          state: "",
+          postalCode: "111111",
+          country: "India"
+        },
+        destinationAddress: {
+          line1: changes.deliveryAddress || existing.deliveryAddress || "Destination Address Line 1",
+          line2: "",
+          city: changes.receiverCity || existing.receiverCity,
+          state: "",
+          postalCode: "222222",
+          country: "India"
         }
+      };
 
-        return {
-          ...shipment,
-          status: "Cancelled",
-          progress: statusProgress.Cancelled,
-          history: [
-            ...shipment.history,
-            {
-              status: "Cancelled",
-              location: location || shipment.senderCity,
-              timestamp: new Date().toISOString(),
-            },
-          ],
-        };
-      }),
-    );
-  }, []);
+      await API.put(`/shipments/${existing.id}`, payload);
+      
+      if (changes.status && changes.status !== existing.status) {
+        const backendStatus = statusMapFrontendToBackend[changes.status] || "CREATED";
+        await API.put("/tracking/status", {
+          trackingNumber,
+          status: backendStatus,
+          description: `Status updated to ${changes.status}`
+        });
+      }
 
-  const rejectShipment = useCallback((trackingNumber, location) => {
-    setShipments((items) =>
-      items.map((shipment) => {
-        if (shipment.trackingNumber !== trackingNumber || shipment.status !== "Pending Approval") {
-          return shipment;
-        }
+      await fetchShipments();
+    } catch (error) {
+      console.error("Failed to update shipment:", error);
+    }
+  }, [shipments, fetchShipments]);
 
-        return {
-          ...shipment,
-          status: "Rejected",
-          progress: statusProgress.Rejected,
-          history: [
-            ...shipment.history,
-            {
-              status: "Rejected",
-              location: location || shipment.senderCity,
-              timestamp: new Date().toISOString(),
-            },
-          ],
-        };
-      }),
-    );
-  }, []);
+  const cancelShipment = useCallback(async (trackingNumber, location) => {
+    try {
+      await API.put("/tracking/status", {
+        trackingNumber,
+        status: "CANCELLED",
+        description: "Shipment Cancelled"
+      });
+
+      if (location) {
+        await API.post("/tracking/location", {
+          trackingNumber,
+          locationName: location,
+          description: "Cancelled at location",
+          latitude: getCoords(location).lat,
+          longitude: getCoords(location).lng
+        });
+      }
+
+      await fetchShipments();
+    } catch (error) {
+      console.error("Failed to cancel shipment:", error);
+    }
+  }, [fetchShipments]);
+
+  const rejectShipment = useCallback(async (trackingNumber, location) => {
+    try {
+      await API.put("/tracking/status", {
+        trackingNumber,
+        status: "CANCELLED",
+        description: "Request Rejected"
+      });
+
+      if (location) {
+        await API.post("/tracking/location", {
+          trackingNumber,
+          locationName: location,
+          description: "Rejected at location",
+          latitude: getCoords(location).lat,
+          longitude: getCoords(location).lng
+        });
+      }
+
+      await fetchShipments();
+    } catch (error) {
+      console.error("Failed to reject shipment:", error);
+    }
+  }, [fetchShipments]);
 
   const metrics = useMemo(() => {
     const total = shipments.length;
@@ -273,6 +465,8 @@ export function ShipmentProvider({ children }) {
   const value = useMemo(
     () => ({
       shipments,
+      loading,
+      fetchShipments,
       createShipment,
       updateStatus,
       updateShipment,
@@ -281,7 +475,7 @@ export function ShipmentProvider({ children }) {
       metrics,
       statuses: Object.keys(statusProgress),
     }),
-    [cancelShipment, createShipment, metrics, rejectShipment, shipments, updateShipment, updateStatus],
+    [cancelShipment, createShipment, fetchShipments, metrics, rejectShipment, shipments, loading, updateShipment, updateStatus],
   );
 
   return <ShipmentContext.Provider value={value}>{children}</ShipmentContext.Provider>;
