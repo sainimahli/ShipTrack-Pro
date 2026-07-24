@@ -45,6 +45,26 @@ export const markAllNotificationsAsRead = () =>
 export const getDeliveryForecast = (trackingNumber) =>
   API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
 
+// Live tracking and shipment alerts
+export const getTrackingStatus = (trackingNumber) =>
+  API.get(`/tracking/${encodeURIComponent(trackingNumber)}`);
+
+export const getTrackingTimeline = (trackingNumber) =>
+  API.get(`/tracking/timeline/${encodeURIComponent(trackingNumber)}`);
+
+export const getTrackingLocation = (trackingNumber) =>
+  API.get(`/tracking/location/${encodeURIComponent(trackingNumber)}`);
+
+export const getShipments = () => API.get("/shipments");
+
+export const getShipmentAlerts = (shipmentId) =>
+  API.get(`/shipments/${shipmentId}/alerts`);
+
+export const markAlertAsRead = (alertId) => API.put(`/alerts/${alertId}/read`);
+
+export const predictShipmentDelay = (shipmentId, signals = {}) =>
+  API.post(`/shipments/${shipmentId}/predict-delay`, signals);
+
 // Route Calculation
 export const calculateRoute = (originCity, destinationCity) =>
   API.post("/route/calculate", { originCity, destinationCity });

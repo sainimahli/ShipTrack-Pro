@@ -1,6 +1,16 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
-import { calculateRoute, getDeliveryForecast } from "../services/api";
+import {
+  calculateRoute,
+  getDeliveryForecast,
+  getShipmentAlerts,
+  getShipments,
+  getTrackingLocation,
+  getTrackingStatus,
+  getTrackingTimeline,
+  markAlertAsRead,
+  predictShipmentDelay,
+} from "../services/api";
 
 const CITY_COORDS = {
   mumbai: [19.076, 72.8777], delhi: [28.6139, 77.209], "new delhi": [28.6139, 77.209],
@@ -115,6 +125,9 @@ function TrackShipment() {
   const [serverForecast, setServerForecast] = useState(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [routeData, setRouteData] = useState(null);
+  const [liveTracking, setLiveTracking] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [liveError, setLiveError] = useState("");
 
   const shipment = useMemo(
     () =>
@@ -135,7 +148,7 @@ function TrackShipment() {
   }, []);
 
   useEffect(() => {
-    const refreshTimer = window.setInterval(refreshLiveTracking, 30_000);
+    const refreshTimer = window.setInterval(refreshLiveTracking, 15_000);
     return () => window.clearInterval(refreshTimer);
   }, [refreshLiveTracking]);
 
@@ -160,6 +173,55 @@ function TrackShipment() {
   }, [shipment, refreshVersion]);
 
   useEffect(() => {
+    if (!submittedTracking.trim()) return undefined;
+
+    let cancelled = false;
+    const loadLiveTracking = async () => {
+      const tracking = submittedTracking.trim();
+      const [statusResult, timelineResult, locationResult, shipmentsResult] = await Promise.allSettled([
+        getTrackingStatus(tracking),
+        getTrackingTimeline(tracking),
+        getTrackingLocation(tracking),
+        getShipments(),
+      ]);
+      if (cancelled) return;
+
+      const status = statusResult.status === "fulfilled" ? statusResult.value.data : null;
+      const timeline = timelineResult.status === "fulfilled" ? timelineResult.value.data?.events : [];
+      const location = locationResult.status === "fulfilled" ? locationResult.value.data : status?.latestLocation;
+      setLiveTracking(status ? { status, timeline: Array.isArray(timeline) ? timeline : [], location } : null);
+      setLiveError(status ? "" : "Live updates are temporarily unavailable; showing the latest available data.");
+
+      if (shipmentsResult.status !== "fulfilled") return;
+      const apiShipment = (shipmentsResult.value.data || []).find(
+        (item) => item.trackingNumber?.toLowerCase() === tracking.toLowerCase(),
+      );
+      if (!apiShipment?.shipmentId) {
+        setAlerts([]);
+        return;
+      }
+      try {
+        // The prediction endpoint raises a persisted alert for medium/high risk.
+        // Alert creation is idempotent, so this is safe during polling.
+        await predictShipmentDelay(apiShipment.shipmentId);
+        const response = await getShipmentAlerts(apiShipment.shipmentId);
+        if (!cancelled) {
+          setAlerts(
+            Array.isArray(response.data)
+              ? response.data.map((alert) => ({ ...alert, isRead: alert.isRead ?? alert.read ?? false }))
+              : [],
+          );
+        }
+      } catch {
+        if (!cancelled) setAlerts([]);
+      }
+    };
+
+    loadLiveTracking();
+    return () => { cancelled = true; };
+  }, [submittedTracking, refreshVersion]);
+
+  useEffect(() => {
     if (!shipment?.senderCity || !shipment?.receiverCity) {
       setRouteData(null);
       return undefined;
@@ -180,6 +242,16 @@ function TrackShipment() {
   }, [shipment?.senderCity, shipment?.receiverCity]);
 
   const latestEvent = shipment?.history?.at(-1);
+  const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
+  const liveLocation = liveTracking?.location?.locationName;
+  const displayStatus = serverStatus || shipment?.status;
+  const displayTimeline = liveTracking?.timeline?.length
+    ? liveTracking.timeline.map((event) => ({
+        status: event.status?.replaceAll("_", " ") || "Update",
+        location: event.locationName || event.description || "Location update pending",
+        timestamp: event.updatedAt,
+      }))
+    : shipment?.history || [];
   const localForecast = shipment ? getForecast(shipment) : null;
   const forecast = serverForecast
     ? {
@@ -192,7 +264,7 @@ function TrackShipment() {
       }
     : localForecast;
   const mapQuery = shipment
-    ? encodeURIComponent(latestEvent?.location || `${shipment.receiverCity}, India`)
+    ? encodeURIComponent(liveLocation || latestEvent?.location || `${shipment.receiverCity}, India`)
     : "";
 
   const totalDistanceKm = routeData ? `${routeData.distanceKm} km` : "Calculating...";
@@ -240,8 +312,8 @@ function TrackShipment() {
           <section className="live-monitoring" aria-label="Live delivery monitoring">
             <div>
               <div className="eyebrow">Live delivery monitoring</div>
-              <strong>{latestEvent?.location || shipment.receiverCity}</strong>
-              <span>Latest checkpoint: {latestEvent?.status || shipment.status}</span>
+              <strong>{liveLocation || latestEvent?.location || shipment.receiverCity}</strong>
+              <span>Latest checkpoint: {displayStatus}</span>
             </div>
             <div>
               <span className={`live-risk ${forecast.risk.toLowerCase().replaceAll(" ", "-")}`}>{forecast.risk}</span>
@@ -271,7 +343,31 @@ function TrackShipment() {
               title={`Current shipment location for ${shipment.trackingNumber}`}
               src={`https://www.google.com/maps?q=${mapQuery}&output=embed&refresh=${refreshVersion}`}
             />
-            <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {latestEvent?.location || "Location update pending"}. Route: {shipment.senderCity} to {shipment.receiverCity}. Total distance: {totalDistanceKm}. Est. travel time: {estimatedTravelTime}.</p>
+            <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {liveLocation || latestEvent?.location || "Location update pending"}. Route: {shipment.senderCity} to {shipment.receiverCity}. Total distance: {totalDistanceKm}. Est. travel time: {estimatedTravelTime}.</p>
+          </section>
+
+          {liveError && <div className="alert error" style={{ marginBottom: 18 }}>{liveError}</div>}
+
+          <section className="panel" style={{ marginBottom: 18 }} aria-label="Shipment alerts">
+            <div className="toolbar">
+              <div><div className="eyebrow">Notification panel</div><h2 className="section-title" style={{ marginTop: 6 }}>Shipment alerts</h2></div>
+              <span className="subtle">Auto-refreshed with live tracking</span>
+            </div>
+            {alerts.length === 0 ? <p className="subtle" style={{ marginBottom: 0 }}>No shipment alerts at this time.</p> : (
+              <div className="notification-items">
+                {alerts.map((alert) => <button className={`notification-item${alert.isRead ? "" : " unread"}`} key={alert.id} onClick={async () => {
+                  if (alert.isRead) return;
+                  try {
+                    await markAlertAsRead(alert.id);
+                    setAlerts((items) => items.map((item) => item.id === alert.id ? { ...item, isRead: true } : item));
+                  } catch { setLiveError("The alert could not be marked as read."); }
+                }} type="button">
+                  <span className="notification-item-title">{alert.alertType?.replaceAll("_", " ") || "Shipment alert"}</span>
+                  <span className="notification-item-message">{alert.message}</span>
+                  <span className="notification-item-time">{formatDateTime(alert.createdAt)}</span>
+                </button>)}
+              </div>
+            )}
           </section>
 
           <section className="grid grid-2" style={{ marginBottom: 18 }}>
@@ -298,7 +394,7 @@ function TrackShipment() {
                     {shipment.trackingNumber}
                   </h2>
                 </div>
-                <span className={`badge ${statusClass(shipment.status)}`}>{shipment.status}</span>
+                <span className={`badge ${statusClass(displayStatus)}`}>{displayStatus}</span>
               </div>
 
               <div className="route-strip">
@@ -369,9 +465,9 @@ function TrackShipment() {
 
               <h2 className="section-title">Tracking Timeline</h2>
               <ul className="timeline">
-                {shipment.history.map((event) => (
+                {displayTimeline.map((event) => (
                   <li className="timeline-item" key={`${event.status}-${event.timestamp}`}>
-                    <div className={`timeline-dot ${event.status === shipment.status ? "live" : ""}`}>
+                    <div className={`timeline-dot ${event.status === displayStatus ? "live" : ""}`}>
                       {event.status === "Delivered"
                         ? "✅"
                         : event.status === "Out for Delivery"
