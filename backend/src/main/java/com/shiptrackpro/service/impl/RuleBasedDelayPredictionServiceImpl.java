@@ -100,7 +100,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                     now);
         }
 
-        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate().atStartOfDay(), now, reasons);
+        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate(), now, reasons);
         long travelShortfallMinutes = computeTravelShortfall(shipment, request, now, reasons);
         long weatherDelayMinutes = computeWeatherDelay(request == null ? null : request.getWeatherCondition(), reasons);
 
@@ -211,7 +211,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                 .delayRisk(risk)
                 .predictedDelayMinutes(predictedDelayMinutes)
                 .reason(reason)
-                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate().atStartOfDay())
+                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate())
                 .evaluatedAt(evaluatedAt)
                 .build();
     }
