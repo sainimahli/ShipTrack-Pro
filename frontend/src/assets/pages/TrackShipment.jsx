@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ShipmentContext } from "../context/shipments";
 import { AuthContext } from "../context/auth";
 import { getDeliveryForecast, getMapConfig, updateTrackingLocation, updateTrackingStatus } from "../services/api";
@@ -541,7 +541,9 @@ function TrackShipment() {
   const { shipments, fetchShipments } = useContext(ShipmentContext);
   const { auth } = useContext(AuthContext);
   const location = useLocation();
-  const routeStateTrackingNumber = location.state?.trackingNumber;
+  const navigate = useNavigate();
+  const queryTrackingNumber = new URLSearchParams(location.search).get("num");
+  const routeStateTrackingNumber = queryTrackingNumber || location.state?.trackingNumber;
 
   const [trackingNumber, setTrackingNumber] = useState(routeStateTrackingNumber || shipments[0]?.trackingNumber || "");
   const [submittedTracking, setSubmittedTracking] = useState(routeStateTrackingNumber || shipments[0]?.trackingNumber || "");
@@ -747,6 +749,7 @@ function TrackShipment() {
   const handleSubmit = (event) => {
     event.preventDefault();
     setSubmittedTracking(trackingNumber);
+    navigate(`/track?num=${encodeURIComponent(trackingNumber)}`, { replace: true });
   };
 
   // Regular timestamp refresh
