@@ -62,6 +62,9 @@ export const getShipmentAlerts = (shipmentId) =>
 
 export const markAlertAsRead = (alertId) => API.put(`/alerts/${alertId}/read`);
 
+export const predictShipmentDelay = (shipmentId, signals = {}) =>
+  API.post(`/shipments/${shipmentId}/predict-delay`, signals);
+
 // Route Calculation
 export const calculateRoute = (originCity, destinationCity) =>
   API.post("/route/calculate", { originCity, destinationCity });

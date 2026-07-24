@@ -9,6 +9,7 @@ import {
   getTrackingStatus,
   getTrackingTimeline,
   markAlertAsRead,
+  predictShipmentDelay,
 } from "../services/api";
 
 const CITY_COORDS = {
@@ -200,6 +201,9 @@ function TrackShipment() {
         return;
       }
       try {
+        // The prediction endpoint raises a persisted alert for medium/high risk.
+        // Alert creation is idempotent, so this is safe during polling.
+        await predictShipmentDelay(apiShipment.shipmentId);
         const response = await getShipmentAlerts(apiShipment.shipmentId);
         if (!cancelled) {
           setAlerts(
