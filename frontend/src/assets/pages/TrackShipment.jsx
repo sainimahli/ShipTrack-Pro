@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ShipmentContext } from "../context/shipments";
 import { AuthContext } from "../context/auth";
 import { getDeliveryForecast, getMapConfig, updateTrackingLocation, updateTrackingStatus } from "../services/api";
@@ -539,8 +540,11 @@ function StatusStepper({ currentStatus }) {
 function TrackShipment() {
   const { shipments, fetchShipments } = useContext(ShipmentContext);
   const { auth } = useContext(AuthContext);
-  const [trackingNumber, setTrackingNumber] = useState(shipments[0]?.trackingNumber || "");
-  const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
+  const location = useLocation();
+  const routeStateTrackingNumber = location.state?.trackingNumber;
+
+  const [trackingNumber, setTrackingNumber] = useState(routeStateTrackingNumber || shipments[0]?.trackingNumber || "");
+  const [submittedTracking, setSubmittedTracking] = useState(routeStateTrackingNumber || shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
   const [mapConfig, setMapConfig] = useState(null);
@@ -548,13 +552,16 @@ function TrackShipment() {
   const [showLiveTracking, setShowLiveTracking] = useState(false);
   const [geocodedCoords, setGeocodedCoords] = useState({});
 
-  // Auto-populate default tracking number when shipments load
+  // Auto-populate default tracking number when shipments load or route state changes
   useEffect(() => {
-    if (shipments.length > 0 && !submittedTracking) {
+    if (routeStateTrackingNumber) {
+      setTrackingNumber(routeStateTrackingNumber);
+      setSubmittedTracking(routeStateTrackingNumber);
+    } else if (shipments.length > 0 && !submittedTracking) {
       setTrackingNumber(shipments[0].trackingNumber);
       setSubmittedTracking(shipments[0].trackingNumber);
     }
-  }, [shipments, submittedTracking]);
+  }, [shipments, submittedTracking, routeStateTrackingNumber]);
 
   const getCoords = useCallback((location) => {
     if (!location) return { lat: 13.0827, lng: 80.2707 };
