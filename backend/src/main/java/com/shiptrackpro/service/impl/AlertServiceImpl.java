@@ -68,8 +68,11 @@ public class AlertServiceImpl implements AlertService {
             return null;
         }
 
-        // Avoid duplicate alerts while one is still unread for this shipment.
-        if (alertRepository.findFirstByShipment_ShipmentIdAndIsReadFalse(shipmentId).isPresent()) {
+        String alertType = "DELAY_" + delayRisk.toUpperCase();
+
+        // A tracking page refreshes repeatedly. Do not create the same alert
+        // again after it has been read; a new risk level can still raise a new alert.
+        if (alertRepository.findFirstByShipment_ShipmentIdAndAlertType(shipmentId, alertType).isPresent()) {
             return null;
         }
 
@@ -77,7 +80,7 @@ public class AlertServiceImpl implements AlertService {
 
         Alert alert = new Alert();
         alert.setShipment(shipment);
-        alert.setAlertType("DELAY_" + delayRisk.toUpperCase());
+        alert.setAlertType(alertType);
         alert.setMessage(message != null ? message : "Delay risk is " + delayRisk.toUpperCase() + " for this shipment.");
         alert.setRead(false);
 
