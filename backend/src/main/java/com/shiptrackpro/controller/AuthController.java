@@ -76,4 +76,20 @@ public class AuthController {
         );
     }
 
+    @Autowired
+    private com.shiptrackpro.service.google.GoogleAuthService googleAuthService;
+
+    @GetMapping("/google-mock")
+    public void googleMock(
+            @RequestParam(defaultValue = "balajikrishnapillai01@gmail.com") String email,
+            @RequestParam(defaultValue = "Balaji") String name,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        
+        AuthResponse authResponse = googleAuthService.googleLogin(email, name);
+        
+        response.sendRedirect(
+                "http://localhost:5173/dashboard/success?token="
+                        + java.net.URLEncoder.encode(authResponse.getToken(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
 }

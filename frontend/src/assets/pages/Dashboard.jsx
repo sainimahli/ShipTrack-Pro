@@ -597,7 +597,7 @@ function CustomerDashboard({ data }) {
 function SupportAgentDashboard({ data }) {
   return (
     <DashboardLayout
-      actions={[actionLinks.track, actionLinks.manage]}
+      actions={[actionLinks.create, actionLinks.track, actionLinks.manage]}
       controlGroups={[
         {
           count: data.roleTotals.customers,
@@ -612,6 +612,7 @@ function SupportAgentDashboard({ data }) {
         "Proof of delivery verification questions.",
       ]}
       permissions={[
+        "Create shipments for customer and support workflows.",
         "Search and track shipments for customer support.",
         "Review tracking history and delivery status.",
         "Assist customers with ETA, delay, and proof of delivery questions.",

@@ -1,7 +1,8 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
+import { loadGoogleMaps } from "../services/mapsLoader";
 
 const roleLabels = {
   BUSINESS_CLIENT: "Business Client",
@@ -174,6 +175,246 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
   );
 }
 
+
+
+function AdminFleetMap({ shipments, setSelectedTracking }) {
+  const [mapProvider, setMapProvider] = useState("loading");
+  const [googleInstance, setGoogleInstance] = useState(null);
+  const [leafletReady, setLeafletReady] = useState(false);
+
+  useEffect(() => {
+    let timeoutId = setTimeout(() => {
+      console.warn("Google Maps load timed out, falling back to Leaflet.");
+      setMapProvider("leaflet");
+    }, 3500);
+
+    loadGoogleMaps()
+      .then((google) => {
+        clearTimeout(timeoutId);
+        setGoogleInstance(google);
+        setMapProvider("google");
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        console.error("Google Maps failed to load inside AdminFleetMap:", err);
+        setMapProvider("leaflet");
+      });
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (mapProvider !== "google" || !googleInstance || !shipments.length) return;
+
+    const container = document.getElementById("admin-fleet-map");
+    if (!container) return;
+
+    const google = googleInstance;
+    const activeShipments = shipments.filter(
+      (s) => !["Delivered", "Cancelled", "Rejected"].includes(s.status)
+    );
+
+    const map = new google.maps.Map(container, {
+      center: { lat: 20.5937, lng: 78.9629 }, // Center of India
+      zoom: 5,
+      mapTypeControl: false,
+      fullscreenControl: false,
+    });
+
+    const trafficLayer = new google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
+
+    const markers = [];
+    activeShipments.forEach((shipment) => {
+      const latestEvent = shipment.history?.at(-1);
+      const locName = latestEvent?.location || shipment.senderCity;
+      const coords = latestEvent?.latitude != null && latestEvent?.longitude != null
+        ? { lat: Number(latestEvent.latitude), lng: Number(latestEvent.longitude) }
+        : getCoords(locName);
+
+      let iconColor = "blue";
+      if (shipment.priority === "Critical") iconColor = "red";
+      else if (shipment.priority === "Express") iconColor = "orange";
+
+      const marker = new google.maps.Marker({
+        position: coords,
+        map: map,
+        title: shipment.trackingNumber,
+        icon: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="font-family: sans-serif; min-width: 200px; padding: 4px;">
+            <h4 style="margin: 0 0 6px 0; color: #1e293b;">${shipment.trackingNumber}</h4>
+            <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">
+              <b>Status:</b> ${shipment.status}<br/>
+              <b>Route:</b> ${shipment.senderCity} to ${shipment.receiverCity}<br/>
+              <b>Priority:</b> ${shipment.priority}<br/>
+              <b>Current Location:</b> ${locName}
+            </div>
+            <button 
+              style="background: #2563eb; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; width: 100%; font-weight: bold;"
+              onclick="window.selectShipment('${shipment.trackingNumber}')"
+            >
+              Manage Shipment
+            </button>
+          </div>
+        `
+      });
+
+      marker.addListener("click", () => {
+        infoWindow.open(map, marker);
+      });
+
+      markers.push(marker);
+    });
+
+    window.selectShipment = (trackingNumber) => {
+      setSelectedTracking(trackingNumber);
+    };
+
+    return () => {
+      markers.forEach((m) => m.setMap(null));
+      trafficLayer.setMap(null);
+      delete window.selectShipment;
+    };
+  }, [googleReady, googleInstance, shipments, setSelectedTracking, mapProvider]);
+
+  useEffect(() => {
+    if (mapProvider !== "leaflet") return;
+    if (window.L) {
+      setLeafletReady(true);
+      return;
+    }
+
+    const cssExists = document.getElementById("leaflet-css");
+    if (!cssExists) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.id = "leaflet-css";
+      document.head.appendChild(link);
+    }
+
+    const jsExists = document.getElementById("leaflet-js");
+    if (!jsExists) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.id = "leaflet-js";
+      script.onload = () => setLeafletReady(true);
+      document.body.appendChild(script);
+    } else {
+      const interval = setInterval(() => {
+        if (window.L) {
+          setLeafletReady(true);
+          clearInterval(interval);
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [mapProvider]);
+
+  useEffect(() => {
+    if (mapProvider !== "leaflet" || !leafletReady || !window.L || !shipments.length) return;
+
+    const container = document.getElementById("admin-fleet-map");
+    if (!container) return;
+
+    const L = window.L;
+    const activeShipments = shipments.filter(
+      (s) => !["Delivered", "Cancelled", "Rejected"].includes(s.status)
+    );
+
+    const map = L.map("admin-fleet-map", {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([20.5937, 78.9629], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    const createCustomIcon = (color) => {
+      return L.divIcon({
+        className: 'custom-map-marker',
+        html: `<div class="marker-pin" style="background-color: ${color}"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      });
+    };
+
+    const markers = [];
+    activeShipments.forEach((shipment) => {
+      const latestEvent = shipment.history?.at(-1);
+      const locName = latestEvent?.location || shipment.senderCity;
+      const coords = latestEvent?.latitude != null && latestEvent?.longitude != null
+        ? { lat: Number(latestEvent.latitude), lng: Number(latestEvent.longitude) }
+        : getCoords(locName);
+
+      let iconColor = '#2563eb';
+      if (shipment.priority === "Critical") iconColor = '#ef4444';
+      else if (shipment.priority === "Express") iconColor = '#f97316';
+
+      const marker = L.marker([coords.lat, coords.lng], {
+        icon: createCustomIcon(iconColor)
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div style="font-family: sans-serif; min-width: 180px; padding: 2px;">
+          <h4 style="margin: 0 0 6px 0; color: #1e293b; font-size: 13px;">${shipment.trackingNumber}</h4>
+          <div style="font-size: 11px; color: #475569; margin-bottom: 6px; line-height: 1.4;">
+            <b>Status:</b> ${shipment.status}<br/>
+            <b>Route:</b> ${shipment.senderCity} to ${shipment.receiverCity}<br/>
+            <b>Priority:</b> ${shipment.priority}<br/>
+            <b>Current:</b> ${locName}
+          </div>
+          <button 
+            style="background: #2563eb; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; width: 100%; font-weight: bold;"
+            onclick="window.selectShipment('${shipment.trackingNumber}')"
+          >
+            Manage Shipment
+          </button>
+        </div>
+      `);
+
+      markers.push(marker);
+    });
+
+    window.selectShipment = (trackingNumber) => {
+      setSelectedTracking(trackingNumber);
+    };
+
+    return () => {
+      map.remove();
+      delete window.selectShipment;
+    };
+  }, [mapProvider, leafletReady, shipments, setSelectedTracking]);
+
+  return (
+    <section className="panel" style={{ marginBottom: 18 }}>
+      <div className="toolbar" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="eyebrow">Real-time operation control</div>
+          <h2 className="section-title" style={{ marginTop: 6 }}>Live Fleet Monitor Map</h2>
+          <p className="subtle">Monitor positions, statuses, and priority flags for all active delivery vehicles and routes.</p>
+        </div>
+      </div>
+      <div style={{ position: "relative", width: "100%", height: 350 }}>
+        <div 
+          id="admin-fleet-map" 
+          style={{ width: "100%", height: "100%", borderRadius: 12, border: "1px solid #e2e8f0" }} 
+        />
+        {mapProvider === "loading" && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", borderRadius: 12 }}>
+            <p className="subtle">Loading fleet monitor map...</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ShipmentList() {
   const { auth } = useContext(AuthContext);
   const { shipments, statuses, updateStatus, updateShipment, cancelShipment, rejectShipment, metrics } = useContext(ShipmentContext);
@@ -262,6 +503,10 @@ function ShipmentList() {
       )}
 
       {isShipmentAdmin && selectedShipment && <ShipmentAdminWorkspace cancelShipment={cancelShipment} close={() => setSelectedTracking(null)} key={`${selectedShipment.trackingNumber}-${selectedShipment.status}`} rejectShipment={rejectShipment} shipment={selectedShipment} statuses={statuses} updateShipment={updateShipment} updateStatus={updateStatus} />}
+
+      {isShipmentAdmin && (
+        <AdminFleetMap shipments={shipments} setSelectedTracking={setSelectedTracking} />
+      )}
 
       <section className="panel">
         <div className="toolbar"><div className="filters"><input className="input" onChange={(e) => setQuery(e.target.value)} placeholder="Search tracking, sender, receiver, city" style={{ minWidth: 300 }} value={query} /><select className="select" onChange={(e) => setStatus(e.target.value)} value={status}><option>All</option>{statuses.map((item) => <option key={item}>{item}</option>)}</select></div><span className="subtle">{filteredShipments.length} visible records</span></div>

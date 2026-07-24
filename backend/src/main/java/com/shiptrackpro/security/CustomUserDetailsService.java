@@ -2,7 +2,6 @@ package com.shiptrackpro.security;
 
 import org.springframework.security.core.userdetails.UserDetailsService;
 
-import com.shiptrackpro.entity.User;
 import com.shiptrackpro.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;

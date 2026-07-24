@@ -7,26 +7,15 @@
 
 <h2>Google OAuth Test</h2>
 
-<button onclick="loginWithGoogle()">
-    Login with Google
-</button>
-
-<br><br>
-
 <p><strong>JWT Token:</strong></p>
 
 <textarea id="token" rows="10" cols="100"></textarea>
 
 <script>
-    function loginWithGoogle() {
-        window.location.href = "/oauth2/authorization/google";
-    }
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
 
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-
-    document.getElementById("token").value =
-        token ? token : "No token received";
+document.getElementById("token").value = token || "No token received";
 </script>
 
 </body>

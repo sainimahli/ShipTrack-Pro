@@ -1,7 +1,8 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
+import { loadGoogleMaps } from "../services/mapsLoader";
 
 const initialForm = {
   senderName: "",
@@ -20,6 +21,7 @@ const roleLabels = {
   CUSTOMER: "Customer",
   BUSINESS_CLIENT: "Business Client",
   LOGISTICS_OPERATOR: "Logistics Operator",
+  SUPPORT_AGENT: "Support Agent",
   ADMINISTRATOR: "Administrator",
 };
 
@@ -30,6 +32,7 @@ const allowedCreateRoles = [
   "Business Client",
   "Logistics Operator",
   "Administrator",
+  "Support Agent",
 ];
 
 function CreateShipment() {
@@ -40,23 +43,90 @@ function CreateShipment() {
   const role = normalizeRole(auth.user.role);
   const isCustomer = role === "Customer";
 
+  useEffect(() => {
+    if (!auth?.token) return;
+
+    loadGoogleMaps()
+      .then((google) => {
+        const senderEl = document.getElementById("senderCity");
+        if (senderEl) {
+          const autocompleteSender = new google.maps.places.Autocomplete(
+            senderEl,
+            { types: ["(cities)"], componentRestrictions: { country: "in" } }
+          );
+          autocompleteSender.addListener("place_changed", () => {
+            const place = autocompleteSender.getPlace();
+            if (place && place.address_components) {
+              const cityComponent = place.address_components.find(c => 
+                c.types.includes("locality") || c.types.includes("administrative_area_level_2")
+              );
+              if (cityComponent) {
+                setForm(current => ({ ...current, senderCity: cityComponent.long_name }));
+              }
+            }
+          });
+        }
+
+        const receiverEl = document.getElementById("receiverCity");
+        if (receiverEl) {
+          const autocompleteReceiver = new google.maps.places.Autocomplete(
+            receiverEl,
+            { types: ["(cities)"], componentRestrictions: { country: "in" } }
+          );
+          autocompleteReceiver.addListener("place_changed", () => {
+            const place = autocompleteReceiver.getPlace();
+            if (place && place.address_components) {
+              const cityComponent = place.address_components.find(c => 
+                c.types.includes("locality") || c.types.includes("administrative_area_level_2")
+              );
+              if (cityComponent) {
+                setForm(current => ({ ...current, receiverCity: cityComponent.long_name }));
+              }
+            }
+          });
+        }
+
+        const addressEl = document.getElementById("deliveryAddress");
+        if (addressEl) {
+          const autocompleteAddress = new google.maps.places.Autocomplete(
+            addressEl,
+            { componentRestrictions: { country: "in" } }
+          );
+          autocompleteAddress.addListener("place_changed", () => {
+            const place = autocompleteAddress.getPlace();
+            if (place && place.formatted_address) {
+              setForm(current => ({ ...current, deliveryAddress: place.formatted_address }));
+            }
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Google Maps failed to load autocomplete:", err);
+      });
+  }, [auth]);
+
   const canCreate = useMemo(() => allowedCreateRoles.includes(role), [role]);
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!canCreate) return;
 
     const requiresApproval = role !== "Administrator";
-    const shipment = createShipment({
-      ...form,
-      requestStatus: requiresApproval ? "Pending Approval" : "Created",
-    });
-    setCreated(shipment);
-    setForm(initialForm);
+    try {
+      const shipment = await createShipment({
+        ...form,
+        requestStatus: requiresApproval ? "Pending Approval" : "Created",
+      });
+      setCreated(shipment);
+      setForm(initialForm);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create shipment. Error: " + (err.response?.data?.message || err.message || err));
+    }
   };
 
   return (
@@ -97,6 +167,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="senderName"
               name="senderName"
+              value={form.senderName}
               onChange={handleChange}
               required
               placeholder="Enter Sender Name"
@@ -110,6 +181,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="senderCity"
               name="senderCity"
+              value={form.senderCity}
               onChange={handleChange}
               required
               placeholder="Enter Sender City"
@@ -123,6 +195,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="receiverName"
               name="receiverName"
+              value={form.receiverName}
               onChange={handleChange}
               required
               placeholder="Enter Receiver Name"
@@ -136,6 +209,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="receiverCity"
               name="receiverCity"
+              value={form.receiverCity}
               onChange={handleChange}
               required
               placeholder="Enter Receiver City"
@@ -149,6 +223,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="packageType"
               name="packageType"
+              value={form.packageType}
               onChange={handleChange}
               placeholder="Select Package Type"
             >
@@ -167,6 +242,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="weight"
               name="weight"
+              value={form.weight}
               onChange={handleChange}
               required
               placeholder="Enter Package Weight"
@@ -180,6 +256,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="eta"
               name="eta"
+              value={form.eta}
               onChange={handleChange}
               required
               type="date"
@@ -194,6 +271,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="priority"
               name="priority"
+              value={form.priority}
               onChange={handleChange}
               placeholder="Select Priority"
             >
@@ -210,6 +288,7 @@ function CreateShipment() {
               disabled={!canCreate}
               id="deliveryAddress"
               name="deliveryAddress"
+              value={form.deliveryAddress}
               onChange={handleChange}
               required
               placeholder="Enter Delivery Address"

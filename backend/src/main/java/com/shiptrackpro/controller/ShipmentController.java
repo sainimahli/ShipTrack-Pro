@@ -1,7 +1,6 @@
 package com.shiptrackpro.controller;
 
 import com.shiptrackpro.dto.CreateShipmentRequest;
-import com.shiptrackpro.dto.ForecastResponse;
 import com.shiptrackpro.dto.ShipmentResponse;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
 import com.shiptrackpro.entity.User;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
 
@@ -38,6 +38,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/shipments")
+@CrossOrigin(origins = "*")
 public class ShipmentController {
 
     private final ShipmentService shipmentService;
@@ -77,13 +78,6 @@ public class ShipmentController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ShipmentResponse> deleteShipment(@PathVariable Long id) {
         return ResponseEntity.ok(shipmentService.deleteShipment(id));
-    }
-
-    
-    @GetMapping("/{id}/forecast")
-    public ResponseEntity<ForecastResponse> getForecast(
-       @PathVariable Long id) {
-       return ResponseEntity.ok(shipmentService.getForecast(id));
     }
 
 }

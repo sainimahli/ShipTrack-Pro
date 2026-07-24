@@ -3,12 +3,14 @@ package com.shiptrackpro.config;
 import com.shiptrackpro.entity.Role;
 import com.shiptrackpro.repository.RoleRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Component
+@Order(1)
 public class RoleDataInitializer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;

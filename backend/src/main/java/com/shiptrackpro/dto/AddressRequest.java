@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.validation.constraints.NotNull;
-import com.shiptrackpro.enums.AddressType;
 
 /**
  * Inbound address payload, nested inside {@link CreateShipmentRequest} and
@@ -22,10 +20,6 @@ import com.shiptrackpro.enums.AddressType;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddressRequest {
-
-    @NotBlank(message = "Address type is required")
-    @NotNull(message = "Address type is required")
-    private AddressType addressType;
 
     @NotBlank(message = "Address line 1 is required")
     @Size(max = 255)
@@ -48,4 +42,6 @@ public class AddressRequest {
     @NotBlank(message = "Country is required")
     @Size(max = 100)
     private String country;
+
 }
+

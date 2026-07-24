@@ -1,42 +1,25 @@
-# IDE
-.idea/
-.vscode/
-*.iml
+node_modules
 
-# Node
-node_modules/
-
-# Maven / Java
-target/
+# Backend-specific ignores
 backend/target/
-
-# macOS
-.DS_Store
-
-# Logs
-*.log
-backend/logs/
-backend/hs_err_pid*.log
-backend/replay_pid*.log
-
-# Environment files
-.env
-.env.*
-backend/.env
-backend/.env.*
-
-# Backend IDE files
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/.mvn/wrapper/maven-wrapper.properties
 backend/.idea/
 backend/.vscode/
+backend/*.iml
 backend/.classpath
 backend/.project
 backend/.settings/
 backend/.factorypath
 backend/.springBeans
+backend/.env
+backend/.env.*
+backend/logs/
+backend/*.log
+backend/hs_err_pid*.log
+backend/replay_pid*.log
 
-# Local properties
+# Local runtime files
 backend/src/main/resources/application-local.properties
 backend/src/test/resources/application-local.properties
 
-# Temporary files
-backend/error.txt

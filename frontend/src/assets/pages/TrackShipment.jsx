@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
 import { AuthContext } from "../context/auth";
 import { getDeliveryForecast, getMapConfig, updateTrackingLocation, updateTrackingStatus } from "../services/api";
@@ -60,10 +60,52 @@ const locationCoords = {
   coimbatore: { lat: 11.0168, lng: 76.9558 },
   madurai: { lat: 9.9252, lng: 78.1198 },
   trichy: { lat: 10.7905, lng: 78.7047 },
+  tirchy: { lat: 10.7905, lng: 78.7047 },
   salem: { lat: 11.6643, lng: 78.1460 },
   pondicherry: { lat: 11.9416, lng: 79.8083 },
   puducherry: { lat: 11.9416, lng: 79.8083 },
   tirupati: { lat: 13.6288, lng: 79.4192 },
+  // Tamil Nadu additional major cities
+  theni: { lat: 10.0104, lng: 77.4768 },
+  erode: { lat: 11.3410, lng: 77.7172 },
+  dindigul: { lat: 10.3673, lng: 77.9803 },
+  tirunelveli: { lat: 8.7139, lng: 77.7567 },
+  thoothukudi: { lat: 8.7642, lng: 78.1348 },
+  tuticorin: { lat: 8.7642, lng: 78.1348 },
+  kanyakumari: { lat: 8.0883, lng: 77.5385 },
+  nagercoil: { lat: 8.1833, lng: 77.4119 },
+  thanjavur: { lat: 10.7870, lng: 79.1378 },
+  kumbakonam: { lat: 10.9602, lng: 79.3845 },
+  namakkal: { lat: 11.2189, lng: 78.1674 },
+  hosur: { lat: 12.7409, lng: 77.8253 },
+  krishnagiri: { lat: 12.5186, lng: 78.2138 },
+  dharmapuri: { lat: 12.1211, lng: 78.1582 },
+  tirupur: { lat: 11.1085, lng: 77.3411 },
+  tiruppur: { lat: 11.1085, lng: 77.3411 },
+  ooty: { lat: 11.4102, lng: 76.6950 },
+  cuddalore: { lat: 11.7480, lng: 79.7714 },
+  chidambaram: { lat: 11.3980, lng: 79.6936 },
+  nagapattinam: { lat: 10.7656, lng: 79.8424 },
+  karaikal: { lat: 10.9254, lng: 79.8380 },
+  sivakasi: { lat: 9.4532, lng: 77.7951 },
+  virudhunagar: { lat: 9.5680, lng: 77.9624 },
+  ramanathapuram: { lat: 9.3639, lng: 78.8395 },
+  sivaganga: { lat: 9.8433, lng: 78.4809 },
+  pudukkottai: { lat: 10.3796, lng: 78.8208 },
+  karaikudi: { lat: 10.0747, lng: 78.7842 },
+  perambalur: { lat: 11.2342, lng: 78.8756 },
+  ariyalur: { lat: 11.1401, lng: 79.0786 },
+  villupuram: { lat: 11.9401, lng: 79.4861 },
+  viluppuram: { lat: 11.9401, lng: 79.4861 },
+  kallakurichi: { lat: 11.7383, lng: 78.9639 },
+  tiruvallur: { lat: 13.1394, lng: 79.9070 },
+  kanchipuram: { lat: 12.8342, lng: 79.7036 },
+  chengalpattu: { lat: 12.6932, lng: 79.9754 },
+  ranipet: { lat: 12.9272, lng: 79.3331 },
+  tirupattur: { lat: 12.4918, lng: 78.5636 },
+  tenkasi: { lat: 8.9591, lng: 77.3146 },
+  mayiladuthurai: { lat: 11.1018, lng: 79.6522 },
+  karur: { lat: 10.9601, lng: 78.0766 },
 };
 
 function getCoords(location) {
@@ -106,7 +148,8 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distance in km
 }
 
-function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
+function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated, getCoords: resolveCoords }) {
+  const getCoordsVal = resolveCoords || getCoords;
   const [mapProvider, setMapProvider] = useState("loading");
   const [googleInstance, setGoogleInstance] = useState(null);
   const [leafletReady, setLeafletReady] = useState(false);
@@ -135,7 +178,7 @@ function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
   const points = useMemo(() => {
     if (!shipment) return [];
 
-    const senderCoords = getCoords(shipment.senderCity);
+    const senderCoords = getCoordsVal(shipment.senderCity);
     const resolvedPoints = [{
       lat: senderCoords.lat,
       lng: senderCoords.lng,
@@ -147,7 +190,7 @@ function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
       shipment.history.forEach((event, idx) => {
         const coords = event.latitude != null && event.longitude != null
           ? { lat: Number(event.latitude), lng: Number(event.longitude) }
-          : getCoords(event.location);
+          : getCoordsVal(event.location);
 
         const prev = resolvedPoints[resolvedPoints.length - 1];
         if (prev.lat !== coords.lat || prev.lng !== coords.lng) {
@@ -165,7 +208,7 @@ function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
       });
     }
 
-    const receiverCoords = getCoords(shipment.receiverCity);
+    const receiverCoords = getCoordsVal(shipment.receiverCity);
     const lastPoint = resolvedPoints[resolvedPoints.length - 1];
     if (lastPoint.lat !== receiverCoords.lat || lastPoint.lng !== receiverCoords.lng) {
       resolvedPoints.push({
@@ -177,7 +220,7 @@ function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
     }
 
     return resolvedPoints;
-  }, [shipment]);
+  }, [shipment, getCoordsVal]);
 
   useEffect(() => {
     if (mapProvider !== "google" || !googleInstance || !shipment) return;
@@ -187,8 +230,8 @@ function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
     if (!container) return;
 
     const google = googleInstance;
-    const origin = getCoords(shipment.senderCity);
-    const destination = getCoords(shipment.receiverCity);
+    const origin = getCoordsVal(shipment.senderCity);
+    const destination = getCoordsVal(shipment.receiverCity);
 
     const map = new google.maps.Map(container, {
       center: origin,
@@ -345,8 +388,8 @@ function LiveTrackingMap({ shipment, mapId = "main", onRouteCalculated }) {
     if (!container) return;
 
     const L = window.L;
-    const origin = getCoords(shipment.senderCity);
-    const destination = getCoords(shipment.receiverCity);
+    const origin = getCoordsVal(shipment.senderCity);
+    const destination = getCoordsVal(shipment.receiverCity);
     
     if (onRouteCalculated) {
       const dist = calculateHaversineDistance(origin.lat, origin.lng, destination.lat, destination.lng);
@@ -503,6 +546,51 @@ function TrackShipment() {
   const [mapConfig, setMapConfig] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [showLiveTracking, setShowLiveTracking] = useState(false);
+  const [geocodedCoords, setGeocodedCoords] = useState({});
+
+  // Auto-populate default tracking number when shipments load
+  useEffect(() => {
+    if (shipments.length > 0 && !submittedTracking) {
+      setTrackingNumber(shipments[0].trackingNumber);
+      setSubmittedTracking(shipments[0].trackingNumber);
+    }
+  }, [shipments, submittedTracking]);
+
+  const getCoords = useCallback((location) => {
+    if (!location) return { lat: 13.0827, lng: 80.2707 };
+    const key = location.toLowerCase().trim();
+    if (locationCoords[key]) {
+      return locationCoords[key];
+    }
+    if (geocodedCoords[key]) {
+      return geocodedCoords[key];
+    }
+    for (const [name, coords] of Object.entries(geocodedCoords)) {
+      if (key.includes(name) || name.includes(key)) {
+        return coords;
+      }
+    }
+    for (const [name, coords] of Object.entries(locationCoords)) {
+      if (key.includes(name) || name.includes(key)) {
+        return coords;
+      }
+    }
+
+    // Stable hash offset fallback to prevent overlapping routes for unrecognized cities
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const baseLat = 13.0827;
+    const baseLng = 80.2707;
+    const latOffset = ((Math.abs(hash) % 200) - 100) / 100; // -1.0 to +1.0 degree
+    const lngOffset = ((Math.abs(hash * 31) % 200) - 100) / 100; // -1.0 to +1.0 degree
+
+    return {
+      lat: baseLat + latOffset,
+      lng: baseLng + lngOffset
+    };
+  }, [geocodedCoords]);
 
   // Simulator state variables
   const [isSimulating, setIsSimulating] = useState(false);
@@ -524,6 +612,69 @@ function TrackShipment() {
       ),
     [shipments, submittedTracking],
   );
+
+  const geocodingInFlight = useRef(new Set());
+
+  // Geocoding hook
+  useEffect(() => {
+    if (!shipment) return;
+
+    const citiesToGeocode = new Set();
+    if (shipment.senderCity) citiesToGeocode.add(shipment.senderCity);
+    if (shipment.receiverCity) citiesToGeocode.add(shipment.receiverCity);
+    if (shipment.history) {
+      shipment.history.forEach(event => {
+        if (event.location && event.location !== "Unknown") {
+          citiesToGeocode.add(event.location);
+        }
+      });
+    }
+
+    citiesToGeocode.forEach(city => {
+      const normalizedCity = city.toLowerCase().trim();
+      
+      // Skip if already in static locationCoords or geocodedCoords or currently in-flight
+      if (locationCoords[normalizedCity] || geocodedCoords[normalizedCity] || geocodingInFlight.current.has(normalizedCity)) {
+        return;
+      }
+
+      geocodingInFlight.current.add(normalizedCity);
+
+      if (window.google?.maps?.Geocoder) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address: city + ", India" }, (results, status) => {
+          if (status === "OK" && results[0]?.geometry?.location) {
+            const loc = results[0].geometry.location;
+            setGeocodedCoords(prev => ({
+              ...prev,
+              [normalizedCity]: { lat: loc.lat(), lng: loc.lng() }
+            }));
+          } else {
+            geocodingInFlight.current.delete(normalizedCity);
+          }
+        });
+      } else {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city + ", India")}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data[0]) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              setGeocodedCoords(prev => ({
+                ...prev,
+                [normalizedCity]: { lat, lng: lon }
+              }));
+            } else {
+              geocodingInFlight.current.delete(normalizedCity);
+            }
+          })
+          .catch(err => {
+            console.error("OSM Geocoding failed:", err);
+            geocodingInFlight.current.delete(normalizedCity);
+          });
+      }
+    });
+  }, [shipment, geocodedCoords]);
 
   const distanceToDestination = useMemo(() => {
     if (!shipment) return null;
@@ -554,13 +705,37 @@ function TrackShipment() {
     }
     
     return null;
-  }, [shipment]);
+  }, [shipment, getCoords]);
 
   const isNearDestination = useMemo(() => {
     if (distanceToDestination === null || !shipment) return false;
     const isActive = ["Picked Up", "In Transit", "Out for Delivery"].includes(shipment.status);
     return isActive && distanceToDestination <= 50;
   }, [distanceToDestination, shipment?.status]);
+
+  const googleMapsDirUrl = useMemo(() => {
+    if (!shipment) return "";
+    let origin = shipment.senderCity;
+    const latestWithCoords = [...shipment.history]
+      .reverse()
+      .find(h => h.latitude !== null && h.longitude !== null);
+      
+    if (latestWithCoords) {
+      origin = `${latestWithCoords.latitude},${latestWithCoords.longitude}`;
+    } else {
+      const latestEvent = shipment.history?.at(-1);
+      if (latestEvent?.location) {
+        const coords = getCoords(latestEvent.location);
+        origin = `${coords.lat},${coords.lng}`;
+      } else {
+        const startCoords = getCoords(shipment.senderCity);
+        origin = `${startCoords.lat},${startCoords.lng}`;
+      }
+    }
+    const destCoords = getCoords(shipment.receiverCity);
+    const destination = `${destCoords.lat},${destCoords.lng}`;
+    return `https://www.google.com/maps/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}`;
+  }, [shipment, getCoords]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -621,21 +796,12 @@ function TrackShipment() {
       return;
     }
 
-    const existingScript = document.getElementById("google-maps-script");
-    if (existingScript) {
-      if (window.google?.maps) {
-        setMapReady(true);
-      }
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-maps-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${mapConfig.apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setMapReady(true);
-    document.body.appendChild(script);
+    loadGoogleMaps()
+      .then(() => setMapReady(true))
+      .catch((err) => {
+        console.error("Google Maps failed to load in TrackShipment:", err);
+        setMapReady(false);
+      });
   }, [mapConfig]);
 
   const simulateNextStep = async () => {
@@ -948,10 +1114,10 @@ function TrackShipment() {
                 <div className="eyebrow">Location services</div>
                 <h2 className="section-title" style={{ marginTop: 6 }}>Live route map</h2>
               </div>
-              <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank">Open in Google Maps</a>
+              <a className="button secondary compact" href={googleMapsDirUrl} rel="noreferrer" target="_blank">Open in Google Maps</a>
             </div>
             <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 350, marginBottom: 14 }}>
-              <LiveTrackingMap shipment={shipment} mapId="panel" onRouteCalculated={handleRouteCalculated} />
+              <LiveTrackingMap shipment={shipment} mapId="panel" onRouteCalculated={handleRouteCalculated} getCoords={getCoords} />
             </div>
             <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {latestEvent?.location || "Location update pending"}. Route: {currentRoute}.</p>
           </section>
@@ -1094,11 +1260,11 @@ function TrackShipment() {
                   <div className="live-modal-map-sec">
                     <div className="live-modal-card-title">Live Current Location Map</div>
                     <div style={{ flex: 1, minHeight: 350 }}>
-                      <LiveTrackingMap shipment={shipment} onRouteCalculated={handleRouteCalculated} />
+                      <LiveTrackingMap shipment={shipment} onRouteCalculated={handleRouteCalculated} getCoords={getCoords} />
                     </div>
                     <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="subtle" style={{ fontSize: 13, color: '#334155' }}>Current Location: <strong>{latestEvent?.location || shipment.receiverCity}</strong></span>
-                      <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank" style={{ margin: 0 }}>Open in Google Maps</a>
+                      <a className="button secondary compact" href={googleMapsDirUrl} rel="noreferrer" target="_blank" style={{ margin: 0 }}>Open in Google Maps</a>
                     </div>
                   </div>
                   <div className="live-modal-info-sec">

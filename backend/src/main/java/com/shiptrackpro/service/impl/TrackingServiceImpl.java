@@ -16,84 +16,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Set;
 
 import java.time.OffsetDateTime;
 import java.time.Duration;
 import java.util.List;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import com.shiptrackpro.service.NotificationService;
-import com.shiptrackpro.enums.NotificationChannel;
-import com.shiptrackpro.enums.NotificationEventType;
-import com.shiptrackpro.entity.User;
-import com.shiptrackpro.repository.UserRepository;
 
 @Service
 public class TrackingServiceImpl implements TrackingService {
 
     private static final String SYSTEM_USER = "SYSTEM";
 
-    private static final Map<ShipmentStatus, Set<ShipmentStatus>> VALID_TRANSITIONS = new EnumMap<>(
-            ShipmentStatus.class);
-
-    static {
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.CREATED,
-                EnumSet.of(
-                        ShipmentStatus.PICKED_UP,
-                        ShipmentStatus.CANCELLED));
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.PICKED_UP,
-                EnumSet.of(
-                        ShipmentStatus.IN_TRANSIT,
-                        ShipmentStatus.CANCELLED));
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.IN_TRANSIT,
-                EnumSet.of(
-                        ShipmentStatus.OUT_FOR_DELIVERY,
-                        ShipmentStatus.CANCELLED));
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.OUT_FOR_DELIVERY,
-                EnumSet.of(
-                        ShipmentStatus.DELIVERED,
-                        ShipmentStatus.RETURNED));
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.DELIVERED,
-                EnumSet.noneOf(ShipmentStatus.class));
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.CANCELLED,
-                EnumSet.noneOf(ShipmentStatus.class));
-
-        VALID_TRANSITIONS.put(
-                ShipmentStatus.RETURNED,
-                EnumSet.noneOf(ShipmentStatus.class));
-    }
-
     private final TrackingEventRepository trackingEventRepository;
     private final ShipmentRepository shipmentRepository;
-    private final UserRepository userRepository;
-    private final NotificationService notificationService;
 
     public TrackingServiceImpl(
             TrackingEventRepository trackingEventRepository,
-            ShipmentRepository shipmentRepository,
-            UserRepository userRepository,
-            NotificationService notificationService) {
+            ShipmentRepository shipmentRepository) {
 
         this.trackingEventRepository = trackingEventRepository;
         this.shipmentRepository = shipmentRepository;
-        this.userRepository = userRepository;
-        this.notificationService = notificationService;
     }
 
     @Override
@@ -122,7 +63,9 @@ public class TrackingServiceImpl implements TrackingService {
         response.setTrackingNumber(shipment.getTrackingNumber());
         response.setCurrentStatus(shipment.getShipmentStatus());
         response.setLatestLocation(null);
-        response.setLatestUpdateAt(shipment.getUpdatedAt());
+        response.setLatestUpdateAt(shipment.getUpdatedAt() != null
+                ? shipment.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC)
+                : null);
         return response;
     }
 
@@ -130,8 +73,7 @@ public class TrackingServiceImpl implements TrackingService {
     @Transactional(readOnly = true)
     public TrackingTimelineResponse getTrackingTimeline(String trackingNumber) {
         String normalizedTrackingNumber = normalizeTrackingNumber(trackingNumber);
-        List<TrackingEvent> events = trackingEventRepository
-                .findByTrackingNumberOrderByUpdatedAtAsc(normalizedTrackingNumber);
+        List<TrackingEvent> events = trackingEventRepository.findByTrackingNumberOrderByUpdatedAtAsc(normalizedTrackingNumber);
 
         if (events.isEmpty()) {
             throw notFound(normalizedTrackingNumber);
@@ -159,9 +101,7 @@ public class TrackingServiceImpl implements TrackingService {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime expectedDelivery = shipment.getExpectedDeliveryDate() == null
                 ? null
-                : shipment.getExpectedDeliveryDate()
-                        .atStartOfDay()
-                        .atOffset(java.time.ZoneOffset.UTC);
+                : shipment.getExpectedDeliveryDate().atOffset(java.time.ZoneOffset.UTC);
 
         DeliveryForecastResponse response = new DeliveryForecastResponse();
         response.setTrackingNumber(normalizedTrackingNumber);
@@ -199,27 +139,19 @@ public class TrackingServiceImpl implements TrackingService {
     public TrackingStatusResponse updateTrackingStatus(UpdateTrackingStatusRequest request) {
         String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
         Shipment shipment = findShipment(trackingNumber);
-        validateStatusTransition(
-                shipment.getShipmentStatus(),
-                request.getStatus());
 
         TrackingEvent event = new TrackingEvent();
         event.setShipment(shipment);
         event.setTrackingNumberCache(trackingNumber);
         event.setStatus(request.getStatus());
         event.setDescription(request.getDescription().trim());
-        event.setUpdatedBy(getCurrentUsername());
+        event.setUpdatedBy(SYSTEM_USER);
         event.setUpdatedAt(OffsetDateTime.now());
 
         TrackingEvent savedEvent = trackingEventRepository.save(event);
 
         shipment.setShipmentStatus(request.getStatus());
-
-        shipment.setEstimatedArrival(
-                calculateEstimatedArrival(shipment));
-
         shipmentRepository.save(shipment);
-        sendShipmentStatusNotifications(shipment, request.getStatus());
 
         TrackingStatusResponse response = new TrackingStatusResponse();
         response.setTrackingNumber(savedEvent.getTrackingNumber());
@@ -245,7 +177,7 @@ public class TrackingServiceImpl implements TrackingService {
         event.setLongitude(request.getLongitude());
         event.setLocationName(request.getLocationName().trim());
         event.setDescription(request.getDescription().trim());
-        event.setUpdatedBy(getCurrentUsername());
+        event.setUpdatedBy(SYSTEM_USER);
         event.setUpdatedAt(OffsetDateTime.now());
 
         TrackingEvent savedEvent = trackingEventRepository.save(event);
@@ -282,18 +214,18 @@ public class TrackingServiceImpl implements TrackingService {
         String normalizedTrackingNumber = normalizeTrackingNumber(trackingNumber);
 
         TrackingEvent eventWithLocation = trackingEventRepository
-                .findFirstByTrackingNumberAndLocationNameIsNotNullOrderByUpdatedAtDesc(normalizedTrackingNumber)
-                .orElse(null);
+            .findFirstByTrackingNumberAndLocationNameIsNotNullOrderByUpdatedAtDesc(normalizedTrackingNumber)
+            .orElse(null);
 
         if (eventWithLocation != null && hasLocationData(eventWithLocation)) {
             return eventWithLocation;
         }
 
         return trackingEventRepository.findByTrackingNumberOrderByUpdatedAtAsc(normalizedTrackingNumber)
-                .stream()
-                .filter(this::hasLocationData)
-                .reduce((first, second) -> second)
-                .orElse(null);
+            .stream()
+            .filter(this::hasLocationData)
+            .reduce((first, second) -> second)
+            .orElse(null);
     }
 
     private TrackingEvent findLatestLocationEvent(String trackingNumber) {
@@ -321,21 +253,6 @@ public class TrackingServiceImpl implements TrackingService {
             case CANCELLED, RETURNED -> 0;
             case DELIVERED -> 0;
         };
-    }
-
-    private OffsetDateTime calculateEstimatedArrival(Shipment shipment) {
-
-        if (shipment.getShipmentStatus() == ShipmentStatus.DELIVERED) {
-            return OffsetDateTime.now();
-        }
-
-        if (shipment.getShipmentStatus() == ShipmentStatus.CANCELLED
-                || shipment.getShipmentStatus() == ShipmentStatus.RETURNED) {
-            return null;
-        }
-
-        return OffsetDateTime.now()
-                .plusMinutes(remainingMinutes(shipment.getShipmentStatus()));
     }
 
     private String buildForecastReason(ShipmentStatus status, boolean staleUpdate, long delayMinutes) {
@@ -368,41 +285,6 @@ public class TrackingServiceImpl implements TrackingService {
         return response;
     }
 
-    private void validateStatusTransition(
-            ShipmentStatus currentStatus,
-            ShipmentStatus newStatus) {
-
-        if (currentStatus == newStatus) {
-            return;
-        }
-
-        Set<ShipmentStatus> allowedStatuses = VALID_TRANSITIONS.getOrDefault(
-                currentStatus,
-                EnumSet.noneOf(ShipmentStatus.class));
-
-        if (!allowedStatuses.contains(newStatus)) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invalid shipment status transition from "
-                            + currentStatus
-                            + " to "
-                            + newStatus);
-        }
-    }
-
-    private String getCurrentUsername() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
-            return "SYSTEM";
-        }
-
-        return authentication.getName();
-    }
-
     private String normalizeTrackingNumber(String trackingNumber) {
         if (trackingNumber == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "trackingNumber is required");
@@ -431,56 +313,7 @@ public class TrackingServiceImpl implements TrackingService {
     private ResponseStatusException notFound(String trackingNumber) {
         return new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
-                "No tracking history found for tracking number: " + trackingNumber);
+                "No tracking history found for tracking number: " + trackingNumber
+        );
     }
-
-    private void sendShipmentStatusNotifications(
-            Shipment shipment,
-            ShipmentStatus status) {
-
-        if (shipment.getUserId() == null) {
-            return;
-        }
-
-        User user = userRepository.findById(shipment.getUserId())
-                .orElse(null);
-
-        if (user == null) {
-            return;
-        }
-
-        NotificationEventType eventType = mapEventType(status);
-
-        String title = "Shipment Status Updated";
-
-        String message = "Shipment "
-                + shipment.getTrackingNumber()
-                + " status changed to "
-                + status.name().replace('_', ' ');
-
-        notificationService.createNotification(
-                user,
-                shipment,
-                eventType,
-                NotificationChannel.PUSH,
-                title,
-                message);
-    }
-
-    private NotificationEventType mapEventType(ShipmentStatus status) {
-
-        return switch (status) {
-
-            case PICKED_UP -> NotificationEventType.PICKED_UP;
-
-            case IN_TRANSIT -> NotificationEventType.IN_TRANSIT;
-
-            case OUT_FOR_DELIVERY -> NotificationEventType.OUT_FOR_DELIVERY;
-
-            case DELIVERED -> NotificationEventType.DELIVERED;
-
-            default -> NotificationEventType.SHIPMENT_CREATED;
-        };
-    }
-
 }

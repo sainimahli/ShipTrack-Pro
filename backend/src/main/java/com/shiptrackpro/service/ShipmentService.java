@@ -1,7 +1,6 @@
 package com.shiptrackpro.service;
 
 import com.shiptrackpro.dto.CreateShipmentRequest;
-import com.shiptrackpro.dto.ForecastResponse;
 import com.shiptrackpro.dto.ShipmentResponse;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
 
@@ -56,7 +55,5 @@ public interface ShipmentService {
      * @throws com.shiptrackpro.exception.ResourceNotFoundException if no shipment exists with the given id
      */
     ShipmentResponse deleteShipment(Long id);
-    
-    ForecastResponse getForecast(Long shipmentId);
 
 }

@@ -1,7 +1,6 @@
 import { useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/auth";
-import NotificationBell from "./NotificationBell";
 
 const titles = {
   "/dashboard": ["Dashboard", ""],
@@ -35,7 +34,6 @@ function Navbar() {
       </div>
 
       <div className="user-chip">
-        <NotificationBell isAuthenticated={Boolean(auth?.token)} />
         <div className="avatar">{initials}</div>
         <div>
          <div>

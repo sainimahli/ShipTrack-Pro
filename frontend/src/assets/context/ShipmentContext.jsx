@@ -3,59 +3,7 @@ import { ShipmentContext } from "./shipments";
 import { AuthContext } from "./auth";
 import API from "../services/api";
 
-const locationCoords = {
-  mumbai: { lat: 19.0760, lng: 72.8777 },
-  delhi: { lat: 28.6139, lng: 77.2090 },
-  "new delhi": { lat: 28.6139, lng: 77.2090 },
-  bengaluru: { lat: 12.9716, lng: 77.5946 },
-  bangalore: { lat: 12.9716, lng: 77.5946 },
-  hyderabad: { lat: 17.3850, lng: 78.4867 },
-  pune: { lat: 18.5204, lng: 73.8567 },
-  chennai: { lat: 13.0827, lng: 80.2707 },
-  thambaram: { lat: 12.9249, lng: 80.1240 },
-  tambaram: { lat: 12.9249, lng: 80.1240 },
-  nagpur: { lat: 21.1466, lng: 79.0849 },
-  kurnool: { lat: 15.8281, lng: 78.0373 },
-  lucknow: { lat: 26.8467, lng: 80.9462 },
-  kanpur: { lat: 26.4499, lng: 80.3319 },
-  tiruvannamalai: { lat: 12.2272, lng: 79.0700 },
-  vellore: { lat: 12.9165, lng: 79.1325 },
-  coimbatore: { lat: 11.0168, lng: 76.9558 },
-  madurai: { lat: 9.9252, lng: 78.1198 },
-  trichy: { lat: 10.7905, lng: 78.7047 },
-  salem: { lat: 11.6643, lng: 78.1460 },
-  pondicherry: { lat: 11.9416, lng: 79.8083 },
-  puducherry: { lat: 11.9416, lng: 79.8083 },
-  tirupati: { lat: 13.6288, lng: 79.4192 },
-};
 
-function getCoords(location) {
-  if (!location) return { lat: 13.0827, lng: 80.2707 };
-  const key = location.toLowerCase().trim();
-  if (locationCoords[key]) {
-    return locationCoords[key];
-  }
-  for (const [name, coords] of Object.entries(locationCoords)) {
-    if (key.includes(name) || name.includes(key)) {
-      return coords;
-    }
-  }
-
-  // Stable hash offset fallback to prevent overlapping routes for unrecognized cities
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = key.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const baseLat = 13.0827;
-  const baseLng = 80.2707;
-  const latOffset = ((Math.abs(hash) % 200) - 100) / 100; // -1.0 to +1.0 degree
-  const lngOffset = ((Math.abs(hash * 31) % 200) - 100) / 100; // -1.0 to +1.0 degree
-
-  return {
-    lat: baseLat + latOffset,
-    lng: baseLng + lngOffset
-  };
-}
 
 const statusMapFrontendToBackend = {
   "Pending Approval": "CREATED",
