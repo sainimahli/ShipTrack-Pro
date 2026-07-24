@@ -423,47 +423,6 @@ Delivery Health
 <p>{shipment.priority}</p>
 
 </div>
-<section className="ai-card">
-
-<h3>AI Shipment Insights</h3>
-
-<div className="ai-grid">
-
-<div>
-
-<h4>Weather</h4>
-
-<p>Clear Route ☀</p>
-
-</div>
-
-<div>
-
-<h4>Traffic</h4>
-
-<p>Moderate</p>
-
-</div>
-
-<div>
-
-<h4>Delay Risk</h4>
-
-<p>Low (6%)</p>
-
-</div>
-
-<div>
-
-<h4>Vehicle Speed</h4>
-
-<p>62 km/h</p>
-
-</div>
-
-</div>
-
-</section>
 </section>
           <section className="grid grid-2">
           <div className="panel">
@@ -561,15 +520,7 @@ return(
             <div style={{ marginTop: 18 }}>
               <div className="toolbar" style={{ marginBottom: 8 }}>
                 <strong>Delivery progress</strong>
-                <div className="eta-countdown">
 
-⏳ Estimated Arrival
-
-<h2>08 : 42 : 15</h2>
-
-<p>Hours Remaining</p>
-
-</div>
                 <span className="subtle">{shipment.progress}%</span>
               </div>
               <div className="progress-track">
