@@ -129,9 +129,11 @@ function TrackShipment() {
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
-
-
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [liveTracking, setLiveTracking] = useState(null);
+  const [routeData, setRouteData] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [liveError, setLiveError] = useState("");
 
 
 
