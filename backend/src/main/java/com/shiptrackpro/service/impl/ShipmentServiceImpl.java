@@ -3,7 +3,6 @@ package com.shiptrackpro.service.impl;
 import com.shiptrackpro.dto.CreateShipmentRequest;
 import com.shiptrackpro.dto.ShipmentResponse;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
-import com.shiptrackpro.dto.ForecastResponse;
 import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.entity.Shipment;
 import com.shiptrackpro.entity.User;
@@ -19,7 +18,9 @@ import com.shiptrackpro.service.TrackingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.LocalDate;
+
 
 import java.util.List;
 import java.util.UUID;
@@ -143,6 +144,7 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         return mapToResponse(cancelled);
     }
+
     @Override
 public ForecastResponse getForecast(Long shipmentId) {
 

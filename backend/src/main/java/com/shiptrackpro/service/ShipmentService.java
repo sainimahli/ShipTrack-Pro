@@ -57,6 +57,5 @@ public interface ShipmentService {
      */
     ShipmentResponse deleteShipment(Long id);
     
-    ForecastResponse getForecast(Long shipmentId);
 
 }
