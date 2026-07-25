@@ -2,10 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getRoles, register as registerApi } from "../services/api";
 
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 const fallbackRoles = [
   { roleId: 1, roleName: "CUSTOMER" },
   { roleId: 2, roleName: "BUSINESS_CLIENT" },
@@ -32,10 +29,7 @@ const withDefaultRoles = (loadedRoles) => {
 };
 
 function Register() {
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [roles, setRoles] = useState([]);
@@ -80,10 +74,6 @@ function Register() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
     if (form.password !== form.confirmPassword) {
       setFeedback({
         type: "error",
@@ -109,10 +99,7 @@ function Register() {
         });
 
         navigate("/login");
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
       }
     } catch (error) {
       setFeedback({
