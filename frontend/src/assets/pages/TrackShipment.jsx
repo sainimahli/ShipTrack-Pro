@@ -102,6 +102,13 @@ const shipmentSteps = [
   "Out for Delivery",
   "Delivered",
 ];
+const demoTrackingNumbers = [
+  "STP10024591",
+  "STP10024592",
+  "STP10024593",
+  "STP10024594",
+  "STP10024595",
+];
 
 function getForecast(shipment) {
   const forecast = forecastByStatus[shipment.status] || { remaining: "Under review", risk: "WATCH" };
@@ -116,7 +123,6 @@ function getForecast(shipment) {
         : `The shipment is ${shipment.status.toLowerCase()} and is forecast to reach its destination on schedule.`,
   };
 }
-
 function TrackShipment() {
   const { shipments } = useContext(ShipmentContext);
   const [trackingNumber, setTrackingNumber] = useState(shipments[0]?.trackingNumber || "");
@@ -124,10 +130,12 @@ function TrackShipment() {
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const [routeData, setRouteData] = useState(null);
   const [liveTracking, setLiveTracking] = useState(null);
+  const [routeData, setRouteData] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [liveError, setLiveError] = useState("");
+
+
 
   const shipment = useMemo(
     () =>
@@ -142,6 +150,7 @@ function TrackShipment() {
     setSubmittedTracking(trackingNumber);
   };
 
+
   const refreshLiveTracking = useCallback(() => {
     setLastCheckedAt(new Date());
     setRefreshVersion((version) => version + 1);
@@ -153,6 +162,7 @@ function TrackShipment() {
   }, [refreshLiveTracking]);
 
   useEffect(() => {
+
     if (!shipment) {
       setServerForecast(null);
       return undefined;
@@ -170,76 +180,11 @@ function TrackShipment() {
     return () => {
       ignoreResponse = true;
     };
+
+
   }, [shipment, refreshVersion]);
 
-  useEffect(() => {
-    if (!submittedTracking.trim()) return undefined;
 
-    let cancelled = false;
-    const loadLiveTracking = async () => {
-      const tracking = submittedTracking.trim();
-      const [statusResult, timelineResult, locationResult, shipmentsResult] = await Promise.allSettled([
-        getTrackingStatus(tracking),
-        getTrackingTimeline(tracking),
-        getTrackingLocation(tracking),
-        getShipments(),
-      ]);
-      if (cancelled) return;
-
-      const status = statusResult.status === "fulfilled" ? statusResult.value.data : null;
-      const timeline = timelineResult.status === "fulfilled" ? timelineResult.value.data?.events : [];
-      const location = locationResult.status === "fulfilled" ? locationResult.value.data : status?.latestLocation;
-      setLiveTracking(status ? { status, timeline: Array.isArray(timeline) ? timeline : [], location } : null);
-      setLiveError(status ? "" : "Live updates are temporarily unavailable; showing the latest available data.");
-
-      if (shipmentsResult.status !== "fulfilled") return;
-      const apiShipment = (shipmentsResult.value.data || []).find(
-        (item) => item.trackingNumber?.toLowerCase() === tracking.toLowerCase(),
-      );
-      if (!apiShipment?.shipmentId) {
-        setAlerts([]);
-        return;
-      }
-      try {
-        // The prediction endpoint raises a persisted alert for medium/high risk.
-        // Alert creation is idempotent, so this is safe during polling.
-        await predictShipmentDelay(apiShipment.shipmentId);
-        const response = await getShipmentAlerts(apiShipment.shipmentId);
-        if (!cancelled) {
-          setAlerts(
-            Array.isArray(response.data)
-              ? response.data.map((alert) => ({ ...alert, isRead: alert.isRead ?? alert.read ?? false }))
-              : [],
-          );
-        }
-      } catch {
-        if (!cancelled) setAlerts([]);
-      }
-    };
-
-    loadLiveTracking();
-    return () => { cancelled = true; };
-  }, [submittedTracking, refreshVersion]);
-
-  useEffect(() => {
-    if (!shipment?.senderCity || !shipment?.receiverCity) {
-      setRouteData(null);
-      return undefined;
-    }
-
-    setRouteData(localRoute(shipment.senderCity, shipment.receiverCity));
-
-    let ignoreResponse = false;
-    calculateRoute(shipment.senderCity, shipment.receiverCity)
-      .then((response) => {
-        if (!ignoreResponse) setRouteData(response.data);
-      })
-      .catch(() => { /* local fallback already set */ });
-
-    return () => {
-      ignoreResponse = true;
-    };
-  }, [shipment?.senderCity, shipment?.receiverCity]);
 
   const latestEvent = shipment?.history?.at(-1);
   const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
@@ -259,7 +204,11 @@ function TrackShipment() {
         remaining: serverForecast.predictedDelayMinutes > 0
           ? `${serverForecast.predictedDelayMinutes} min delay forecast`
           : `${serverForecast.confidencePercentage}% forecast confidence`,
-        risk: (serverForecast.riskLevel || "").replaceAll("_", " ") || "UNKNOWN",
+
+
+        risk: serverForecast.riskLevel.replaceAll("_", " "),
+
+
         message: serverForecast.reason,
       }
     : localForecast;
@@ -317,6 +266,8 @@ function TrackShipment() {
             </div>
             <div>
               <span className={`live-risk ${forecast.risk.toLowerCase().replaceAll(" ", "-")}`}>{forecast.risk}</span>
+
+
               <small>Checked {formatDateTime(lastCheckedAt)}</small>
             </div>
           </section>
@@ -326,6 +277,7 @@ function TrackShipment() {
               <div>
                 <div className="eyebrow">Location services</div>
                 <h2 className="section-title" style={{ marginTop: 6 }}>Live route map</h2>
+
                 <p className="subtle" style={{ margin: "4px 0 0" }}>
                   Auto-refreshes every 30 seconds · Last synced {formatDateTime(lastCheckedAt)}
                 </p>
@@ -342,6 +294,7 @@ function TrackShipment() {
               key={`${shipment.trackingNumber}-${refreshVersion}`}
               title={`Current shipment location for ${shipment.trackingNumber}`}
               src={`https://www.google.com/maps?q=${mapQuery}&output=embed&refresh=${refreshVersion}`}
+
             />
             <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {liveLocation || latestEvent?.location || "Location update pending"}. Route: {shipment.senderCity} to {shipment.receiverCity}. Total distance: {totalDistanceKm}. Est. travel time: {estimatedTravelTime}.</p>
           </section>
@@ -373,6 +326,7 @@ function TrackShipment() {
           <section className="grid grid-2" style={{ marginBottom: 18 }}>
             <article className="panel forecast-panel">
               <div className="eyebrow">ETA prediction</div>
+
               <h2 className="section-title" style={{ marginTop: 6 }}>{forecast.eta}</h2>
               <div className="forecast-details"><span>Forecast window</span><strong>{forecast.remaining}</strong></div>
               <p className="subtle">{forecast.message}</p>

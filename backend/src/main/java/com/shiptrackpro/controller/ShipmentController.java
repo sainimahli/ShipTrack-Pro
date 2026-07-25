@@ -80,10 +80,5 @@ public class ShipmentController {
     }
 
     
-    @GetMapping("/{id}/forecast")
-    public ResponseEntity<ForecastResponse> getForecast(
-       @PathVariable Long id) {
-       return ResponseEntity.ok(shipmentService.getForecast(id));
-    }
 
 }

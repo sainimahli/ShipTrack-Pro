@@ -1,17 +1,17 @@
 package com.shiptrackpro.dto;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class ForecastResponse {
 
-    private LocalDate estimatedDelivery;
+    private LocalDateTime estimatedDelivery;
     private int confidence;
     private String message;
 
     public ForecastResponse() {
     }
 
-    public ForecastResponse(LocalDate estimatedDelivery,
+    public ForecastResponse(LocalDateTime estimatedDelivery,
                             int confidence,
                             String message) {
         this.estimatedDelivery = estimatedDelivery;
@@ -19,11 +19,11 @@ public class ForecastResponse {
         this.message = message;
     }
 
-    public LocalDate getEstimatedDelivery() {
+    public LocalDateTime getEstimatedDelivery() {
         return estimatedDelivery;
     }
 
-    public void setEstimatedDelivery(LocalDate estimatedDelivery) {
+    public void setEstimatedDelivery(LocalDateTime estimatedDelivery) {
         this.estimatedDelivery = estimatedDelivery;
     }
 
