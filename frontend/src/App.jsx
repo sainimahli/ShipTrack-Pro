@@ -16,6 +16,8 @@ import Profile from "./assets/pages/Profile";
 import Register from "./assets/pages/Register";
 import ShipmentList from "./assets/pages/ShipmentList";
 import TrackShipment from "./assets/pages/TrackShipment";
+import RouteManagement from "./assets/pages/RouteManagement";
+
 
 const roleLabels = {
   ADMINISTRATOR: "Administrator",
@@ -54,6 +56,8 @@ function AppLayout() {
             <Route path="/track" element={<TrackShipment />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
+            <Route path="/routes" element={<RouteManagement />} />
+
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
