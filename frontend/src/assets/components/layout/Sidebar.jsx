@@ -7,7 +7,15 @@ const navigation = [
   { to: "/shipments", label: "Shipments", icon: "S" },
   { to: "/shipments/new", label: "Create Shipment", icon: "+" },
   { to: "/track", label: "Track", icon: "T" },
+   {
+    to: "/routes",
+    label: "Route Management",
+    icon: "R",
+  },
+
   { to: "/profile", label: "Profile", icon: "P" },
+  
+
 ];
 
 const roleLabels = {
