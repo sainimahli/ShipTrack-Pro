@@ -13,6 +13,16 @@ const statusProgress = {
   Created: 12, "Picked Up": 28, "In Transit": 58, "Out for Delivery": 84,
   Delivered: 100, "Failed Delivery": 72, Returned: 0, Cancelled: 0,
 };
+const statusLabelMap = {
+  CREATED: "Created",
+  PICKED_UP: "Picked Up",
+  IN_TRANSIT: "In Transit",
+  OUT_FOR_DELIVERY: "Out for Delivery",
+  DELIVERED: "Delivered",
+  FAILED_DELIVERY: "Failed Delivery",
+  RETURNED: "Returned",
+  CANCELLED: "Cancelled",
+};
 
 const toUiShipment = (shipment) => ({
   ...shipment,
@@ -27,8 +37,16 @@ const toUiShipment = (shipment) => ({
   deliveryAddress: shipment.deliveryAddress || "",
   eta: shipment.eta || shipment.expectedDeliveryDate || "",
   priority: shipment.priority || "Standard",
-  status: shipment.status || shipment.shipmentStatus?.replaceAll("_", " ") || "Created",
-  progress: shipment.progress ?? statusProgress[shipment.status] ?? 0,
+  status:
+  shipment.status ||
+  statusLabelMap[shipment.shipmentStatus] ||
+  "Created",
+  progress:
+  shipment.progress ??
+  statusProgress[
+    statusLabelMap[shipment.shipmentStatus] || shipment.status
+  ] ??
+  0,
   createdAt: shipment.createdAt?.slice(0, 10),
   history: shipment.history || [],
 });
@@ -79,13 +97,38 @@ export function ShipmentProvider({ children }) {
   }, []);
 
   const updateStatus = useCallback(async (trackingNumber, status, location) => {
-    try {
-      await updateShipmentStatus({ trackingNumber, status: status.replaceAll(" ", "_"), location, description: `Shipment status updated to ${status}` });
-      await refreshShipments();
-    } catch (requestError) {
-      const message = errorMessage(requestError); setError(message); throw new Error(message);
-    }
-  }, [refreshShipments]);
+
+  const statusEnumMap = {
+    "Created": "CREATED",
+    "Picked Up": "PICKED_UP",
+    "In Transit": "IN_TRANSIT",
+    "Out for Delivery": "OUT_FOR_DELIVERY",
+    "Delivered": "DELIVERED",
+    "Failed Delivery": "FAILED_DELIVERY",
+    "Returned": "RETURNED",
+    "Cancelled": "CANCELLED",
+  };
+
+  try {
+
+    await updateShipmentStatus({
+      trackingNumber,
+      status: statusEnumMap[status] || status,
+      location,
+      description: `Shipment status updated to ${status}`,
+    });
+
+    await refreshShipments();
+
+  } catch (requestError) {
+
+    const message = errorMessage(requestError);
+    setError(message);
+    throw new Error(message);
+
+  }
+
+}, [refreshShipments]);
 
   const updateShipment = useCallback(async (trackingNumber, changes) => {
     const current = shipments.find((shipment) => shipment.trackingNumber === trackingNumber);
