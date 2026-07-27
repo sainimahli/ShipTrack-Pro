@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
-import { getDeliveryForecast } from "../services/api";
+import { getDeliveryForecast, getETA } from "../services/api";
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
@@ -44,6 +44,8 @@ function TrackShipment() {
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
+  const [eta, setETA] = useState(null);
+  console.log("ETA State:", eta);
   const [refreshVersion, setRefreshVersion] = useState(0);
 
   const shipment = useMemo(
@@ -83,7 +85,21 @@ function TrackShipment() {
       .catch(() => {
         if (!ignoreResponse) setServerForecast(null);
       });
+   getETA(shipment.trackingNumber)
+  .then((response) => {
+    console.log("ETA Response:", JSON.stringify(response.data, null, 2));
 
+    if (!ignoreResponse) {
+      setETA(response.data);
+    }
+  })
+  .catch((error) => {
+    console.log("ETA Error:", error.response?.data || error);
+
+    if (!ignoreResponse) {
+      setETA(null);
+    }
+  });
     return () => {
       ignoreResponse = true;
     };
@@ -195,7 +211,43 @@ function TrackShipment() {
               <p className="subtle">Forecasts update from the current delivery status and latest location checkpoint.</p>
             </article>
           </section>
+           {eta && (
+  <section style={{ marginBottom: 18 }}>
+    <article className="panel">
+      <div className="eyebrow">ETA Information</div>
 
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="schema-box">
+          <strong>Estimated Arrival</strong>
+          <p className="subtle">
+            {eta.estimatedArrival}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Remaining Time</strong>
+          <p className="subtle">
+            {eta.remainingTime}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Shipment Status</strong>
+          <p className="subtle">
+            {eta.shipmentStatus}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Delay Reason</strong>
+          <p className="subtle">
+            {eta.delayReason ?? "No Delay"}
+          </p>
+        </div>
+      </div>
+    </article>
+  </section>
+)}
           <section className="grid grid-2">
           <div className="panel">
             <div className="toolbar">

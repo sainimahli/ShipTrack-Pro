@@ -45,6 +45,9 @@ export const markAllNotificationsAsRead = () =>
 export const getDeliveryForecast = (trackingNumber) =>
   API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
 
+export const getETA = (trackingNumber) =>
+  API.get(`/eta/${encodeURIComponent(trackingNumber)}`);
+
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
 
