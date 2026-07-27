@@ -81,7 +81,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/shipments/**",
                                 "/api/tracking/status")
-                        .hasRole("LOGISTICS_OPERATOR")
+                        .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR")
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/shipments/**")
