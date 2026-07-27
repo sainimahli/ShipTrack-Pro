@@ -11,6 +11,13 @@ import com.shiptrackpro.enums.WeatherCondition;
 import com.shiptrackpro.exception.ResourceNotFoundException;
 import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.service.DelayPredictionService;
+import com.shiptrackpro.entity.User;
+import com.shiptrackpro.enums.NotificationChannel;
+import com.shiptrackpro.enums.NotificationEventType;
+import com.shiptrackpro.repository.UserRepository;
+import com.shiptrackpro.service.NotificationService;
+import com.shiptrackpro.service.AlertService;
+import com.shiptrackpro.dto.AlertResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +27,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.time.LocalDate;
+
 
 /**
  * Rule-based implementation of {@link DelayPredictionService}.
@@ -55,11 +64,23 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
 
     private final ShipmentRepository shipmentRepository;
     private final DelayPredictionProperties properties;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
+    private final AlertService alertService;
 
-    public RuleBasedDelayPredictionServiceImpl(ShipmentRepository shipmentRepository,
-            DelayPredictionProperties properties) {
+
+    public RuleBasedDelayPredictionServiceImpl(
+            ShipmentRepository shipmentRepository,
+            DelayPredictionProperties properties,
+            NotificationService notificationService,
+            UserRepository userRepository,
+            AlertService alertService) {
+
         this.shipmentRepository = shipmentRepository;
         this.properties = properties;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
+        this.alertService = alertService;
     }
 
     @Override
@@ -84,7 +105,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                     now);
         }
 
-        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate().atStartOfDay(), now, reasons);
+        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate(), now, reasons);
         long travelShortfallMinutes = computeTravelShortfall(shipment, request, now, reasons);
         long weatherDelayMinutes = computeWeatherDelay(request == null ? null : request.getWeatherCondition(), reasons);
 
@@ -102,6 +123,15 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
 
         shipmentRepository.save(shipment);
 
+        AlertResponse alert = alertService.evaluateAndRaiseAlertIfNeeded(
+                shipment.getShipmentId(), risk.name(), reason);
+
+        // Send one user notification only when a new actionable alert is raised.
+        if (alert != null) {
+            sendDelayNotification(shipment);
+        }
+
+
         return build(shipment, risk, predictedDelayMinutes, reason, now);
     }
 
@@ -111,8 +141,8 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     // same DTO/entity shape without inheriting this class.
     // ------------------------------------------------------------------
 
-    private long computeOverdueMinutes(LocalDateTime expectedDeliveryDate, LocalDateTime now, List<String> reasons) {
-        long minutesUntilDue = Duration.between(now, expectedDeliveryDate).toMinutes();
+    private long computeOverdueMinutes(LocalDate expectedDeliveryDate, LocalDateTime now, List<String> reasons)  {
+        long minutesUntilDue = Duration.between(now, expectedDeliveryDate.atStartOfDay()).toMinutes();
         if (minutesUntilDue < 0) {
             long overdueBy = -minutesUntilDue;
             reasons.add("Shipment is already " + overdueBy + " minute(s) past its estimated delivery time.");
@@ -133,9 +163,10 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         TrafficLevel trafficLevel = request.getTrafficLevel() != null ? request.getTrafficLevel() : TrafficLevel.MEDIUM;
         double speedKmh = speedForTraffic(trafficLevel);
         double requiredTravelMinutes = (request.getDistanceRemainingKm() / speedKmh) * 60.0;
-
         long minutesUntilDue = Math.max(0,
-                Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+        Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+         
+
         long shortfall = Math.round(requiredTravelMinutes) - minutesUntilDue;
 
         if (shortfall > 0) {
@@ -189,9 +220,45 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                 .delayRisk(risk)
                 .predictedDelayMinutes(predictedDelayMinutes)
                 .reason(reason)
-                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate().atStartOfDay())
+                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate())
                 .evaluatedAt(evaluatedAt)
                 .build();
+    }
+    private void sendDelayNotification(Shipment shipment) {
+
+        User user = userRepository.findById(shipment.getUserId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id: " + shipment.getUserId()));
+
+        String title = "Shipment Delayed";
+
+        StringBuilder message = new StringBuilder();
+        message.append("Your shipment ")
+                .append(shipment.getTrackingNumber())
+                .append(" has been been delayed.");
+
+        if (shipment.getDelayReason() != null &&
+                !shipment.getDelayReason().isBlank()) {
+
+            message.append("\n\nReason: ")
+                    .append(shipment.getDelayReason());
+        }
+
+        if (shipment.getEstimatedArrival() != null) {
+
+            message.append("\nUpdated ETA: ")
+                    .append(shipment.getEstimatedArrival());
+        }
+
+        notificationService.createNotification(
+                user,
+                shipment,
+                NotificationEventType.DELAYED,
+                NotificationChannel.PUSH,
+                title,
+                message.toString()
+        );
     }
 
 }

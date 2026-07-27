@@ -3,7 +3,6 @@ package com.shiptrackpro.service.impl;
 import com.shiptrackpro.dto.CreateShipmentRequest;
 import com.shiptrackpro.dto.ShipmentResponse;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
-import com.shiptrackpro.dto.ForecastResponse;
 import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.entity.Shipment;
 import com.shiptrackpro.entity.User;
@@ -19,7 +18,9 @@ import com.shiptrackpro.service.TrackingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
+
 
 import java.util.List;
 import java.util.UUID;
@@ -143,54 +144,7 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         return mapToResponse(cancelled);
     }
-    @Override
-public ForecastResponse getForecast(Long shipmentId) {
 
-    Shipment shipment = findShipmentOrThrow(shipmentId);
-
-    LocalDateTime estimatedDate = shipment.getExpectedDeliveryDate().atStartOfDay();
-
-    int confidence = 95;
-    String message = "Shipment is on schedule";
-
-    switch (shipment.getShipmentStatus()) {
-
-        case CREATED:
-            confidence = 60;
-            message = "Shipment has been created.";
-            break;
-
-        case PICKED_UP:
-            confidence = 75;
-            message = "Shipment picked up successfully.";
-            break;
-
-        case IN_TRANSIT:
-            confidence = 90;
-            message = "Shipment is moving as planned.";
-            break;
-
-        case OUT_FOR_DELIVERY:
-            confidence = 98;
-            message = "Shipment will arrive today.";
-            break;
-
-        case DELIVERED:
-            confidence = 100;
-            message = "Shipment delivered.";
-            break;
-
-        case CANCELLED:
-            confidence = 0;
-            message = "Shipment cancelled.";
-            break;
-
-        default:
-            confidence = 50;
-            message = "Forecast unavailable.";
-        }
-        return new ForecastResponse(estimatedDate, confidence, message);
-    }
 
     // ------------------------------------------------------------------
     // Helpers

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getRoles, register as registerApi } from "../services/api";
 
+
 const fallbackRoles = [
   { roleId: 1, roleName: "CUSTOMER" },
   { roleId: 2, roleName: "BUSINESS_CLIENT" },
@@ -37,6 +38,7 @@ const withDefaultRoles = (loadedRoles) => {
 };
 
 function Register() {
+
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [roles, setRoles] = useState([]);
@@ -55,14 +57,18 @@ function Register() {
   });
 
   const handleChange = (event) => {
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+    setForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
   };
+
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-const response = await getRoles();
-const loadedRoles = Array.isArray(response.data) ? response.data : [];
-setRoles(withDefaultRoles(loadedRoles));
+        const response = await getRoles();
+        const loadedRoles = Array.isArray(response.data) ? response.data : [];
+        setRoles(withDefaultRoles(loadedRoles));
       } catch (error) {
         console.error("Failed to load roles", error);
         setRoles(fallbackRoles);
@@ -102,6 +108,7 @@ setRoles(withDefaultRoles(loadedRoles));
         });
 
         navigate("/login");
+
       }
     } catch (error) {
       setFeedback({
@@ -129,9 +136,14 @@ setRoles(withDefaultRoles(loadedRoles));
 
           <div className="eyebrow">Account setup</div>
           <h1>Create your ShipTrack account</h1>
-          <p className="subtle">Choose the role that matches your milestone workflow access.</p>
+          <p className="subtle">
+            Choose the role that matches your milestone workflow access.
+          </p>
 
-          {feedback.message && <div className={`alert ${feedback.type}`}>{feedback.message}</div>}
+          {feedback.message && (
+            <div className={`alert ${feedback.type}`}>{feedback.message}</div>
+          )}
+
 
          <form className="auth-form" onSubmit={handleSubmit}>
   <>
@@ -294,6 +306,8 @@ setRoles(withDefaultRoles(loadedRoles));
   </>
 </form>
 
+
+
           <p className="auth-switch">
             Already registered? <Link to="/login">Sign in</Link>
           </p>
@@ -304,7 +318,11 @@ setRoles(withDefaultRoles(loadedRoles));
         <div className="auth-visual-inner">
           <h2>Register to Manage Your Shipment</h2>
           <p>
+
+
             Join a unified platform where customers, operators, and administrators collaborate to ensure smooth and reliable shipment management.
+
+
           </p>
         </div>
       </section>

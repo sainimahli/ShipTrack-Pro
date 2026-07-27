@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -17,13 +18,17 @@ import java.time.LocalDateTime;
 public class DelayPredictionResponse {
 
     private Long shipmentId;
+
     private DelayRisk delayRisk;
+
     private long predictedDelayMinutes;
 
     /** Human-readable explanation of which factors drove this prediction. */
     private String reason;
 
-    private LocalDateTime estimatedDeliveryDate;
-    private LocalDateTime evaluatedAt;
+    // Shipment entity uses LocalDate
+    private LocalDate estimatedDeliveryDate;
 
+    // Time when prediction was evaluated
+    private LocalDateTime evaluatedAt;
 }

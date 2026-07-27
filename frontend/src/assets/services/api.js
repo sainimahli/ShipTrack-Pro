@@ -6,7 +6,6 @@ const API = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
 });
 
-
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
@@ -16,6 +15,7 @@ API.interceptors.request.use((config) => {
 
   return config;
 });
+
 // Authentication APIs
 export const login = (data) => API.post("/auth/login", data);
 
@@ -45,8 +45,34 @@ export const markAllNotificationsAsRead = () =>
 export const getDeliveryForecast = (trackingNumber) =>
   API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
 
+<<<<<<< HEAD
 export const getETA = (trackingNumber) =>
   API.get(`/eta/${encodeURIComponent(trackingNumber)}`);
+=======
+// Live tracking and shipment alerts
+export const getTrackingStatus = (trackingNumber) =>
+  API.get(`/tracking/${encodeURIComponent(trackingNumber)}`);
+
+export const getTrackingTimeline = (trackingNumber) =>
+  API.get(`/tracking/timeline/${encodeURIComponent(trackingNumber)}`);
+
+export const getTrackingLocation = (trackingNumber) =>
+  API.get(`/tracking/location/${encodeURIComponent(trackingNumber)}`);
+
+export const getShipments = () => API.get("/shipments");
+
+export const getShipmentAlerts = (shipmentId) =>
+  API.get(`/shipments/${shipmentId}/alerts`);
+
+export const markAlertAsRead = (alertId) => API.put(`/alerts/${alertId}/read`);
+
+export const predictShipmentDelay = (shipmentId, signals = {}) =>
+  API.post(`/shipments/${shipmentId}/predict-delay`, signals);
+
+// Route Calculation
+export const calculateRoute = (originCity, destinationCity) =>
+  API.post("/route/calculate", { originCity, destinationCity });
+>>>>>>> origin/main
 
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
