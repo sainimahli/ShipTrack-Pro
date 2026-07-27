@@ -288,7 +288,18 @@ public class ShipmentServiceImpl implements ShipmentService {
         return null;
     }
 
-    private String humanizeStatus(ShipmentStatus status) { return status.name().replace('_', ' '); }
+    private String humanizeStatus(ShipmentStatus status) {
+        return switch (status) {
+            case CREATED -> "Created";
+            case PICKED_UP -> "Picked Up";
+            case IN_TRANSIT -> "In Transit";
+            case OUT_FOR_DELIVERY -> "Out for Delivery";
+            case DELIVERED -> "Delivered";
+            case FAILED_DELIVERY -> "Failed Delivery";
+            case CANCELLED -> "Cancelled";
+            case RETURNED -> "Returned";
+        };
+    }
 
     // The live database constrains shipment_type to these values. Keep the
     // friendly package controls in the UI while persisting a valid transport type.

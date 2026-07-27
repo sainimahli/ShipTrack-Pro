@@ -1,10 +1,10 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
 
-import { getDeliveryForecast, getETA } from "../services/api";
 import {
   calculateRoute,
   getDeliveryForecast,
+  getETA,
   getShipmentAlerts,
   getShipments,
   getTrackingLocation,
@@ -140,6 +140,14 @@ function TrackShipment() {
   const [alerts, setAlerts] = useState([]);
   const [liveError, setLiveError] = useState("");
 
+  useEffect(() => {
+    if (!submittedTracking && shipments.length > 0) {
+      const firstTrackingNumber = shipments[0].trackingNumber;
+      setTrackingNumber(firstTrackingNumber);
+      setSubmittedTracking(firstTrackingNumber);
+    }
+  }, [shipments, submittedTracking]);
+
 
 
   const shipment = useMemo(
@@ -201,6 +209,42 @@ function TrackShipment() {
     };
 
 
+  }, [shipment, refreshVersion]);
+
+  useEffect(() => {
+    if (!shipment) {
+      setLiveTracking(null);
+      setRouteData(null);
+      setAlerts([]);
+      return undefined;
+    }
+
+    let ignoreResponse = false;
+    setLiveError("");
+
+    Promise.all([
+      getTrackingStatus(shipment.trackingNumber),
+      getTrackingTimeline(shipment.trackingNumber),
+      getTrackingLocation(shipment.trackingNumber).catch(() => ({ data: null })),
+      getShipmentAlerts(shipment.shipmentId || shipment.id).catch(() => ({ data: [] })),
+      calculateRoute(shipment.senderCity, shipment.receiverCity).catch(() => ({ data: localRoute(shipment.senderCity, shipment.receiverCity) })),
+    ]).then(([statusResponse, timelineResponse, locationResponse, alertsResponse, routeResponse]) => {
+      if (ignoreResponse) return;
+      setLiveTracking({
+        status: statusResponse.data,
+        timeline: timelineResponse.data?.events || [],
+        location: locationResponse.data,
+      });
+      setAlerts(alertsResponse.data || []);
+      setRouteData(routeResponse.data || localRoute(shipment.senderCity, shipment.receiverCity));
+    }).catch(() => {
+      if (!ignoreResponse) {
+        setLiveError("Live tracking data is temporarily unavailable.");
+        setRouteData(localRoute(shipment.senderCity, shipment.receiverCity));
+      }
+    });
+
+    return () => { ignoreResponse = true; };
   }, [shipment, refreshVersion]);
 
 
