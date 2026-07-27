@@ -53,6 +53,7 @@ function AppLayout() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
+            <Route path="/track" element={<TrackShipment />} />
             <Route path="/tracking" element={<TrackShipment />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />

@@ -24,6 +24,11 @@ const statusLabelMap = {
   CANCELLED: "Cancelled",
 };
 
+const normalizeStatus = (status) => {
+  if (!status) return null;
+  return statusLabelMap[String(status).trim().replaceAll(" ", "_").toUpperCase()] || status;
+};
+
 const toUiShipment = (shipment) => ({
   ...shipment,
   id: shipment.shipmentId,
@@ -37,14 +42,11 @@ const toUiShipment = (shipment) => ({
   deliveryAddress: shipment.deliveryAddress || "",
   eta: shipment.eta || shipment.expectedDeliveryDate || "",
   priority: shipment.priority || "Standard",
-  status:
-  shipment.status ||
-  statusLabelMap[shipment.shipmentStatus] ||
-  "Created",
+  status: normalizeStatus(shipment.status) || statusLabelMap[shipment.shipmentStatus] || "Created",
   progress:
   shipment.progress ??
   statusProgress[
-    statusLabelMap[shipment.shipmentStatus] || shipment.status
+    normalizeStatus(shipment.status) || statusLabelMap[shipment.shipmentStatus]
   ] ??
   0,
   createdAt: shipment.createdAt?.slice(0, 10),
