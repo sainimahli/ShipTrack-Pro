@@ -216,6 +216,8 @@ public class TrackingServiceImpl implements TrackingService {
         event.setTrackingNumberCache(trackingNumber);
         event.setStatus(request.getStatus());
         event.setDescription(request.getDescription().trim());
+        event.setLocationName(request.getLocation() == null || request.getLocation().isBlank()
+                ? null : request.getLocation().trim());
         event.setUpdatedBy(getCurrentUsername());
         event.setUpdatedAt(OffsetDateTime.now());
 

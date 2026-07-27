@@ -37,6 +37,7 @@ function CreateShipment() {
   const { createShipment } = useContext(ShipmentContext);
   const [form, setForm] = useState(initialForm);
   const [created, setCreated] = useState(null);
+  const [error, setError] = useState("");
   const role = normalizeRole(auth.user.role);
   const isCustomer = role === "Customer";
 
@@ -46,17 +47,22 @@ function CreateShipment() {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!canCreate) return;
 
     const requiresApproval = role !== "Administrator";
-    const shipment = createShipment({
-      ...form,
-      requestStatus: requiresApproval ? "Pending Approval" : "Created",
-    });
-    setCreated(shipment);
-    setForm(initialForm);
+    try {
+      setError("");
+      const shipment = await createShipment({
+        ...form,
+        requestStatus: requiresApproval ? "Pending Approval" : "Created",
+      });
+      setCreated(shipment);
+      setForm(initialForm);
+    } catch (requestError) {
+      setError(requestError.message || "Unable to create shipment.");
+    }
   };
 
   return (
@@ -87,6 +93,8 @@ function CreateShipment() {
           Shipment {created.trackingNumber} {created.status === "Pending Approval" ? "submitted for approval" : "created"}.
         </div>
       )}
+
+      {error && <div className="alert error" style={{ marginBottom: 18 }}>{error}</div>}
 
       <form className="panel" onSubmit={handleSubmit}>
         <div className="form-grid">

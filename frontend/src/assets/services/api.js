@@ -57,6 +57,14 @@ export const getTrackingLocation = (trackingNumber) =>
 
 export const getShipments = () => API.get("/shipments");
 
+export const createShipment = (data) => API.post("/shipments", data);
+
+export const updateShipment = (shipmentId, data) => API.put(`/shipments/${shipmentId}`, data);
+
+export const cancelShipment = (shipmentId) => API.delete(`/shipments/${shipmentId}`);
+
+export const updateShipmentStatus = (data) => API.put("/tracking/status", data);
+
 export const getShipmentAlerts = (shipmentId) =>
   API.get(`/shipments/${shipmentId}/alerts`);
 

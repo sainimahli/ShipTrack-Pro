@@ -1,7 +1,8 @@
-import { useContext, useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
+import { getApprovedUsers, getNotifications } from "../services/api";
 import "./Dashboard.css";
 
 const roleLabels = {
@@ -48,7 +49,7 @@ function roleCount(users, roleNames) {
   return users.filter((user) => normalizedRoles.has(normalizeRole(user.role))).length;
 }
 
-function getDashboardData(shipments, metrics, users) {
+function getDashboardData(shipments, metrics, users, notifications) {
   const activeShipments = shipments.filter(
     (shipment) => !["Delivered", "Cancelled"].includes(shipment.status),
   );
@@ -80,6 +81,7 @@ function getDashboardData(shipments, metrics, users) {
     shipments,
     statusSummary,
     users,
+    notifications,
   };
 }
 
@@ -225,6 +227,7 @@ function NotificationPanel({ items, title = "Notification Center" }) {
         <h2>{title}</h2>
       </div>
       <div className="notification-list">
+        {items.length === 0 && <p>No notifications available.</p>}
         {items.map((item) => (
           <p key={item}>{item}</p>
         ))}
@@ -432,7 +435,7 @@ function DashboardLayout({
 
       <section className="dashboard-grid analytics-grid">
         <ReportsPanel items={reports} />
-        <NotificationPanel items={notifications} />
+        <NotificationPanel items={data.notifications.length ? data.notifications : notifications} />
         <SnapshotPanel data={data} role={role} />
       </section>
 
@@ -633,7 +636,45 @@ function Dashboard() {
   const { auth, users = [] } = useContext(AuthContext);
   const { metrics, shipments } = useContext(ShipmentContext);
   const role = normalizeRole(auth?.user?.role);
-  const data = useMemo(() => getDashboardData(shipments, metrics, users), [metrics, shipments, users]);
+  const [dashboardUsers, setDashboardUsers] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    const loadDashboardData = async () => {
+      try {
+        const notificationResponse = await getNotifications();
+        if (active) {
+          setNotifications(notificationResponse.data.map((notification) =>
+            notification.message || notification.title || "Shipment notification"));
+        }
+      } catch {
+        if (active) setNotifications([]);
+      }
+
+      if (role !== "Administrator") {
+        if (active) setDashboardUsers([]);
+        return;
+      }
+
+      try {
+        const userResponse = await getApprovedUsers();
+        if (active) setDashboardUsers(userResponse.data);
+      } catch {
+        if (active) setDashboardUsers([]);
+      }
+    };
+
+    loadDashboardData();
+    return () => { active = false; };
+  }, [role]);
+
+  const data = useMemo(() => getDashboardData(
+    shipments,
+    metrics,
+    role === "Administrator" ? dashboardUsers : users,
+    notifications,
+  ), [dashboardUsers, metrics, notifications, role, shipments, users]);
 
   if (role === "Administrator") return <AdministratorDashboard data={data} />;
   if (role === "Business Client") return <BusinessClientDashboard data={data} />;
