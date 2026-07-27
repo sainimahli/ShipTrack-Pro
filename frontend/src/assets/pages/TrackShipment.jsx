@@ -1,8 +1,10 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
+
 import {
   calculateRoute,
   getDeliveryForecast,
+  getETA,
   getShipmentAlerts,
   getShipments,
   getTrackingLocation,
@@ -68,6 +70,7 @@ function localRoute(originCity, destinationCity) {
   return { distanceKm, estimatedTravelTime: formatDuration(estimatedMinutes) };
 }
 
+
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
 }
@@ -129,11 +132,21 @@ function TrackShipment() {
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
+  const [eta, setETA] = useState(null);
+  console.log("ETA State:", eta);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [liveTracking, setLiveTracking] = useState(null);
   const [routeData, setRouteData] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [liveError, setLiveError] = useState("");
+
+  useEffect(() => {
+    if (!submittedTracking && shipments.length > 0) {
+      const firstTrackingNumber = shipments[0].trackingNumber;
+      setTrackingNumber(firstTrackingNumber);
+      setSubmittedTracking(firstTrackingNumber);
+    }
+  }, [shipments, submittedTracking]);
 
 
 
@@ -176,12 +189,62 @@ function TrackShipment() {
       .catch(() => {
         if (!ignoreResponse) setServerForecast(null);
       });
+   getETA(shipment.trackingNumber)
+  .then((response) => {
+    console.log("ETA Response:", JSON.stringify(response.data, null, 2));
 
+    if (!ignoreResponse) {
+      setETA(response.data);
+    }
+  })
+  .catch((error) => {
+    console.log("ETA Error:", error.response?.data || error);
+
+    if (!ignoreResponse) {
+      setETA(null);
+    }
+  });
     return () => {
       ignoreResponse = true;
     };
 
 
+  }, [shipment, refreshVersion]);
+
+  useEffect(() => {
+    if (!shipment) {
+      setLiveTracking(null);
+      setRouteData(null);
+      setAlerts([]);
+      return undefined;
+    }
+
+    let ignoreResponse = false;
+    setLiveError("");
+
+    Promise.all([
+      getTrackingStatus(shipment.trackingNumber),
+      getTrackingTimeline(shipment.trackingNumber),
+      getTrackingLocation(shipment.trackingNumber).catch(() => ({ data: null })),
+      getShipmentAlerts(shipment.shipmentId || shipment.id).catch(() => ({ data: [] })),
+      calculateRoute(shipment.senderCity, shipment.receiverCity).catch(() => ({ data: localRoute(shipment.senderCity, shipment.receiverCity) })),
+    ]).then(([statusResponse, timelineResponse, locationResponse, alertsResponse, routeResponse]) => {
+      if (ignoreResponse) return;
+      setLiveTracking({
+        status: statusResponse.data,
+        timeline: timelineResponse.data?.events || [],
+        location: locationResponse.data,
+      });
+      setAlerts(alertsResponse.data || []);
+      setRouteData(routeResponse.data || localRoute(shipment.senderCity, shipment.receiverCity));
+    }).catch(() => {
+      if (!ignoreResponse) {
+        setLiveError("Live tracking data is temporarily unavailable.");
+        setRouteData(localRoute(shipment.senderCity, shipment.receiverCity));
+      }
+    });
+
+    return () => { ignoreResponse = true; };
   }, [shipment, refreshVersion]);
 
 
@@ -337,7 +400,43 @@ function TrackShipment() {
               <p className="subtle">Forecasts update from the current delivery status and latest location checkpoint.</p>
             </article>
           </section>
+           {eta && (
+  <section style={{ marginBottom: 18 }}>
+    <article className="panel">
+      <div className="eyebrow">ETA Information</div>
 
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="schema-box">
+          <strong>Estimated Arrival</strong>
+          <p className="subtle">
+            {eta.estimatedArrival}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Remaining Time</strong>
+          <p className="subtle">
+            {eta.remainingTime}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Shipment Status</strong>
+          <p className="subtle">
+            {eta.shipmentStatus}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Delay Reason</strong>
+          <p className="subtle">
+            {eta.delayReason ?? "No Delay"}
+          </p>
+        </div>
+      </div>
+    </article>
+  </section>
+)}
           <section className="grid grid-2">
             <div className="panel">
               <div className="toolbar">

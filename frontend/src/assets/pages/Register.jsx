@@ -7,11 +7,20 @@ const fallbackRoles = [
   { roleId: 1, roleName: "CUSTOMER" },
   { roleId: 2, roleName: "BUSINESS_CLIENT" },
   { roleId: 3, roleName: "LOGISTICS_OPERATOR" },
-  { roleId: 5, roleName: "ADMINISTRATOR" },
+  { roleId: 4, roleName: "SUPPORT_AGENT" },
 ];
 
-const isSuperAdminRole = (roleName) =>
-  String(roleName).replace(/[^a-z]/gi, "").toUpperCase() === "SUPERADMIN";
+const isSuperAdminRole = (roleName) => {
+  const normalized = String(roleName)
+    .replace(/[^a-z]/gi, "")
+    .toUpperCase();
+
+  return (
+    normalized === "SUPERADMIN" ||
+    normalized === "ADMIN" ||
+    normalized === "ADMINISTRATOR"
+  );
+};
 
 const formatRoleName = (roleName) =>
   roleName
@@ -231,7 +240,6 @@ function Register() {
         required
       >
         <option value="">Select Role</option>
-<option value="">Select Role</option>
 
 {roles
   .filter((role) => role.roleName !== "ADMIN")

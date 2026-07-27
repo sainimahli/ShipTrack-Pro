@@ -15,6 +15,8 @@ public class UpdateTrackingStatusRequest {
     @NotBlank
     private String description;
 
+    private String location;
+
     public UpdateTrackingStatusRequest() {
     }
 
@@ -41,4 +43,8 @@ public class UpdateTrackingStatusRequest {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public String getLocation() { return location; }
+
+    public void setLocation(String location) { this.location = location; }
 }

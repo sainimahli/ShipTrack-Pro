@@ -152,7 +152,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     }
 
     private long computeTravelShortfall(Shipment shipment, DelayPredictionRequest request,
-            LocalDateTime now, List<String> reasons) {
+                                        LocalDateTime now, List<String> reasons) {
         if (request == null || request.getDistanceRemainingKm() == null) {
             return 0;
         }
@@ -164,8 +164,8 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         double speedKmh = speedForTraffic(trafficLevel);
         double requiredTravelMinutes = (request.getDistanceRemainingKm() / speedKmh) * 60.0;
         long minutesUntilDue = Math.max(0,
-        Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
-         
+                Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+
 
         long shortfall = Math.round(requiredTravelMinutes) - minutesUntilDue;
 
@@ -214,7 +214,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     }
 
     private DelayPredictionResponse build(Shipment shipment, DelayRisk risk, long predictedDelayMinutes,
-            String reason, LocalDateTime evaluatedAt) {
+                                          String reason, LocalDateTime evaluatedAt) {
         return DelayPredictionResponse.builder()
                 .shipmentId(shipment.getShipmentId())
                 .delayRisk(risk)

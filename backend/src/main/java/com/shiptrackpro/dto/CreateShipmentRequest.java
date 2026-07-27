@@ -1,8 +1,5 @@
 package com.shiptrackpro.dto;
 
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,10 +16,8 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class CreateShipmentRequest {
 
-    @NotNull(message = "Sender address ID is required")
     private Long senderAddressId;
 
-    @NotNull(message = "Receiver address ID is required")
     private Long receiverAddressId;
 
     private Long originWarehouseId;
@@ -33,13 +28,21 @@ public class CreateShipmentRequest {
 
     private Long assignedVehicleId;
 
-    @NotNull(message = "Total weight is required")
-    @Positive(message = "Total weight must be greater than zero")
     private BigDecimal totalWeightKg;
 
-    @NotNull(message = "Shipment type is required")
     private String shipmentType;
 
-    @Future(message = "Expected delivery date must be in the future")
     private LocalDate expectedDeliveryDate;
+
+    // Fields used by the shipment-management screen.  They let the API create
+    // the required address records instead of exposing database ids to users.
+    private String senderName;
+    private String senderCity;
+    private String receiverName;
+    private String receiverCity;
+    private String packageType;
+    private String weight;
+    private String deliveryAddress;
+    private LocalDate eta;
+    private String priority;
 }
