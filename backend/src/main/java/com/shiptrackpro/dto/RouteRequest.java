@@ -2,6 +2,8 @@ package com.shiptrackpro.dto;
 
 public class RouteRequest {
 
+    private String trackingNumber;
+
     private String originCity;
     private String destinationCity;
 
@@ -12,6 +14,14 @@ public class RouteRequest {
     private Long destinationId;
 
     public RouteRequest() {
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
     }
 
     public RouteRequest(String originCity, String destinationCity) {

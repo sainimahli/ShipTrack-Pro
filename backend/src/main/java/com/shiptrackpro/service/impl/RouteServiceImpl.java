@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.shiptrackpro.entity.Address;
+import com.shiptrackpro.entity.TrackingEvent;
 import com.shiptrackpro.repository.AddressRepository;
+import com.shiptrackpro.repository.TrackingEventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Map;
@@ -18,16 +20,20 @@ import java.util.Map;
  *
  * Distance is computed using the Haversine formula on known city coordinates.
  * Estimated travel time assumes an average road speed of 60 km/h.
- * Supports calculation via city names (originCity/destinationCity) or address IDs (originAddressId/destinationAddressId).
+ * Supports calculation via city names, address IDs, or tracking number.
  */
 @Service
 public class RouteServiceImpl implements RouteService {
 
     private final AddressRepository addressRepository;
+    private final TrackingEventRepository trackingEventRepository;
 
     @Autowired
-    public RouteServiceImpl(@Autowired(required = false) AddressRepository addressRepository) {
+    public RouteServiceImpl(
+            @Autowired(required = false) AddressRepository addressRepository,
+            @Autowired(required = false) TrackingEventRepository trackingEventRepository) {
         this.addressRepository = addressRepository;
+        this.trackingEventRepository = trackingEventRepository;
     }
 
     /** Average road speed in km/h used for ETA calculation. */
@@ -186,26 +192,53 @@ public class RouteServiceImpl implements RouteService {
 
     @Override
     public RouteResponse calculateRoute(RouteRequest request) {
-        String originCity = resolveCity(request.getOriginCity(), request.getEffectiveOriginId(), "Origin");
         String destinationCity = resolveCity(request.getDestinationCity(), request.getEffectiveDestinationId(), "Destination");
-
-        String originKey = originCity.trim().toLowerCase();
         String destinationKey = destinationCity.trim().toLowerCase();
+        double[] destinationCoords = resolveCoordinates(request.getEffectiveDestinationId(), destinationKey);
 
-        double[] originCoords = CITY_COORDINATES.get(originKey);
-        double[] destinationCoords = CITY_COORDINATES.get(destinationKey);
-
-        if (originCoords == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "City not found in route database: " + originCity);
-        }
         if (destinationCoords == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "City not found in route database: " + destinationCity);
         }
 
+        double[] currentCoords = null;
+        String trackingNumber = request.getTrackingNumber();
+
+        if (trackingNumber != null && !trackingNumber.trim().isEmpty() && trackingEventRepository != null) {
+            String normalizedTrackingNumber = trackingNumber.trim();
+            TrackingEvent latestEvent = trackingEventRepository.findLatestLocationByTrackingNumber(normalizedTrackingNumber)
+                    .orElseGet(() -> trackingEventRepository.findFirstByTrackingNumberOrderByUpdatedAtDesc(normalizedTrackingNumber).orElse(null));
+
+            if (latestEvent != null) {
+                if (latestEvent.getLatitude() != null && latestEvent.getLongitude() != null) {
+                    currentCoords = new double[]{latestEvent.getLatitude(), latestEvent.getLongitude()};
+                } else if (latestEvent.getLocationName() != null && !latestEvent.getLocationName().trim().isEmpty()) {
+                    currentCoords = CITY_COORDINATES.get(latestEvent.getLocationName().trim().toLowerCase());
+                }
+            }
+        }
+
+        String originCity = null;
+        if (request.getOriginCity() != null || request.getEffectiveOriginId() != null) {
+            originCity = resolveCity(request.getOriginCity(), request.getEffectiveOriginId(), "Origin");
+        }
+
+        if (currentCoords == null) {
+            if (originCity == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Origin city or address ID must be provided.");
+            }
+            String originKey = originCity.trim().toLowerCase();
+            currentCoords = resolveCoordinates(request.getEffectiveOriginId(), originKey);
+            if (currentCoords == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "City not found in route database: " + originCity);
+            }
+        } else if (originCity == null) {
+            originCity = "Current Location";
+        }
+
         double distanceKm = haversineDistance(
-                originCoords[0], originCoords[1],
+                currentCoords[0], currentCoords[1],
                 destinationCoords[0], destinationCoords[1]);
 
         long estimatedMinutes = Math.round((distanceKm / AVERAGE_SPEED_KMH) * 60);
@@ -220,6 +253,16 @@ public class RouteServiceImpl implements RouteService {
         response.setEstimatedMinutes(estimatedMinutes);
         response.setEstimatedTravelTime(formatDuration(estimatedMinutes));
         return response;
+    }
+
+    private double[] resolveCoordinates(Long addressId, String cityKey) {
+        if (addressId != null && addressRepository != null) {
+            Address address = addressRepository.findById(addressId).orElse(null);
+            if (address != null && address.getLatitude() != null && address.getLongitude() != null) {
+                return new double[]{address.getLatitude().doubleValue(), address.getLongitude().doubleValue()};
+            }
+        }
+        return CITY_COORDINATES.get(cityKey);
     }
 
     private String resolveCity(String cityName, Long addressId, String locationType) {

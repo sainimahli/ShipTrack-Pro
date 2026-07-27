@@ -22,11 +22,14 @@ class RouteServiceImplTest {
     @Mock
     private AddressRepository addressRepository;
 
+    @Mock
+    private com.shiptrackpro.repository.TrackingEventRepository trackingEventRepository;
+
     private RouteServiceImpl routeService;
 
     @BeforeEach
     void setUp() {
-        routeService = new RouteServiceImpl(addressRepository);
+        routeService = new RouteServiceImpl(addressRepository, trackingEventRepository);
     }
 
     @Test
@@ -83,5 +86,36 @@ class RouteServiceImplTest {
         assertEquals("Hyderabad", response.getDestinationCity());
         assertEquals(10L, response.getOriginId());
         assertEquals(20L, response.getDestinationId());
+    }
+
+    @Test
+    void calculateRoute_WithTrackingNumber_CalculatesRemainingDistance() {
+        Address originAddress = Address.builder().addressId(1L).city("Mumbai").build();
+        Address destAddress = Address.builder().addressId(2L).city("Delhi").build();
+
+        when(addressRepository.findById(1L)).thenReturn(Optional.of(originAddress));
+        when(addressRepository.findById(2L)).thenReturn(Optional.of(destAddress));
+
+        com.shiptrackpro.entity.TrackingEvent event = new com.shiptrackpro.entity.TrackingEvent();
+        event.setLocationName("Pune"); // Pune is closer to Delhi than Mumbai is
+
+        when(trackingEventRepository.findLatestLocationByTrackingNumber("ST123456"))
+                .thenReturn(Optional.of(event));
+
+        RouteRequest fullRequest = new RouteRequest();
+        fullRequest.setOriginId(1L);
+        fullRequest.setDestinationId(2L);
+        RouteResponse fullResponse = routeService.calculateRoute(fullRequest);
+
+        RouteRequest trackingRequest = new RouteRequest();
+        trackingRequest.setTrackingNumber("ST123456");
+        trackingRequest.setOriginId(1L);
+        trackingRequest.setDestinationId(2L);
+        RouteResponse trackingResponse = routeService.calculateRoute(trackingRequest);
+
+        assertNotNull(trackingResponse);
+        assertEquals("Mumbai", trackingResponse.getOriginCity());
+        assertEquals("Delhi", trackingResponse.getDestinationCity());
+        assertTrue(trackingResponse.getDistanceKm() < fullResponse.getDistanceKm());
     }
 }
