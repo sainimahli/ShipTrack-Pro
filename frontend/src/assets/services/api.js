@@ -45,10 +45,10 @@ export const markAllNotificationsAsRead = () =>
 export const getDeliveryForecast = (trackingNumber) =>
   API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
 
-<<<<<<< HEAD
+
 export const getETA = (trackingNumber) =>
   API.get(`/eta/${encodeURIComponent(trackingNumber)}`);
-=======
+
 // Live tracking and shipment alerts
 export const getTrackingStatus = (trackingNumber) =>
   API.get(`/tracking/${encodeURIComponent(trackingNumber)}`);
@@ -72,7 +72,7 @@ export const predictShipmentDelay = (shipmentId, signals = {}) =>
 // Route Calculation
 export const calculateRoute = (originCity, destinationCity) =>
   API.post("/route/calculate", { originCity, destinationCity });
->>>>>>> origin/main
+
 
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
