@@ -185,7 +185,6 @@ function TrackShipment() {
   }, [shipment, refreshVersion]);
 
 
-
   const latestEvent = shipment?.history?.at(-1);
   const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
   const liveLocation = liveTracking?.location?.locationName;
