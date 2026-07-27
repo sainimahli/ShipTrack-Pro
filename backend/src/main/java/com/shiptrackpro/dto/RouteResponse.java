@@ -4,6 +4,10 @@ public class RouteResponse {
 
     private String originCity;
     private String destinationCity;
+    private Long originAddressId;
+    private Long destinationAddressId;
+    private Long originId;
+    private Long destinationId;
     private String route;
     private double distanceKm;
     private long estimatedMinutes;
@@ -26,6 +30,42 @@ public class RouteResponse {
 
     public void setDestinationCity(String destinationCity) {
         this.destinationCity = destinationCity;
+    }
+
+    public Long getOriginAddressId() {
+        return originAddressId;
+    }
+
+    public void setOriginAddressId(Long originAddressId) {
+        this.originAddressId = originAddressId;
+        this.originId = originAddressId;
+    }
+
+    public Long getDestinationAddressId() {
+        return destinationAddressId;
+    }
+
+    public void setDestinationAddressId(Long destinationAddressId) {
+        this.destinationAddressId = destinationAddressId;
+        this.destinationId = destinationAddressId;
+    }
+
+    public Long getOriginId() {
+        return originId;
+    }
+
+    public void setOriginId(Long originId) {
+        this.originId = originId;
+        this.originAddressId = originId;
+    }
+
+    public Long getDestinationId() {
+        return destinationId;
+    }
+
+    public void setDestinationId(Long destinationId) {
+        this.destinationId = destinationId;
+        this.destinationAddressId = destinationId;
     }
 
     public String getRoute() {

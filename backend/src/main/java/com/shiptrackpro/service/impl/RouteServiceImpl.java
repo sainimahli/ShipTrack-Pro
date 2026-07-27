@@ -7,6 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.shiptrackpro.entity.Address;
+import com.shiptrackpro.repository.AddressRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.util.Map;
 
 /**
@@ -14,10 +18,17 @@ import java.util.Map;
  *
  * Distance is computed using the Haversine formula on known city coordinates.
  * Estimated travel time assumes an average road speed of 60 km/h.
- * No external routing API is required.
+ * Supports calculation via city names (originCity/destinationCity) or address IDs (originAddressId/destinationAddressId).
  */
 @Service
 public class RouteServiceImpl implements RouteService {
+
+    private final AddressRepository addressRepository;
+
+    @Autowired
+    public RouteServiceImpl(@Autowired(required = false) AddressRepository addressRepository) {
+        this.addressRepository = addressRepository;
+    }
 
     /** Average road speed in km/h used for ETA calculation. */
     private static final double AVERAGE_SPEED_KMH = 60.0;
@@ -175,19 +186,22 @@ public class RouteServiceImpl implements RouteService {
 
     @Override
     public RouteResponse calculateRoute(RouteRequest request) {
-        String originKey = request.getOriginCity().trim().toLowerCase();
-        String destinationKey = request.getDestinationCity().trim().toLowerCase();
+        String originCity = resolveCity(request.getOriginCity(), request.getEffectiveOriginId(), "Origin");
+        String destinationCity = resolveCity(request.getDestinationCity(), request.getEffectiveDestinationId(), "Destination");
+
+        String originKey = originCity.trim().toLowerCase();
+        String destinationKey = destinationCity.trim().toLowerCase();
 
         double[] originCoords = CITY_COORDINATES.get(originKey);
         double[] destinationCoords = CITY_COORDINATES.get(destinationKey);
 
         if (originCoords == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "City not found in route database: " + request.getOriginCity());
+                    "City not found in route database: " + originCity);
         }
         if (destinationCoords == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "City not found in route database: " + request.getDestinationCity());
+                    "City not found in route database: " + destinationCity);
         }
 
         double distanceKm = haversineDistance(
@@ -197,13 +211,33 @@ public class RouteServiceImpl implements RouteService {
         long estimatedMinutes = Math.round((distanceKm / AVERAGE_SPEED_KMH) * 60);
 
         RouteResponse response = new RouteResponse();
-        response.setOriginCity(request.getOriginCity().trim());
-        response.setDestinationCity(request.getDestinationCity().trim());
-        response.setRoute(request.getOriginCity().trim() + " → " + request.getDestinationCity().trim());
+        response.setOriginCity(originCity.trim());
+        response.setDestinationCity(destinationCity.trim());
+        response.setOriginId(request.getEffectiveOriginId());
+        response.setDestinationId(request.getEffectiveDestinationId());
+        response.setRoute(originCity.trim() + " → " + destinationCity.trim());
         response.setDistanceKm(Math.round(distanceKm * 10.0) / 10.0);
         response.setEstimatedMinutes(estimatedMinutes);
         response.setEstimatedTravelTime(formatDuration(estimatedMinutes));
         return response;
+    }
+
+    private String resolveCity(String cityName, Long addressId, String locationType) {
+        if (cityName != null && !cityName.trim().isEmpty()) {
+            return cityName.trim();
+        }
+        if (addressId != null) {
+            if (addressRepository != null) {
+                Address address = addressRepository.findById(addressId).orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.BAD_REQUEST, locationType + " address ID not found: " + addressId));
+                if (address.getCity() != null && !address.getCity().trim().isEmpty()) {
+                    return address.getCity().trim();
+                }
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, locationType + " address resolution unavailable.");
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, locationType + " city or address ID must be provided.");
     }
 
     /**

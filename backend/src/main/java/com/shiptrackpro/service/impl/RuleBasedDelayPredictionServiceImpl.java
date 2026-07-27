@@ -100,7 +100,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                     now);
         }
 
-        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate().atStartOfDay(), now, reasons);
+        long overdueMinutes = computeOverdueMinutes(shipment.getExpectedDeliveryDate(), now, reasons);
         long travelShortfallMinutes = computeTravelShortfall(shipment, request, now, reasons);
         long weatherDelayMinutes = computeWeatherDelay(request == null ? null : request.getWeatherCondition(), reasons);
 
@@ -113,8 +113,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
 
         // Save prediction into Shipment
         shipment.setDelayReason(reason);
-        shipment.setIsDelayed(predictedDelayMinutes > 0);
-        shipment.setForecastConfidence(risk.name());
+        shipment.setIsDelayed(risk == DelayRisk.HIGH);
 
         shipmentRepository.save(shipment);
 
@@ -158,12 +157,11 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
          
 
-        long shortfall = Math.round(requiredTravelMinutes) - minutesUntilDue;
-
-        if (shortfall > 0) {
-            reasons.add(String.format(
-                    "At %s traffic, the remaining %.1f km is estimated to take %.0f minute(s), which is %d minute(s) more than the time left until the ETA.",
-                    trafficLevel, request.getDistanceRemainingKm(), requiredTravelMinutes, shortfall));
+        if (requiredTravelMinutes > minutesUntilDue) {
+            long shortfall = Math.round(requiredTravelMinutes - minutesUntilDue);
+            reasons.add("At current speed (" + Math.round(speedKmh) + " km/h under " + trafficLevel
+                    + " traffic), remaining " + request.getDistanceRemainingKm()
+                    + " km trip will exceed remaining window by ~" + shortfall + " minute(s).");
             return shortfall;
         }
         return 0;
@@ -211,7 +209,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
                 .delayRisk(risk)
                 .predictedDelayMinutes(predictedDelayMinutes)
                 .reason(reason)
-                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate().atStartOfDay())
+                .estimatedDeliveryDate(shipment.getExpectedDeliveryDate())
                 .evaluatedAt(evaluatedAt)
                 .build();
     }

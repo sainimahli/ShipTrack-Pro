@@ -28,7 +28,7 @@ const CITY_COORDS = {
   jamshedpur: [22.8046, 86.2029], bokaro: [23.6693, 86.1511], siliguri: [26.7271, 88.3953],
   agartala: [23.8315, 91.2868], imphal: [24.817, 93.9368], shillong: [25.5788, 91.8933],
   aizawl: [23.7271, 92.7176], kohima: [25.6751, 94.1086], itanagar: [27.0844, 93.6053],
-  gangtok: [27.3389, 88.6065], portblair: [11.6234, 92.7265],
+  gangtok: [27.3389, 88.6065], portblair: [11.6234, 92.7265], "port blair": [11.6234, 92.7265],
 };
 
 function haversineKm(lat1, lon1, lat2, lon2) {
