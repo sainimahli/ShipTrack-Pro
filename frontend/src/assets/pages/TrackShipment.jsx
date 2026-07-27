@@ -1,8 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
-<<<<<<< HEAD
+
 import { getDeliveryForecast, getETA } from "../services/api";
-=======
 import {
   calculateRoute,
   getDeliveryForecast,
@@ -70,7 +69,7 @@ function localRoute(originCity, destinationCity) {
   const estimatedMinutes = Math.round((distanceKm / 60) * 60);
   return { distanceKm, estimatedTravelTime: formatDuration(estimatedMinutes) };
 }
->>>>>>> origin/main
+
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
