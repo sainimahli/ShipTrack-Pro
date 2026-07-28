@@ -10,6 +10,7 @@ const initialForm = {
   receiverName: "",
   receiverCity: "",
   receiverAddressId: "",
+  shipmentType: "STANDARD",
   packageType: "General Cargo",
   weight: "",
   deliveryAddress: "",
@@ -194,6 +195,22 @@ function CreateShipment() {
           </div>
 
           <div className="form-field">
+            <label htmlFor="shipmentType">Shipment service type</label>
+            <select
+              className="select"
+              disabled={!canCreate}
+              id="shipmentType"
+              name="shipmentType"
+              onChange={handleChange}
+              value={form.shipmentType}
+            >
+              <option value="STANDARD">STANDARD</option>
+              <option value="EXPRESS">EXPRESS</option>
+              <option value="SAME_DAY">SAME_DAY</option>
+            </select>
+          </div>
+
+          <div className="form-field">
             <label htmlFor="packageType">Package type</label>
             <select
               className="select"
@@ -202,6 +219,7 @@ function CreateShipment() {
               name="packageType"
               onChange={handleChange}
               placeholder="Select Package Type"
+              value={form.packageType}
             >
               <option>General Cargo</option>
               <option>Electronics</option>

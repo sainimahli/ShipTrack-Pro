@@ -50,6 +50,8 @@ public class ShipmentResponse {
 
     private String shipmentType;
 
+    private String packageType;
+
     private LocalDate expectedDeliveryDate;
 
     private OffsetDateTime actualDeliveryDate;

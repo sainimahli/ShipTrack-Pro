@@ -46,12 +46,8 @@ export const getDeliveryForecast = (trackingNumber) =>
   API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
 
 // Route Calculation
-export const calculateRoute = (originCity, destinationCity, trackingNumber) =>
-  API.post("/route/calculate", {
-    originCity,
-    destinationCity,
-    ...(trackingNumber ? { trackingNumber } : {}),
-  });
+export const calculateRoute = (params) =>
+  API.post("/route/calculate", params);
 
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");

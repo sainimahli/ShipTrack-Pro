@@ -1,19 +1,28 @@
 package com.shiptrackpro.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 public class RouteRequest {
 
     private String trackingNumber;
 
-    private String originCity;
-    private String destinationCity;
+    private Double originLatitude;
+    private Double originLongitude;
 
-    private Long originAddressId;
-    private Long destinationAddressId;
+    @NotNull(message = "Destination latitude is required")
+    private Double destinationLatitude;
 
-    private Long originId;
-    private Long destinationId;
+    @NotNull(message = "Destination longitude is required")
+    private Double destinationLongitude;
 
     public RouteRequest() {
+    }
+
+    public RouteRequest(Double originLatitude, Double originLongitude, Double destinationLatitude, Double destinationLongitude) {
+        this.originLatitude = originLatitude;
+        this.originLongitude = originLongitude;
+        this.destinationLatitude = destinationLatitude;
+        this.destinationLongitude = destinationLongitude;
     }
 
     public String getTrackingNumber() {
@@ -24,70 +33,36 @@ public class RouteRequest {
         this.trackingNumber = trackingNumber;
     }
 
-    public RouteRequest(String originCity, String destinationCity) {
-        this.originCity = originCity;
-        this.destinationCity = destinationCity;
+    public Double getOriginLatitude() {
+        return originLatitude;
     }
 
-    public RouteRequest(Long originId, Long destinationId) {
-        this.originId = originId;
-        this.destinationId = destinationId;
+    public void setOriginLatitude(Double originLatitude) {
+        this.originLatitude = originLatitude;
     }
 
-    public String getOriginCity() {
-        return originCity;
+    public Double getOriginLongitude() {
+        return originLongitude;
     }
 
-    public void setOriginCity(String originCity) {
-        this.originCity = originCity;
+    public void setOriginLongitude(Double originLongitude) {
+        this.originLongitude = originLongitude;
     }
 
-    public String getDestinationCity() {
-        return destinationCity;
+    public Double getDestinationLatitude() {
+        return destinationLatitude;
     }
 
-    public void setDestinationCity(String destinationCity) {
-        this.destinationCity = destinationCity;
+    public void setDestinationLatitude(Double destinationLatitude) {
+        this.destinationLatitude = destinationLatitude;
     }
 
-    public Long getOriginAddressId() {
-        return originAddressId;
+    public Double getDestinationLongitude() {
+        return destinationLongitude;
     }
 
-    public void setOriginAddressId(Long originAddressId) {
-        this.originAddressId = originAddressId;
-    }
-
-    public Long getDestinationAddressId() {
-        return destinationAddressId;
-    }
-
-    public void setDestinationAddressId(Long destinationAddressId) {
-        this.destinationAddressId = destinationAddressId;
-    }
-
-    public Long getOriginId() {
-        return originId;
-    }
-
-    public void setOriginId(Long originId) {
-        this.originId = originId;
-    }
-
-    public Long getDestinationId() {
-        return destinationId;
-    }
-
-    public void setDestinationId(Long destinationId) {
-        this.destinationId = destinationId;
-    }
-
-    public Long getEffectiveOriginId() {
-        return originId != null ? originId : originAddressId;
-    }
-
-    public Long getEffectiveDestinationId() {
-        return destinationId != null ? destinationId : destinationAddressId;
+    public void setDestinationLongitude(Double destinationLongitude) {
+        this.destinationLongitude = destinationLongitude;
     }
 }
 

@@ -73,6 +73,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .shipmentStatus(ShipmentStatus.CREATED)
                 .totalWeightKg(request.getTotalWeightKg())
                 .shipmentType(request.getShipmentType())
+                .packageType(request.getPackageType())
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .estimatedArrival(null)
                 .actualDeliveryDate(null)
@@ -128,6 +129,9 @@ public class ShipmentServiceImpl implements ShipmentService {
         shipment.setAssignedVehicleId(request.getAssignedVehicleId());
         shipment.setTotalWeightKg(request.getTotalWeightKg());
         shipment.setShipmentType(request.getShipmentType());
+        if (request.getPackageType() != null) {
+            shipment.setPackageType(request.getPackageType());
+        }
         shipment.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
 
         updateAddress(shipment.getSenderAddressId(), request.getSenderCity(), null);
@@ -246,6 +250,7 @@ public ForecastResponse getForecast(Long shipmentId) {
                 .shipmentStatus(shipment.getShipmentStatus())
                 .totalWeightKg(shipment.getTotalWeightKg())
                 .shipmentType(shipment.getShipmentType())
+                .packageType(shipment.getPackageType())
                 .expectedDeliveryDate(shipment.getExpectedDeliveryDate())
                 .actualDeliveryDate(shipment.getActualDeliveryDate())
                 .estimatedArrival(shipment.getEstimatedArrival())

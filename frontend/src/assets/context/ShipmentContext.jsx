@@ -62,7 +62,7 @@ function mapBackendShipment(s) {
     senderCity: s.senderCity ?? "",
     receiverName: s.receiverName ?? "",
     receiverCity: s.receiverCity ?? "",
-    packageType: s.shipmentType ?? "",
+    packageType: s.packageType ?? s.shipmentType ?? "General Cargo",
     weight: s.totalWeightKg != null ? `${s.totalWeightKg} kg` : "",
     deliveryAddress: s.deliveryAddress ?? "",
     priority: s.priority ?? "Standard",
@@ -166,7 +166,8 @@ export function ShipmentProvider({ children }) {
         totalWeightKg: formData.weight
           ? parseFloat(String(formData.weight).replace(/[^0-9.]/g, ""))
           : null,
-        shipmentType: formData.packageType ?? formData.shipmentType ?? null,
+        shipmentType: formData.shipmentType || "STANDARD",
+        packageType: formData.packageType || "General Cargo",
         expectedDeliveryDate: formData.eta ?? formData.expectedDeliveryDate ?? null,
       };
 
@@ -205,8 +206,8 @@ export function ShipmentProvider({ children }) {
       destinationWarehouseId: shipment.destinationWarehouseId,
       assignedDriverId: shipment.assignedDriverId,
       assignedVehicleId: shipment.assignedVehicleId,
-      totalWeightKg: Number.parseFloat(String(changes.weight ?? shipment.weight).replace(/[^0-9.]/g, "")),
-      shipmentType: changes.packageType ?? shipment.shipmentType,
+      shipmentType: changes.shipmentType ?? shipment.shipmentType ?? "STANDARD",
+      packageType: changes.packageType ?? shipment.packageType ?? "General Cargo",
       expectedDeliveryDate: changes.eta || shipment.expectedDeliveryDate || null,
     });
     await fetchShipments();

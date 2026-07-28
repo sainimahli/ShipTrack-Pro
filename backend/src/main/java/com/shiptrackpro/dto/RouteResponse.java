@@ -12,8 +12,26 @@ public class RouteResponse {
     private double distanceKm;
     private long estimatedMinutes;
     private String estimatedTravelTime;
+    private double[] originCoords;
+    private double[] destinationCoords;
 
     public RouteResponse() {
+    }
+
+    public double[] getOriginCoords() {
+        return originCoords;
+    }
+
+    public void setOriginCoords(double[] originCoords) {
+        this.originCoords = originCoords;
+    }
+
+    public double[] getDestinationCoords() {
+        return destinationCoords;
+    }
+
+    public void setDestinationCoords(double[] destinationCoords) {
+        this.destinationCoords = destinationCoords;
     }
 
     public String getOriginCity() {

@@ -40,6 +40,8 @@ public class CreateShipmentRequest {
     @NotNull(message = "Shipment type is required")
     private String shipmentType;
 
+    private String packageType;
+
     @Future(message = "Expected delivery date must be in the future")
     private LocalDate expectedDeliveryDate;
 }
