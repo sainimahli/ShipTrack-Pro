@@ -859,6 +859,36 @@ a {
   width: 100%;
 }
 
+.map-with-marker { height: 280px; margin: 0 0 14px; position: relative; }
+.map-with-marker .tracking-map { height: 100%; margin: 0; }
+.map-with-marker .interactive-route-map { inset: 0; margin: 0; position: absolute; }
+.map-with-marker .route-map-city,
+.map-with-marker .interactive-route-line,
+.map-with-marker .route-map-hint { display: none; }
+
+.interactive-route-map {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  height: 280px;
+  margin: 0 0 14px;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+}
+
+.interactive-route-map.unavailable { align-items: center; color: #66758a; display: flex; justify-content: center; }
+.route-map-city { background: rgba(255, 255, 255, .88); border-radius: 6px; color: #17364e; padding: 5px; position: absolute; text-align: center; top: 38px; width: 140px; }
+.route-map-city span { color: #66758a; display: block; font-size: 12px; margin-top: 4px; }
+.route-map-city.origin { left: 4%; }
+.route-map-city.destination { right: 4%; }
+.interactive-route-line { background: #d6e5ea; border-radius: 99px; height: 10px; left: 10%; position: absolute; right: 10%; top: 52%; }
+.interactive-route-line span { background: #2579a9; border-radius: inherit; display: block; height: 100%; }
+.shipment-map-marker { background: #2579a9; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 6px 16px rgba(21, 86, 108, .35); cursor: grab; font-size: 19px; height: 44px; padding: 0; position: absolute; top: calc(52% - 17px); transform: translateX(-50%); width: 44px; }
+.shipment-map-marker:active { cursor: grabbing; }
+.route-map-hint { background: rgba(255, 255, 255, .88); border-radius: 6px; bottom: 22px; color: #526b7a; font-size: 13px; left: 16px; padding: 5px; position: absolute; right: 16px; text-align: center; }
+
 .forecast-panel {
   border-top: 4px solid #2579a9;
 }

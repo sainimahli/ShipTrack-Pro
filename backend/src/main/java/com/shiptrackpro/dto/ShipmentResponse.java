@@ -31,6 +31,12 @@ public class ShipmentResponse {
 
     private Long receiverAddressId;
 
+    private String senderCity;
+
+    private String receiverCity;
+
+    private String deliveryAddress;
+
     private Long originWarehouseId;
 
     private Long destinationWarehouseId;
@@ -59,6 +65,8 @@ public class ShipmentResponse {
     private Integer progress;
     private List<ShipmentHistoryItem> history;
 
+    private String packageType;
+
     private LocalDate expectedDeliveryDate;
 
     private OffsetDateTime actualDeliveryDate;
@@ -71,6 +79,9 @@ public class ShipmentResponse {
     private Boolean isDelayed;
 
     private String delayReason;
+
+    private Double currentLatitude;
+    private Double currentLongitude;
 
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
