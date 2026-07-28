@@ -56,6 +56,13 @@ const shipmentSteps = [
   "Out for Delivery",
   "Delivered",
 ];
+const demoTrackingNumbers = [
+  "STP10024591",
+  "STP10024592",
+  "STP10024593",
+  "STP10024594",
+  "STP10024595",
+];
 
 function getForecast(shipment) {
   const forecast = forecastByStatus[shipment.status] || { remaining: "Under review", risk: "WATCH" };
@@ -132,7 +139,10 @@ function TrackShipment() {
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
   const [serverForecast, setServerForecast] = useState(null);
+  const [eta, setETA] = useState(null);
+  console.log("ETA State:", eta);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [liveTracking, setLiveTracking] = useState(null);
   const [routeData, setRouteData] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const liveProgressRef = useRef(0);
@@ -150,6 +160,7 @@ function TrackShipment() {
     event.preventDefault();
     setSubmittedTracking(trackingNumber);
   };
+
 
   const refreshLiveTracking = useCallback(() => {
     setLastCheckedAt(new Date());
@@ -187,11 +198,12 @@ function TrackShipment() {
   }, [refetch, refreshLiveTracking, shipment]);
 
   useEffect(() => {
-    const refreshTimer = window.setInterval(refreshLiveTracking, 30_000);
+    const refreshTimer = window.setInterval(refreshLiveTracking, 15_000);
     return () => window.clearInterval(refreshTimer);
   }, [refreshLiveTracking]);
 
   useEffect(() => {
+
     if (!shipment) {
       setServerForecast(null);
       return undefined;
@@ -205,10 +217,26 @@ function TrackShipment() {
       .catch(() => {
         if (!ignoreResponse) setServerForecast(null);
       });
+   getETA(shipment.trackingNumber)
+  .then((response) => {
+    console.log("ETA Response:", JSON.stringify(response.data, null, 2));
 
+    if (!ignoreResponse) {
+      setETA(response.data);
+    }
+  })
+  .catch((error) => {
+    console.log("ETA Error:", error.response?.data || error);
+
+    if (!ignoreResponse) {
+      setETA(null);
+    }
+  });
     return () => {
       ignoreResponse = true;
     };
+
+
   }, [shipment, refreshVersion]);
 
   useEffect(() => {
@@ -239,6 +267,7 @@ function TrackShipment() {
   useEffect(() => {
     if (!shipment?.senderCity || !shipment?.receiverCity) {
       setRouteData(null);
+      setAlerts([]);
       return undefined;
     }
 
@@ -363,6 +392,16 @@ function TrackShipment() {
   }, [routeData, shipment, mapOrigin, mapDestination, refetch]);
 
   const latestEvent = shipment?.history?.at(-1);
+  const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
+  const liveLocation = liveTracking?.location?.locationName;
+  const displayStatus = serverStatus || shipment?.status;
+  const displayTimeline = liveTracking?.timeline?.length
+    ? liveTracking.timeline.map((event) => ({
+        status: event.status?.replaceAll("_", " ") || "Update",
+        location: event.locationName || event.description || "Location update pending",
+        timestamp: event.updatedAt,
+      }))
+    : shipment?.history || [];
   const localForecast = shipment ? getForecast(shipment) : null;
   const forecast = serverForecast
     ? {
@@ -370,7 +409,11 @@ function TrackShipment() {
         remaining: serverForecast.predictedDelayMinutes > 0
           ? `${serverForecast.predictedDelayMinutes} min delay forecast`
           : `${serverForecast.confidencePercentage}% forecast confidence`,
-        risk: (serverForecast.riskLevel || "").replaceAll("_", " ") || "UNKNOWN",
+
+
+        risk: serverForecast.riskLevel.replaceAll("_", " "),
+
+
         message: serverForecast.reason,
       }
     : localForecast;
@@ -433,11 +476,13 @@ function TrackShipment() {
           <section className="live-monitoring" aria-label="Live delivery monitoring">
             <div>
               <div className="eyebrow">Live delivery monitoring</div>
-              <strong>{latestEvent?.location || shipment.receiverCity}</strong>
-              <span>Latest checkpoint: {latestEvent?.status || shipment.status}</span>
+              <strong>{liveLocation || latestEvent?.location || shipment.receiverCity}</strong>
+              <span>Latest checkpoint: {displayStatus}</span>
             </div>
             <div>
               <span className={`live-risk ${forecast.risk.toLowerCase().replaceAll(" ", "-")}`}>{forecast.risk}</span>
+
+
               <small>Checked {formatDateTime(lastCheckedAt)}</small>
             </div>
           </section>
@@ -447,6 +492,7 @@ function TrackShipment() {
               <div>
                 <div className="eyebrow">Location services</div>
                 <h2 className="section-title" style={{ marginTop: 6 }}>Live route map</h2>
+
                 <p className="subtle" style={{ margin: "4px 0 0" }}>
                   Auto-refreshes every 30 seconds · Last synced {formatDateTime(lastCheckedAt)}
                 </p>
@@ -478,6 +524,7 @@ function TrackShipment() {
           <section className="grid grid-2" style={{ marginBottom: 18 }}>
             <article className="panel forecast-panel">
               <div className="eyebrow">ETA prediction</div>
+
               <h2 className="section-title" style={{ marginTop: 6 }}>{forecast.eta}</h2>
               <div className="forecast-details"><span>Forecast window</span><strong>{forecast.remaining}</strong></div>
               <p className="subtle">{forecast.message}</p>
@@ -489,7 +536,43 @@ function TrackShipment() {
               <p className="subtle">Forecasts update from the current delivery status and latest location checkpoint.</p>
             </article>
           </section>
+           {eta && (
+  <section style={{ marginBottom: 18 }}>
+    <article className="panel">
+      <div className="eyebrow">ETA Information</div>
 
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="schema-box">
+          <strong>Estimated Arrival</strong>
+          <p className="subtle">
+            {eta.estimatedArrival}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Remaining Time</strong>
+          <p className="subtle">
+            {eta.remainingTime}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Shipment Status</strong>
+          <p className="subtle">
+            {eta.shipmentStatus}
+          </p>
+        </div>
+
+        <div className="schema-box">
+          <strong>Delay Reason</strong>
+          <p className="subtle">
+            {eta.delayReason ?? "No Delay"}
+          </p>
+        </div>
+      </div>
+    </article>
+  </section>
+)}
           <section className="grid grid-2">
             <div className="panel">
               <div className="toolbar">
@@ -499,7 +582,7 @@ function TrackShipment() {
                     {shipment.trackingNumber}
                   </h2>
                 </div>
-                <span className={`badge ${statusClass(shipment.status)}`}>{shipment.status}</span>
+                <span className={`badge ${statusClass(displayStatus)}`}>{displayStatus}</span>
               </div>
 
               <div className="route-strip">
@@ -570,9 +653,9 @@ function TrackShipment() {
 
               <h2 className="section-title">Tracking Timeline</h2>
               <ul className="timeline">
-                {shipment.history.map((event) => (
+                {displayTimeline.map((event) => (
                   <li className="timeline-item" key={`${event.status}-${event.timestamp}`}>
-                    <div className={`timeline-dot ${event.status === shipment.status ? "live" : ""}`}>
+                    <div className={`timeline-dot ${event.status === displayStatus ? "live" : ""}`}>
                       {event.status === "Delivered"
                         ? "✅"
                         : event.status === "Out for Delivery"

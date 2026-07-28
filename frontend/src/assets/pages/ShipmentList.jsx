@@ -87,14 +87,16 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
     }
   };
 
-  const approveRequest = () => {
-    updateStatus(shipment.trackingNumber, "Created", location || shipment.senderCity);
+  const approveRequest = async () => {
+    try { await updateStatus(shipment.trackingNumber, "Created", location || shipment.senderCity); }
+    catch (error) { setNotice(error.message || "Unable to approve shipment."); return; }
     setNotice("Shipment request approved. The shipment is ready for lifecycle updates.");
   };
 
-  const rejectRequest = () => {
+  const rejectRequest = async () => {
     if (!window.confirm(`Reject shipment request ${shipment.trackingNumber}?`)) return;
-    rejectShipment(shipment.trackingNumber, location || shipment.senderCity);
+    try { await rejectShipment(shipment.trackingNumber, location || shipment.senderCity); }
+    catch (error) { setNotice(error.message || "Unable to reject shipment."); return; }
     setNotice("Shipment request rejected and retained in the request history.");
   };
 
@@ -200,7 +202,7 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
 
 function ShipmentList() {
   const { auth } = useContext(AuthContext);
-  const { shipments, statuses, updateStatus, updateShipment, cancelShipment, rejectShipment, metrics } = useContext(ShipmentContext);
+  const { shipments, statuses, updateStatus, updateShipment, cancelShipment, rejectShipment, metrics, loading, error } = useContext(ShipmentContext);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [selectedTracking, setSelectedTracking] = useState(null);
@@ -235,6 +237,9 @@ function ShipmentList() {
   return (
     <div className="page">
       <div className="page-header"><div><div className="eyebrow">Shipment management</div><h1>{canManageShipments ? "Shipment operations" : "Management dashboard"}</h1><p className="subtle">Review shipment information, manage lifecycle updates, and keep a complete tracking history.</p></div><Link className="button primary" to="/shipments/new">+ New shipment</Link></div>
+
+      {error && <div className="alert error" style={{ marginBottom: 18 }}>{error}</div>}
+      {loading && <div className="alert" style={{ marginBottom: 18 }}>Loading shipments…</div>}
 
       <section className="grid grid-4" style={{ marginBottom: 18 }}>
         <div className="metric-card"><div className="metric-label">Total</div><div className="metric-value">{metrics.total}</div></div>

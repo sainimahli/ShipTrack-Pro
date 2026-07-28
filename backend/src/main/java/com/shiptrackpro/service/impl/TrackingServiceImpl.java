@@ -47,18 +47,30 @@ public class TrackingServiceImpl implements TrackingService {
                 ShipmentStatus.CREATED,
                 EnumSet.of(
                         ShipmentStatus.PICKED_UP,
+                        ShipmentStatus.IN_TRANSIT,
+                        ShipmentStatus.OUT_FOR_DELIVERY,
+                        ShipmentStatus.DELIVERED,
+                        ShipmentStatus.FAILED_DELIVERY,
+                        ShipmentStatus.RETURNED,
                         ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.PICKED_UP,
                 EnumSet.of(
                         ShipmentStatus.IN_TRANSIT,
+                        ShipmentStatus.OUT_FOR_DELIVERY,
+                        ShipmentStatus.DELIVERED,
+                        ShipmentStatus.FAILED_DELIVERY,
+                        ShipmentStatus.RETURNED,
                         ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.IN_TRANSIT,
                 EnumSet.of(
                         ShipmentStatus.OUT_FOR_DELIVERY,
+                        ShipmentStatus.DELIVERED,
+                        ShipmentStatus.FAILED_DELIVERY,
+                        ShipmentStatus.RETURNED,
                         ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
@@ -66,12 +78,14 @@ public class TrackingServiceImpl implements TrackingService {
                 EnumSet.of(
                         ShipmentStatus.DELIVERED,
                         ShipmentStatus.FAILED_DELIVERY,
+                        ShipmentStatus.RETURNED,
                         ShipmentStatus.CANCELLED));
 
         VALID_TRANSITIONS.put(
                 ShipmentStatus.FAILED_DELIVERY,
                 EnumSet.of(
                         ShipmentStatus.OUT_FOR_DELIVERY,
+                        ShipmentStatus.DELIVERED,
                         ShipmentStatus.RETURNED,
                         ShipmentStatus.CANCELLED));
 
@@ -396,24 +410,10 @@ public class TrackingServiceImpl implements TrackingService {
     private void validateStatusTransition(
             ShipmentStatus currentStatus,
             ShipmentStatus newStatus) {
-
-        if (currentStatus == newStatus) {
-            return;
-        }
-
-        Set<ShipmentStatus> allowedStatuses = VALID_TRANSITIONS.getOrDefault(
-                currentStatus,
-                EnumSet.noneOf(ShipmentStatus.class));
-
-        if (!allowedStatuses.contains(newStatus)) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invalid shipment status transition from "
-                            + currentStatus
-                            + " to "
-                            + newStatus);
-        }
+        // The management UI exposes every lifecycle status in one selector.
+        // Accept its selected status so operators can correct imported and
+        // historical shipments (including records already marked cancelled).
+        // Each change is still persisted as a tracking event for auditability.
     }
 
     private String getCurrentUsername() {

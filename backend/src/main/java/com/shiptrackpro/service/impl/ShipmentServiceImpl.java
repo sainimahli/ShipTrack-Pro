@@ -2,14 +2,16 @@ package com.shiptrackpro.service.impl;
 
 import com.shiptrackpro.dto.CreateShipmentRequest;
 import com.shiptrackpro.dto.ShipmentResponse;
+import com.shiptrackpro.dto.ShipmentHistoryItem;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
-import com.shiptrackpro.dto.ForecastResponse;
 import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.entity.Shipment;
+import com.shiptrackpro.entity.TrackingEvent;
 import com.shiptrackpro.entity.User;
 import com.shiptrackpro.enums.NotificationChannel;
 import com.shiptrackpro.enums.NotificationEventType;
 import com.shiptrackpro.enums.ShipmentStatus;
+import com.shiptrackpro.enums.AddressType;
 import com.shiptrackpro.exception.ResourceNotFoundException;
 import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.repository.AddressRepository;
@@ -21,7 +23,11 @@ import com.shiptrackpro.service.TrackingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.math.BigDecimal;
+
 
 import java.util.List;
 import java.util.UUID;
@@ -61,11 +67,24 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         User creator = findUserOrThrow(createdByUserId, "creator");
 
+        Long senderAddressId = request.getSenderAddressId() != null
+                ? request.getSenderAddressId()
+                : createAddress(request.getSenderName(), request.getSenderCity(), null, AddressType.SENDER).getAddressId();
+        Long receiverAddressId = request.getReceiverAddressId() != null
+                ? request.getReceiverAddressId()
+                : createAddress(request.getReceiverName(), request.getReceiverCity(), request.getDeliveryAddress(), AddressType.RECEIVER).getAddressId();
+        BigDecimal totalWeight = request.getTotalWeightKg() != null
+                ? request.getTotalWeightKg() : parseWeight(request.getWeight());
+        if (totalWeight == null || totalWeight.signum() <= 0) {
+            throw new IllegalArgumentException("Package weight must be greater than zero");
+        }
+        String packageType = databaseShipmentType(request.getPriority(), request.getShipmentType());
+
         Shipment shipment = Shipment.builder()
                 .trackingNumber(generateUniqueTrackingNumber())
                 .userId(creator.getUserId())
-                .senderAddressId(request.getSenderAddressId())
-                .receiverAddressId(request.getReceiverAddressId())
+                .senderAddressId(senderAddressId)
+                .receiverAddressId(receiverAddressId)
                 .originWarehouseId(request.getOriginWarehouseId())
                 .destinationWarehouseId(request.getDestinationWarehouseId())
                 .assignedDriverId(request.getAssignedDriverId())
@@ -152,59 +171,20 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         Shipment cancelled = shipmentRepository.save(shipment);
 
-        // Notification removed because NotificationEventType
-        // currently has no SHIPMENT_CANCELLED event.
+        Address sender = addressRepository.findById(cancelled.getSenderAddressId()).orElse(null);
+        TrackingEvent event = new TrackingEvent();
+        event.setShipment(cancelled);
+        event.setTrackingNumberCache(cancelled.getTrackingNumber());
+        event.setStatus(ShipmentStatus.CANCELLED);
+        event.setLocationName(sender == null ? null : sender.getCity());
+        event.setDescription("Shipment cancelled");
+        event.setUpdatedBy("SYSTEM");
+        event.setUpdatedAt(OffsetDateTime.now());
+        trackingEventRepository.save(event);
 
         return mapToResponse(cancelled);
     }
-    @Override
-public ForecastResponse getForecast(Long shipmentId) {
 
-    Shipment shipment = findShipmentOrThrow(shipmentId);
-
-    LocalDate estimatedDate = shipment.getExpectedDeliveryDate();
-
-    int confidence = 95;
-    String message = "Shipment is on schedule";
-
-    switch (shipment.getShipmentStatus()) {
-
-        case CREATED:
-            confidence = 60;
-            message = "Shipment has been created.";
-            break;
-
-        case PICKED_UP:
-            confidence = 75;
-            message = "Shipment picked up successfully.";
-            break;
-
-        case IN_TRANSIT:
-            confidence = 90;
-            message = "Shipment is moving as planned.";
-            break;
-
-        case OUT_FOR_DELIVERY:
-            confidence = 98;
-            message = "Shipment will arrive today.";
-            break;
-
-        case DELIVERED:
-            confidence = 100;
-            message = "Shipment delivered.";
-            break;
-
-        case CANCELLED:
-            confidence = 0;
-            message = "Shipment cancelled.";
-            break;
-
-        default:
-            confidence = 50;
-            message = "Forecast unavailable.";
-        }
-        return new ForecastResponse(estimatedDate, confidence, message);
-    }
 
     // ------------------------------------------------------------------
     // Helpers

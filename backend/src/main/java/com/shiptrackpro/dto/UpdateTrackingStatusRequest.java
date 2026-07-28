@@ -16,6 +16,7 @@ public class UpdateTrackingStatusRequest {
     private String description;
 
     private String locationName;
+    private String location;
 
     public UpdateTrackingStatusRequest() {
     }

@@ -16,6 +16,8 @@ import com.shiptrackpro.enums.NotificationChannel;
 import com.shiptrackpro.enums.NotificationEventType;
 import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.service.NotificationService;
+import com.shiptrackpro.service.AlertService;
+import com.shiptrackpro.dto.AlertResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,18 +66,21 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     private final DelayPredictionProperties properties;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final AlertService alertService;
 
 
     public RuleBasedDelayPredictionServiceImpl(
             ShipmentRepository shipmentRepository,
             DelayPredictionProperties properties,
             NotificationService notificationService,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            AlertService alertService) {
 
         this.shipmentRepository = shipmentRepository;
         this.properties = properties;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
+        this.alertService = alertService;
     }
 
     @Override
@@ -117,7 +122,11 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
 
         shipmentRepository.save(shipment);
 
-        if (Boolean.TRUE.equals(shipment.getIsDelayed())) {
+        AlertResponse alert = alertService.evaluateAndRaiseAlertIfNeeded(
+                shipment.getShipmentId(), risk.name(), reason);
+
+        // Send one user notification only when a new actionable alert is raised.
+        if (alert != null) {
             sendDelayNotification(shipment);
         }
 
@@ -142,7 +151,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     }
 
     private long computeTravelShortfall(Shipment shipment, DelayPredictionRequest request,
-            LocalDateTime now, List<String> reasons) {
+                                        LocalDateTime now, List<String> reasons) {
         if (request == null || request.getDistanceRemainingKm() == null) {
             return 0;
         }
@@ -154,8 +163,8 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
         double speedKmh = speedForTraffic(trafficLevel);
         double requiredTravelMinutes = (request.getDistanceRemainingKm() / speedKmh) * 60.0;
         long minutesUntilDue = Math.max(0,
-        Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
-         
+                Duration.between(now, shipment.getExpectedDeliveryDate().atStartOfDay()).toMinutes());
+
 
         if (requiredTravelMinutes > minutesUntilDue) {
             long shortfall = Math.round(requiredTravelMinutes - minutesUntilDue);
@@ -203,7 +212,7 @@ public class RuleBasedDelayPredictionServiceImpl implements DelayPredictionServi
     }
 
     private DelayPredictionResponse build(Shipment shipment, DelayRisk risk, long predictedDelayMinutes,
-            String reason, LocalDateTime evaluatedAt) {
+                                          String reason, LocalDateTime evaluatedAt) {
         return DelayPredictionResponse.builder()
                 .shipmentId(shipment.getShipmentId())
                 .delayRisk(risk)

@@ -10,6 +10,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.math.BigDecimal;
+import java.util.List;
 
 
 
@@ -49,6 +50,20 @@ public class ShipmentResponse {
     private BigDecimal totalWeightKg;
 
     private String shipmentType;
+    private String priority;
+
+    // UI-ready fields, populated from the persisted address and tracking data.
+    private String senderName;
+    private String senderCity;
+    private String receiverName;
+    private String receiverCity;
+    private String packageType;
+    private String weight;
+    private String deliveryAddress;
+    private LocalDate eta;
+    private String status;
+    private Integer progress;
+    private List<ShipmentHistoryItem> history;
 
     private String packageType;
 
