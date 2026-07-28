@@ -210,10 +210,13 @@ public class RouteServiceImpl implements RouteService {
                     .orElseGet(() -> trackingEventRepository.findFirstByTrackingNumberOrderByUpdatedAtDesc(normalizedTrackingNumber).orElse(null));
 
             if (latestEvent != null) {
-                if (latestEvent.getLatitude() != null && latestEvent.getLongitude() != null) {
-                    currentCoords = new double[]{latestEvent.getLatitude(), latestEvent.getLongitude()};
-                } else if (latestEvent.getLocationName() != null && !latestEvent.getLocationName().trim().isEmpty()) {
+                // A named checkpoint is what operators enter in the management
+                // screen, so prefer it over legacy/placeholder GPS values.
+                if (latestEvent.getLocationName() != null && !latestEvent.getLocationName().trim().isEmpty()) {
                     currentCoords = CITY_COORDINATES.get(latestEvent.getLocationName().trim().toLowerCase());
+                }
+                if (currentCoords == null && hasValidCoordinates(latestEvent.getLatitude(), latestEvent.getLongitude())) {
+                    currentCoords = new double[]{latestEvent.getLatitude(), latestEvent.getLongitude()};
                 }
             }
         }
@@ -263,6 +266,13 @@ public class RouteServiceImpl implements RouteService {
             }
         }
         return CITY_COORDINATES.get(cityKey);
+    }
+
+    private boolean hasValidCoordinates(Double latitude, Double longitude) {
+        return latitude != null && longitude != null
+                && latitude >= -90 && latitude <= 90
+                && longitude >= -180 && longitude <= 180
+                && !(latitude == 0.0 && longitude == 0.0);
     }
 
     private String resolveCity(String cityName, Long addressId, String locationType) {

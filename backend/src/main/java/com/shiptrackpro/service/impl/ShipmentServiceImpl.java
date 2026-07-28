@@ -12,6 +12,8 @@ import com.shiptrackpro.enums.NotificationEventType;
 import com.shiptrackpro.enums.ShipmentStatus;
 import com.shiptrackpro.exception.ResourceNotFoundException;
 import com.shiptrackpro.repository.ShipmentRepository;
+import com.shiptrackpro.repository.AddressRepository;
+import com.shiptrackpro.repository.TrackingEventRepository;
 import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.service.NotificationService;
 import com.shiptrackpro.service.ShipmentService;
@@ -32,20 +34,25 @@ public class ShipmentServiceImpl implements ShipmentService {
     private static final int TRACKING_NUMBER_SUFFIX_LENGTH = 8;
 
     private final ShipmentRepository shipmentRepository;
+    private final AddressRepository addressRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final TrackingService trackingService;
+    private final TrackingEventRepository trackingEventRepository;
 
     public ShipmentServiceImpl(
             ShipmentRepository shipmentRepository,
+            AddressRepository addressRepository,
             UserRepository userRepository,
             NotificationService notificationService,
-            TrackingService trackingService) {
+            TrackingService trackingService, TrackingEventRepository trackingEventRepository) {
 
         this.shipmentRepository = shipmentRepository;
+        this.addressRepository = addressRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.trackingService = trackingService;
+        this.trackingEventRepository = trackingEventRepository;
     }
 
     @Override
@@ -95,9 +102,9 @@ public class ShipmentServiceImpl implements ShipmentService {
     @Override
     @Transactional(readOnly = true)
     public List<ShipmentResponse> getAllShipments() {
-        return shipmentRepository.findAll()
+        return shipmentRepository.findAllWithLatestLocation()
                 .stream()
-                .map(this::mapToResponse)
+                .map(dto -> mapToResponse(dto.getShipment(), dto.getLatitude(), dto.getLongitude()))
                 .toList();
     }
 
@@ -122,6 +129,9 @@ public class ShipmentServiceImpl implements ShipmentService {
         shipment.setTotalWeightKg(request.getTotalWeightKg());
         shipment.setShipmentType(request.getShipmentType());
         shipment.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+
+        updateAddress(shipment.getSenderAddressId(), request.getSenderCity(), null);
+        updateAddress(shipment.getReceiverAddressId(), request.getReceiverCity(), request.getDeliveryAddress());
 
         Shipment updated = shipmentRepository.save(shipment);
 
@@ -211,6 +221,14 @@ public ForecastResponse getForecast(Long shipmentId) {
     }
 
     private ShipmentResponse mapToResponse(Shipment shipment) {
+        return mapToResponse(shipment, null, null);
+    }
+
+    private ShipmentResponse mapToResponse(Shipment shipment, Double latitude, Double longitude) {
+        Address senderAddress = shipment.getSenderAddressId() == null
+                ? null : addressRepository.findById(shipment.getSenderAddressId()).orElse(null);
+        Address receiverAddress = shipment.getReceiverAddressId() == null
+                ? null : addressRepository.findById(shipment.getReceiverAddressId()).orElse(null);
 
         return ShipmentResponse.builder()
                 .shipmentId(shipment.getShipmentId())
@@ -218,6 +236,9 @@ public ForecastResponse getForecast(Long shipmentId) {
                 .userId(shipment.getUserId())
                 .senderAddressId(shipment.getSenderAddressId())
                 .receiverAddressId(shipment.getReceiverAddressId())
+                .senderCity(senderAddress == null ? null : senderAddress.getCity())
+                .receiverCity(receiverAddress == null ? null : receiverAddress.getCity())
+                .deliveryAddress(receiverAddress == null ? null : receiverAddress.getAddressLine1())
                 .originWarehouseId(shipment.getOriginWarehouseId())
                 .destinationWarehouseId(shipment.getDestinationWarehouseId())
                 .assignedDriverId(shipment.getAssignedDriverId())
@@ -232,9 +253,28 @@ public ForecastResponse getForecast(Long shipmentId) {
                 .forecastConfidence(shipment.getForecastConfidence())
                 .isDelayed(shipment.getIsDelayed())
                 .delayReason(shipment.getDelayReason())
+                .currentLatitude(latitude)
+                .currentLongitude(longitude)
                 .createdAt(shipment.getCreatedAt())
                 .updatedAt(shipment.getUpdatedAt())
                 .build();
+    }
+
+    private void updateAddress(Long addressId, String city, String addressLine1) {
+        if (addressId == null || ((city == null || city.isBlank())
+                && (addressLine1 == null || addressLine1.isBlank()))) {
+            return;
+        }
+
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        if (city != null && !city.isBlank()) {
+            address.setCity(city.trim());
+        }
+        if (addressLine1 != null && !addressLine1.isBlank()) {
+            address.setAddressLine1(addressLine1.trim());
+        }
+        addressRepository.save(address);
     }
 
     private String generateUniqueTrackingNumber() {

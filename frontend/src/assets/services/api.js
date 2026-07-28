@@ -46,8 +46,12 @@ export const getDeliveryForecast = (trackingNumber) =>
   API.get(`/tracking/forecast/${encodeURIComponent(trackingNumber)}`);
 
 // Route Calculation
-export const calculateRoute = (originCity, destinationCity) =>
-  API.post("/route/calculate", { originCity, destinationCity });
+export const calculateRoute = (originCity, destinationCity, trackingNumber) =>
+  API.post("/route/calculate", {
+    originCity,
+    destinationCity,
+    ...(trackingNumber ? { trackingNumber } : {}),
+  });
 
 // Admin
 export const getPendingUsers = () => API.get("/admin/pending-users");
@@ -66,5 +70,26 @@ export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
 export const verifyOtp = (data) => API.post("/auth/verify-otp", data);
 
 export const resetPassword = (data) => API.post("/auth/reset-password", data);
+
+// Shipments
+export const getShipments = () => API.get("/shipments");
+
+export const getShipmentById = (id) => API.get(`/shipments/${id}`);
+
+export const createShipment = (data) => API.post("/shipments", data);
+
+export const updateShipment = (id, data) => API.put(`/shipments/${id}`, data);
+
+export const deleteShipment = (id) => API.delete(`/shipments/${id}`);
+
+export const updateTrackingStatus = (data) => API.put("/tracking/status", data);
+
+export const getTrackingTimeline = (trackingNumber) =>
+  API.get(`/tracking/timeline/${encodeURIComponent(trackingNumber)}`);
+
+export const updateTrackingLocation = (data) => API.put("/tracking/location", data);
+
+export const getTrackingLocation = (trackingNumber) =>
+  API.get(`/tracking/location/${encodeURIComponent(trackingNumber)}`);
 
 export default API;

@@ -27,6 +27,12 @@ public class UpdateShipmentRequest {
     @NotNull(message = "Receiver address ID is required")
     private Long receiverAddressId;
 
+    private String senderCity;
+
+    private String receiverCity;
+
+    private String deliveryAddress;
+
     private Long originWarehouseId;
 
     private Long destinationWarehouseId;
