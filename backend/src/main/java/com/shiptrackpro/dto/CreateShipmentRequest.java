@@ -32,6 +32,9 @@ public class CreateShipmentRequest {
 
     private String shipmentType;
 
+    private String packageType;
+
+    @Future(message = "Expected delivery date must be in the future")
     private LocalDate expectedDeliveryDate;
 
     // Fields used by the shipment-management screen.  They let the API create

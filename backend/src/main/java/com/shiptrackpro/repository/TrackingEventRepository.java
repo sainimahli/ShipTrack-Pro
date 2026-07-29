@@ -34,6 +34,14 @@ public interface TrackingEventRepository extends JpaRepository<TrackingEvent, Lo
             @Param("trackingNumber") String trackingNumber);
 
     @Query("""
+        SELECT te FROM TrackingEvent te 
+        WHERE (te.shipment.trackingNumber = :trackingNumber OR te.trackingNumberCache = :trackingNumber)
+          AND (te.latitude IS NOT NULL OR te.longitude IS NOT NULL OR te.locationName IS NOT NULL)
+        ORDER BY te.updatedAt DESC LIMIT 1
+        """)
+    Optional<TrackingEvent> findLatestLocationByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    @Query("""
         SELECT CASE WHEN COUNT(te) > 0 THEN TRUE ELSE FALSE END 
         FROM TrackingEvent te 
         WHERE te.shipment.trackingNumber = :trackingNumber OR te.trackingNumberCache = :trackingNumber

@@ -41,25 +41,24 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
     private final AddressRepository addressRepository;
-    private final TrackingEventRepository trackingEventRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final TrackingService trackingService;
+    private final TrackingEventRepository trackingEventRepository;
 
     public ShipmentServiceImpl(
             ShipmentRepository shipmentRepository,
             AddressRepository addressRepository,
-            TrackingEventRepository trackingEventRepository,
             UserRepository userRepository,
             NotificationService notificationService,
-            TrackingService trackingService) {
+            TrackingService trackingService, TrackingEventRepository trackingEventRepository) {
 
         this.shipmentRepository = shipmentRepository;
         this.addressRepository = addressRepository;
-        this.trackingEventRepository = trackingEventRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.trackingService = trackingService;
+        this.trackingEventRepository = trackingEventRepository;
     }
 
     @Override
@@ -91,9 +90,10 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .assignedDriverId(request.getAssignedDriverId())
                 .assignedVehicleId(request.getAssignedVehicleId())
                 .shipmentStatus(ShipmentStatus.CREATED)
-                .totalWeightKg(totalWeight)
-                .shipmentType(packageType)
-                .expectedDeliveryDate(request.getEta() != null ? request.getEta() : request.getExpectedDeliveryDate())
+                .totalWeightKg(request.getTotalWeightKg())
+                .shipmentType(request.getShipmentType())
+                .packageType(request.getPackageType())
+                .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .estimatedArrival(null)
                 .actualDeliveryDate(null)
                 .distanceRemainingKm(null)
@@ -122,9 +122,9 @@ public class ShipmentServiceImpl implements ShipmentService {
     @Override
     @Transactional(readOnly = true)
     public List<ShipmentResponse> getAllShipments() {
-        return shipmentRepository.findAll()
+        return shipmentRepository.findAllWithLatestLocation()
                 .stream()
-                .map(this::mapToResponse)
+                .map(dto -> mapToResponse(dto.getShipment(), dto.getLatitude(), dto.getLongitude()))
                 .toList();
     }
 
@@ -140,21 +140,21 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         Shipment shipment = findShipmentOrThrow(id);
 
-        updateAddress(shipment.getSenderAddressId(), request.getSenderName(), request.getSenderCity(), null, AddressType.SENDER);
-        updateAddress(shipment.getReceiverAddressId(), request.getReceiverName(), request.getReceiverCity(), request.getDeliveryAddress(), AddressType.RECEIVER);
-        if (request.getSenderAddressId() != null) shipment.setSenderAddressId(request.getSenderAddressId());
-        if (request.getReceiverAddressId() != null) shipment.setReceiverAddressId(request.getReceiverAddressId());
-        if (request.getOriginWarehouseId() != null) shipment.setOriginWarehouseId(request.getOriginWarehouseId());
-        if (request.getDestinationWarehouseId() != null) shipment.setDestinationWarehouseId(request.getDestinationWarehouseId());
-        if (request.getAssignedDriverId() != null) shipment.setAssignedDriverId(request.getAssignedDriverId());
-        if (request.getAssignedVehicleId() != null) shipment.setAssignedVehicleId(request.getAssignedVehicleId());
-        if (request.getTotalWeightKg() != null || request.getWeight() != null) shipment.setTotalWeightKg(
-                request.getTotalWeightKg() != null ? request.getTotalWeightKg() : parseWeight(request.getWeight()));
-        if (request.getPackageType() != null || request.getShipmentType() != null || request.getPriority() != null) {
-            shipment.setShipmentType(databaseShipmentType(request.getPriority(), request.getShipmentType()));
+        shipment.setSenderAddressId(request.getSenderAddressId());
+        shipment.setReceiverAddressId(request.getReceiverAddressId());
+        shipment.setOriginWarehouseId(request.getOriginWarehouseId());
+        shipment.setDestinationWarehouseId(request.getDestinationWarehouseId());
+        shipment.setAssignedDriverId(request.getAssignedDriverId());
+        shipment.setAssignedVehicleId(request.getAssignedVehicleId());
+        shipment.setTotalWeightKg(request.getTotalWeightKg());
+        shipment.setShipmentType(request.getShipmentType());
+        if (request.getPackageType() != null) {
+            shipment.setPackageType(request.getPackageType());
         }
-        if (request.getEta() != null || request.getExpectedDeliveryDate() != null) shipment.setExpectedDeliveryDate(
-                request.getEta() != null ? request.getEta() : request.getExpectedDeliveryDate());
+        shipment.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+
+        updateAddress(shipment.getSenderAddressId(), request.getSenderCity(), null);
+        updateAddress(shipment.getReceiverAddressId(), request.getReceiverCity(), request.getDeliveryAddress());
 
         Shipment updated = shipmentRepository.save(shipment);
 
@@ -205,15 +205,14 @@ public class ShipmentServiceImpl implements ShipmentService {
     }
 
     private ShipmentResponse mapToResponse(Shipment shipment) {
-        Address sender = addressRepository.findById(shipment.getSenderAddressId()).orElse(null);
-        Address receiver = addressRepository.findById(shipment.getReceiverAddressId()).orElse(null);
-        var history = trackingEventRepository.findByTrackingNumberOrderByUpdatedAtAsc(shipment.getTrackingNumber())
-                .stream()
-                .map(event -> new ShipmentHistoryItem(
-                        humanizeStatus(event.getStatus()),
-                        firstNonBlank(event.getLocationName(), event.getDescription(), receiver == null ? "" : receiver.getCity()),
-                        event.getUpdatedAt()))
-                .toList();
+        return mapToResponse(shipment, null, null);
+    }
+
+    private ShipmentResponse mapToResponse(Shipment shipment, Double latitude, Double longitude) {
+        Address senderAddress = shipment.getSenderAddressId() == null
+                ? null : addressRepository.findById(shipment.getSenderAddressId()).orElse(null);
+        Address receiverAddress = shipment.getReceiverAddressId() == null
+                ? null : addressRepository.findById(shipment.getReceiverAddressId()).orElse(null);
 
         return ShipmentResponse.builder()
                 .shipmentId(shipment.getShipmentId())
@@ -221,6 +220,9 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .userId(shipment.getUserId())
                 .senderAddressId(shipment.getSenderAddressId())
                 .receiverAddressId(shipment.getReceiverAddressId())
+                .senderCity(senderAddress == null ? null : senderAddress.getCity())
+                .receiverCity(receiverAddress == null ? null : receiverAddress.getCity())
+                .deliveryAddress(receiverAddress == null ? null : receiverAddress.getAddressLine1())
                 .originWarehouseId(shipment.getOriginWarehouseId())
                 .destinationWarehouseId(shipment.getDestinationWarehouseId())
                 .assignedDriverId(shipment.getAssignedDriverId())
@@ -228,18 +230,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .shipmentStatus(shipment.getShipmentStatus())
                 .totalWeightKg(shipment.getTotalWeightKg())
                 .shipmentType(shipment.getShipmentType())
-                .priority(displayPriority(shipment.getShipmentType()))
-                .senderName(sender == null ? "Sender" : sender.getAddressLine1())
-                .senderCity(sender == null ? "" : sender.getCity())
-                .receiverName(receiver == null ? "Receiver" : firstNonBlank(receiver.getAddressLine2(), receiver.getAddressLine1()))
-                .receiverCity(receiver == null ? "" : receiver.getCity())
-                .packageType(displayPackageType(shipment.getShipmentType()))
-                .weight(shipment.getTotalWeightKg() == null ? "" : shipment.getTotalWeightKg().stripTrailingZeros().toPlainString() + " kg")
-                .deliveryAddress(receiver == null ? "" : receiver.getAddressLine1())
-                .eta(shipment.getExpectedDeliveryDate())
-                .status(humanizeStatus(shipment.getShipmentStatus()))
-                .progress(progressFor(shipment.getShipmentStatus()))
-                .history(history)
+                .packageType(shipment.getPackageType())
                 .expectedDeliveryDate(shipment.getExpectedDeliveryDate())
                 .actualDeliveryDate(shipment.getActualDeliveryDate())
                 .estimatedArrival(shipment.getEstimatedArrival())
@@ -247,91 +238,28 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .forecastConfidence(shipment.getForecastConfidence())
                 .isDelayed(shipment.getIsDelayed())
                 .delayReason(shipment.getDelayReason())
+                .currentLatitude(latitude)
+                .currentLongitude(longitude)
                 .createdAt(shipment.getCreatedAt())
                 .updatedAt(shipment.getUpdatedAt())
                 .build();
     }
 
-    private Address createAddress(String name, String city, String addressLine, AddressType type) {
-        Address address = Address.builder()
-                .addressType(type)
-                .addressLine1(firstNonBlank(addressLine, name, "Address not provided"))
-                .addressLine2(type == AddressType.RECEIVER ? name : null)
-                .city(firstNonBlank(city, "Not provided"))
-                .state("Not provided")
-                .postalCode("000000")
-                .country("India")
-                .build();
-        return addressRepository.save(address);
-    }
+    private void updateAddress(Long addressId, String city, String addressLine1) {
+        if (addressId == null || ((city == null || city.isBlank())
+                && (addressLine1 == null || addressLine1.isBlank()))) {
+            return;
+        }
 
-    private void updateAddress(Long id, String name, String city, String addressLine, AddressType type) {
-        if (id == null || (name == null && city == null && addressLine == null)) return;
-        Address address = addressRepository.findById(id).orElse(null);
-        if (address == null) return;
-        if (name != null && type == AddressType.SENDER) address.setAddressLine1(name);
-        if (name != null && type == AddressType.RECEIVER) address.setAddressLine2(name);
-        if (addressLine != null && type == AddressType.RECEIVER) address.setAddressLine1(addressLine);
-        if (city != null) address.setCity(city);
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        if (city != null && !city.isBlank()) {
+            address.setCity(city.trim());
+        }
+        if (addressLine1 != null && !addressLine1.isBlank()) {
+            address.setAddressLine1(addressLine1.trim());
+        }
         addressRepository.save(address);
-    }
-
-    private BigDecimal parseWeight(String weight) {
-        if (weight == null || weight.isBlank()) return null;
-        String numeric = weight.trim().replaceAll("[^0-9.]", "");
-        try { return new BigDecimal(numeric); }
-        catch (NumberFormatException ex) { throw new IllegalArgumentException("Package weight must be a number"); }
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) if (value != null && !value.isBlank()) return value;
-        return null;
-    }
-
-    private String humanizeStatus(ShipmentStatus status) {
-        return switch (status) {
-            case CREATED -> "Created";
-            case PICKED_UP -> "Picked Up";
-            case IN_TRANSIT -> "In Transit";
-            case OUT_FOR_DELIVERY -> "Out for Delivery";
-            case DELIVERED -> "Delivered";
-            case FAILED_DELIVERY -> "Failed Delivery";
-            case CANCELLED -> "Cancelled";
-            case RETURNED -> "Returned";
-        };
-    }
-
-    // The live database constrains shipment_type to these values. Keep the
-    // friendly package controls in the UI while persisting a valid transport type.
-    private String databaseShipmentType(String priority, String shipmentType) {
-        if ("SAME_DAY".equals(shipmentType) || "EXPRESS".equals(shipmentType) || "STANDARD".equals(shipmentType)) return shipmentType;
-        if ("Critical".equalsIgnoreCase(priority)) return "SAME_DAY";
-        if ("Express".equalsIgnoreCase(priority)) return "EXPRESS";
-        return "STANDARD";
-    }
-
-    private String displayPackageType(String shipmentType) {
-        return switch (shipmentType) {
-            case "EXPRESS" -> "Express Cargo";
-            case "SAME_DAY" -> "Critical Cargo";
-            default -> "General Cargo";
-        };
-    }
-
-    private String displayPriority(String shipmentType) {
-        return switch (shipmentType) {
-            case "EXPRESS" -> "Express";
-            case "SAME_DAY" -> "Critical";
-            default -> "Standard";
-        };
-    }
-
-    private int progressFor(ShipmentStatus status) {
-        return switch (status) {
-            case CREATED -> 12; case PICKED_UP -> 28; case IN_TRANSIT -> 58;
-            case OUT_FOR_DELIVERY -> 84; case DELIVERED -> 100; case FAILED_DELIVERY -> 72;
-            case CANCELLED, RETURNED -> 0;
-        };
     }
 
     private String generateUniqueTrackingNumber() {
