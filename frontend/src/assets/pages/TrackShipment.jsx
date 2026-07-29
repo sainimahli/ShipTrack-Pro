@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
-import { calculateRoute, getDeliveryForecast, getTrackingLocation, updateTrackingLocation, updateTrackingStatus } from "../services/api";
+import { calculateRoute, getDeliveryForecast, getETA, getTrackingLocation, updateTrackingLocation, updateTrackingStatus } from "../services/api";
 
 const DEFAULT_CENTER = [12.9716, 77.5946];
 
@@ -264,12 +264,11 @@ function TrackShipment() {
     };
   }, [shipment?.trackingNumber, refreshVersion]);
 
-  useEffect(() => {
-    if (!shipment?.senderCity || !shipment?.receiverCity) {
-      setRouteData(null);
-      setAlerts([]);
-      return undefined;
-    }
+   useEffect(() => {
+     if (!shipment?.senderCity || !shipment?.receiverCity) {
+       setRouteData(null);
+       return undefined;
+     }
 
     const destLat = shipment.destinationLatitude ?? 26.8467;
     const destLng = shipment.destinationLongitude ?? 80.9462;
