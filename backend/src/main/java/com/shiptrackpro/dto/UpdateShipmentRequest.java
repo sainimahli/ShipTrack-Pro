@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import jakarta.validation.constraints.Future;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -16,17 +17,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class UpdateShipmentRequest {
 
-    
-
     private Long senderAddressId;
 
     private Long receiverAddressId;
-
-    private String senderCity;
-
-    private String receiverCity;
-
-    private String deliveryAddress;
 
     private Long originWarehouseId;
 
@@ -44,13 +37,11 @@ public class UpdateShipmentRequest {
 
     @Future(message = "Expected delivery date must be in the future")
     private LocalDate expectedDeliveryDate;
-    private LocalDate expectedDeliveryDate;
 
     private String senderName;
     private String senderCity;
     private String receiverName;
     private String receiverCity;
-    private String packageType;
     private String weight;
     private String deliveryAddress;
     private LocalDate eta;

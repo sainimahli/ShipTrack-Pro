@@ -67,18 +67,45 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         User creator = findUserOrThrow(createdByUserId, "creator");
 
-        Long senderAddressId = request.getSenderAddressId() != null
-                ? request.getSenderAddressId()
-                : createAddress(request.getSenderName(), request.getSenderCity(), null, AddressType.SENDER).getAddressId();
-        Long receiverAddressId = request.getReceiverAddressId() != null
-                ? request.getReceiverAddressId()
-                : createAddress(request.getReceiverName(), request.getReceiverCity(), request.getDeliveryAddress(), AddressType.RECEIVER).getAddressId();
-        BigDecimal totalWeight = request.getTotalWeightKg() != null
-                ? request.getTotalWeightKg() : parseWeight(request.getWeight());
-        if (totalWeight == null || totalWeight.signum() <= 0) {
-            throw new IllegalArgumentException("Package weight must be greater than zero");
+        Long senderAddressId = request.getSenderAddressId();
+        if (senderAddressId == null && request.getSenderCity() != null) {
+            Address senderAddr = Address.builder()
+                    .addressType(AddressType.SENDER)
+                    .city(request.getSenderCity())
+                    .addressLine1(request.getSenderCity())
+                    .state("N/A")
+                    .postalCode("000000")
+                    .country("India")
+                    .build();
+            senderAddressId = addressRepository.save(senderAddr).getAddressId();
         }
-        String packageType = databaseShipmentType(request.getPriority(), request.getShipmentType());
+
+        Long receiverAddressId = request.getReceiverAddressId();
+        if (receiverAddressId == null && request.getReceiverCity() != null) {
+            Address receiverAddr = Address.builder()
+                    .addressType(AddressType.RECEIVER)
+                    .city(request.getReceiverCity())
+                    .addressLine1(request.getDeliveryAddress() != null ? request.getDeliveryAddress() : request.getReceiverCity())
+                    .state("N/A")
+                    .postalCode("000000")
+                    .country("India")
+                    .build();
+            receiverAddressId = addressRepository.save(receiverAddr).getAddressId();
+        }
+
+        if (senderAddressId == null || receiverAddressId == null) {
+            throw new IllegalArgumentException("Sender address ID and receiver address ID (or city details) are required");
+        }
+
+        BigDecimal totalWeight = request.getTotalWeightKg();
+        if (totalWeight == null && request.getWeight() != null) {
+            try {
+                totalWeight = new BigDecimal(request.getWeight().replaceAll("[^0-9.]", ""));
+            } catch (Exception ignored) {}
+        }
+        if (totalWeight == null || totalWeight.compareTo(BigDecimal.ZERO) <= 0) {
+            totalWeight = new BigDecimal("1.0");
+        }
 
         Shipment shipment = Shipment.builder()
                 .trackingNumber(generateUniqueTrackingNumber())
@@ -90,9 +117,9 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .assignedDriverId(request.getAssignedDriverId())
                 .assignedVehicleId(request.getAssignedVehicleId())
                 .shipmentStatus(ShipmentStatus.CREATED)
-                .totalWeightKg(request.getTotalWeightKg())
-                .shipmentType(request.getShipmentType())
-                .packageType(request.getPackageType())
+                .totalWeightKg(totalWeight)
+                .shipmentType(request.getShipmentType() != null ? request.getShipmentType() : "STANDARD")
+                .packageType(request.getPackageType() != null ? request.getPackageType() : "General Cargo")
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .estimatedArrival(null)
                 .actualDeliveryDate(null)
