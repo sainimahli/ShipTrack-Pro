@@ -163,6 +163,14 @@ export function ShipmentProvider({ children }) {
         destinationWarehouseId: formData.destinationWarehouseId ?? null,
         assignedDriverId: formData.assignedDriverId ?? null,
         assignedVehicleId: formData.assignedVehicleId ?? null,
+        senderName: formData.senderName ?? null,
+        senderCity: formData.senderCity ?? null,
+        receiverName: formData.receiverName ?? null,
+        receiverCity: formData.receiverCity ?? null,
+        deliveryAddress: formData.deliveryAddress ?? null,
+        weight: formData.weight != null ? String(formData.weight) : null,
+        priority: formData.priority ?? null,
+        eta: formData.eta ?? formData.expectedDeliveryDate ?? null,
         totalWeightKg: formData.weight
           ? parseFloat(String(formData.weight).replace(/[^0-9.]/g, ""))
           : null,

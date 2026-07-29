@@ -112,8 +112,6 @@ function CreateShipment() {
         </div>
       )}
 
-      {error && <div className="alert error" style={{ marginBottom: 18 }}>{error}</div>}
-
       <form className="panel" onSubmit={handleSubmit}>
         <div className="form-grid">
           <div className="form-field">

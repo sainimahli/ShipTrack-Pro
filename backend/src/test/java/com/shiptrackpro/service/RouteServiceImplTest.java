@@ -62,6 +62,8 @@ class RouteServiceImplTest {
 
         RouteRequest trackingRequest = new RouteRequest();
         trackingRequest.setTrackingNumber("ST123456");
+        trackingRequest.setOriginLatitude(19.0760);
+        trackingRequest.setOriginLongitude(72.8777);
         trackingRequest.setDestinationLatitude(28.6139);
         trackingRequest.setDestinationLongitude(77.2090);
         RouteResponse trackingResponse = routeService.calculateRoute(trackingRequest);

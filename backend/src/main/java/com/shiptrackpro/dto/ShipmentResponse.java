@@ -31,12 +31,6 @@ public class ShipmentResponse {
 
     private Long receiverAddressId;
 
-    private String senderCity;
-
-    private String receiverCity;
-
-    private String deliveryAddress;
-
     private Long originWarehouseId;
 
     private Long destinationWarehouseId;
@@ -64,8 +58,6 @@ public class ShipmentResponse {
     private String status;
     private Integer progress;
     private List<ShipmentHistoryItem> history;
-
-    private String packageType;
 
     private LocalDate expectedDeliveryDate;
 
