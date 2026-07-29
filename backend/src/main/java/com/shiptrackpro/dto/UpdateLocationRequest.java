@@ -20,6 +20,8 @@ public class UpdateLocationRequest {
     @NotBlank
     private String description;
 
+    private Double distanceRemainingKm;
+
     public UpdateLocationRequest() {
     }
 
@@ -61,5 +63,13 @@ public class UpdateLocationRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Double getDistanceRemainingKm() {
+        return distanceRemainingKm;
+    }
+
+    public void setDistanceRemainingKm(Double distanceRemainingKm) {
+        this.distanceRemainingKm = distanceRemainingKm;
     }
 }

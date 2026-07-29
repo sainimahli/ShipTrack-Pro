@@ -12,6 +12,7 @@ const roleLabels = {
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 const editableRoles = ["Business Client", "Logistics Operator", "Administrator"];
 const shipmentAdminRoles = ["Administrator"];
+const shipmentManagerRoles = ["Administrator", "Logistics Operator"];
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
@@ -47,7 +48,7 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
     deliveryAddress: shipment.deliveryAddress,
   }));
   const [nextStatus, setNextStatus] = useState(shipment.status);
-  const [location, setLocation] = useState(shipment.receiverCity);
+  const [location, setLocation] = useState("");
   const [notice, setNotice] = useState("");
   const isCancelled = shipment.status === "Cancelled";
   const isDelivered = shipment.status === "Delivered";
@@ -58,7 +59,9 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
     try {
       await updateShipment(shipment.trackingNumber, details);
       setNotice("Shipment information and package details updated.");
-    } catch (error) { setNotice(error.message || "Unable to update shipment."); }
+    } catch (error) {
+      setNotice(error?.response?.data?.message || "Could not save shipment details.");
+    }
   };
 
   const saveStatus = async (event) => {
@@ -67,7 +70,9 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
     try {
       await updateStatus(shipment.trackingNumber, nextStatus, location);
       setNotice(`Status updated to ${nextStatus}. A tracking event was added.`);
-    } catch (error) { setNotice(error.message || "Unable to update status."); }
+    } catch (error) {
+      setNotice(error?.response?.data?.message || "Could not update shipment status.");
+    }
   };
 
   const cancel = async () => {
@@ -77,7 +82,9 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
     try {
       await cancelShipment(shipment.trackingNumber, location);
       setNotice("Shipment cancelled and retained in tracking history.");
-    } catch (error) { setNotice(error.message || "Unable to cancel shipment."); }
+    } catch (error) {
+      setNotice(error?.response?.data?.message || "Could not cancel shipment.");
+    }
   };
 
   const approveRequest = async () => {
@@ -171,7 +178,7 @@ function ShipmentAdminWorkspace({ shipment, statuses, updateShipment, updateStat
             </div>
             <div className="form-field" style={{ marginTop: 14 }}>
               <label htmlFor="location">Current location</label>
-              <input className="input" disabled={isCancelled || isDelivered} id="location" onChange={(e) => setLocation(e.target.value)} required value={location} />
+              <input className="input" disabled={isCancelled || isDelivered} id="location" onChange={(e) => setLocation(e.target.value)} placeholder="Enter the current checkpoint city" required value={location} />
             </div>
             {isPendingApproval ? <><button className="button primary" onClick={approveRequest} style={{ marginTop: 18 }} type="button">Approve request</button><button className="button danger" onClick={rejectRequest} style={{ marginLeft: 10, marginTop: 18 }} type="button">Reject request</button></> : <><button className="button primary" disabled={isCancelled || isDelivered || nextStatus === shipment.status} style={{ marginTop: 18 }} type="submit">Post tracking update</button><button className="button danger" disabled={isCancelled || isDelivered} onClick={cancel} style={{ marginLeft: 10, marginTop: 18 }} type="button">Cancel shipment</button></>}
           </form>
@@ -202,6 +209,7 @@ function ShipmentList() {
   const role = normalizeRole(auth.user.role);
   const canEditStatus = editableRoles.includes(role);
   const isShipmentAdmin = shipmentAdminRoles.includes(role);
+  const canManageShipments = shipmentManagerRoles.includes(role);
   const selectedShipment = shipments.find((shipment) => shipment.trackingNumber === selectedTracking);
   const pendingRequests = useMemo(
     () => shipments.filter((shipment) => shipment.status === "Pending Approval"),
@@ -228,7 +236,7 @@ function ShipmentList() {
 
   return (
     <div className="page">
-      <div className="page-header"><div><div className="eyebrow">Shipment management</div><h1>{isShipmentAdmin ? "Shipment operations" : "Management dashboard"}</h1><p className="subtle">Review shipment information, manage lifecycle updates, and keep a complete tracking history.</p></div><Link className="button primary" to="/shipments/new">+ New shipment</Link></div>
+      <div className="page-header"><div><div className="eyebrow">Shipment management</div><h1>{canManageShipments ? "Shipment operations" : "Management dashboard"}</h1><p className="subtle">Review shipment information, manage lifecycle updates, and keep a complete tracking history.</p></div><Link className="button primary" to="/shipments/new">+ New shipment</Link></div>
 
       {error && <div className="alert error" style={{ marginBottom: 18 }}>{error}</div>}
       {loading && <div className="alert" style={{ marginBottom: 18 }}>Loading shipments…</div>}
@@ -283,11 +291,11 @@ function ShipmentList() {
         </section>
       )}
 
-      {isShipmentAdmin && selectedShipment && <ShipmentAdminWorkspace cancelShipment={cancelShipment} close={() => setSelectedTracking(null)} key={`${selectedShipment.trackingNumber}-${selectedShipment.status}`} rejectShipment={rejectShipment} shipment={selectedShipment} statuses={statuses} updateShipment={updateShipment} updateStatus={updateStatus} />}
+      {canManageShipments && selectedShipment && <ShipmentAdminWorkspace cancelShipment={cancelShipment} close={() => setSelectedTracking(null)} key={`${selectedShipment.trackingNumber}-${selectedShipment.status}`} rejectShipment={rejectShipment} shipment={selectedShipment} statuses={statuses} updateShipment={updateShipment} updateStatus={updateStatus} />}
 
       <section className="panel">
         <div className="toolbar"><div className="filters"><input className="input" onChange={(e) => setQuery(e.target.value)} placeholder="Search tracking, sender, receiver, city" style={{ minWidth: 300 }} value={query} /><select className="select" onChange={(e) => setStatus(e.target.value)} value={status}><option>All</option>{statuses.map((item) => <option key={item}>{item}</option>)}</select></div><span className="subtle">{filteredShipments.length} visible records</span></div>
-        <div className="table-wrap"><table className="data-table"><thead><tr><th>Tracking</th><th>Route</th><th>Package</th><th>Status</th><th>Progress</th><th>ETA</th><th>Action</th></tr></thead><tbody>{filteredShipments.map((shipment) => <tr key={shipment.id}><td><strong>{shipment.trackingNumber}</strong><div className="subtle" style={{ fontSize: 12 }}>{shipment.id}</div></td><td><strong>{shipment.senderCity}</strong> to <strong>{shipment.receiverCity}</strong><div className="subtle" style={{ fontSize: 12 }}>{shipment.receiverName}</div></td><td>{shipment.packageType}<div className="subtle" style={{ fontSize: 12 }}>{shipment.weight} - {shipment.priority}</div></td><td><span className={`badge ${statusClass(shipment.status)}`}>{shipment.status}</span></td><td style={{ minWidth: 150 }}><div className="progress-track"><div className="progress-fill" style={{ width: `${shipment.progress}%` }} /></div><div className="subtle" style={{ fontSize: 12, marginTop: 4 }}>{shipment.progress}% complete</div></td><td>{shipment.eta}</td><td>{isShipmentAdmin ? <button className="button secondary compact" onClick={() => setSelectedTracking(shipment.trackingNumber)} type="button">Manage</button> : canEditStatus ? <select className="select" onChange={(e) => updateStatus(shipment.trackingNumber, e.target.value, shipment.receiverCity)} value={shipment.status}>{statuses.map((item) => <option key={item}>{item}</option>)}</select> : <Link className="button secondary" to="/track">Track</Link>}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table className="data-table"><thead><tr><th>Tracking</th><th>Route</th><th>Package</th><th>Status</th><th>Progress</th><th>ETA</th><th>Action</th></tr></thead><tbody>{filteredShipments.map((shipment) => <tr key={shipment.id}><td><strong>{shipment.trackingNumber}</strong><div className="subtle" style={{ fontSize: 12 }}>{shipment.id}</div></td><td><strong>{shipment.senderCity}</strong> to <strong>{shipment.receiverCity}</strong><div className="subtle" style={{ fontSize: 12 }}>{shipment.receiverName}</div></td><td>{shipment.packageType}<div className="subtle" style={{ fontSize: 12 }}>{shipment.weight} - {shipment.priority}</div></td><td><span className={`badge ${statusClass(shipment.status)}`}>{shipment.status}</span></td><td style={{ minWidth: 150 }}><div className="progress-track"><div className="progress-fill" style={{ width: `${shipment.progress}%` }} /></div><div className="subtle" style={{ fontSize: 12, marginTop: 4 }}>{shipment.progress}% complete</div></td><td>{shipment.eta}</td><td>{canManageShipments ? <button className="button secondary compact" onClick={() => setSelectedTracking(shipment.trackingNumber)} type="button">Manage</button> : canEditStatus ? <select className="select" onChange={(e) => updateStatus(shipment.trackingNumber, e.target.value, shipment.receiverCity)} value={shipment.status}>{statuses.map((item) => <option key={item}>{item}</option>)}</select> : <Link className="button secondary" to="/track">Track</Link>}</td></tr>)}</tbody></table></div>
         {filteredShipments.length === 0 && <div className="empty-state">No shipments match the selected filters.</div>}
       </section>
     </div>

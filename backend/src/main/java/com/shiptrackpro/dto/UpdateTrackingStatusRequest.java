@@ -15,6 +15,7 @@ public class UpdateTrackingStatusRequest {
     @NotBlank
     private String description;
 
+    private String locationName;
     private String location;
 
     public UpdateTrackingStatusRequest() {
@@ -44,7 +45,11 @@ public class UpdateTrackingStatusRequest {
         this.description = description;
     }
 
-    public String getLocation() { return location; }
+    public String getLocationName() {
+        return locationName;
+    }
 
-    public void setLocation(String location) { this.location = location; }
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
+    }
 }

@@ -22,6 +22,12 @@ public class UpdateShipmentRequest {
 
     private Long receiverAddressId;
 
+    private String senderCity;
+
+    private String receiverCity;
+
+    private String deliveryAddress;
+
     private Long originWarehouseId;
 
     private Long destinationWarehouseId;
@@ -34,6 +40,10 @@ public class UpdateShipmentRequest {
 
     private String shipmentType;
 
+    private String packageType;
+
+    @Future(message = "Expected delivery date must be in the future")
+    private LocalDate expectedDeliveryDate;
     private LocalDate expectedDeliveryDate;
 
     private String senderName;
