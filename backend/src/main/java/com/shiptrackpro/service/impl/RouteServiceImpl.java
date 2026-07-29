@@ -40,7 +40,7 @@ public class RouteServiceImpl implements RouteService {
     public RouteServiceImpl(
             AddressRepository addressRepository,
             TrackingEventRepository trackingEventRepository) {
-        this(addressRepository, trackingEventRepository, null, "12.9716,77.5946");
+        this(addressRepository, trackingEventRepository, null, "19.0760,72.8777");
     }
 
     @Autowired
@@ -48,12 +48,12 @@ public class RouteServiceImpl implements RouteService {
             @Autowired(required = false) AddressRepository addressRepository,
             @Autowired(required = false) TrackingEventRepository trackingEventRepository,
             @Value("${google.maps.api-key:AIzaSyAEqs7_2CT49g297KuQ86TBWgx1UP-g434}") String googleMapsApiKey,
-            @Value("${google.maps.default-center:12.9716,77.5946}") String defaultCenterStr) {
+            @Value("${google.maps.default-center:19.0760,72.8777}") String defaultCenterStr) {
         this.addressRepository = addressRepository;
         this.trackingEventRepository = trackingEventRepository;
         this.googleMapsApiKey = googleMapsApiKey;
         
-        double[] center = new double[]{12.9716, 77.5946};
+        double[] center = new double[]{19.0760, 72.8777};
         if (defaultCenterStr != null && defaultCenterStr.contains(",")) {
             try {
                 String[] parts = defaultCenterStr.split(",");
@@ -78,12 +78,8 @@ public class RouteServiceImpl implements RouteService {
         double[] destinationCoords = new double[]{request.getDestinationLatitude(), request.getDestinationLongitude()};
         double[] currentCoords = null;
 
-        if (request.getOriginLatitude() != null && request.getOriginLongitude() != null) {
-            currentCoords = new double[]{request.getOriginLatitude(), request.getOriginLongitude()};
-        }
-
         String trackingNumber = request.getTrackingNumber();
-        if (currentCoords == null && trackingNumber != null && !trackingNumber.trim().isEmpty() && trackingEventRepository != null) {
+        if (trackingNumber != null && !trackingNumber.trim().isEmpty() && trackingEventRepository != null) {
             String normalizedTrackingNumber = trackingNumber.trim();
             TrackingEvent latestEvent = trackingEventRepository.findLatestLocationByTrackingNumber(normalizedTrackingNumber)
                     .orElseGet(() -> trackingEventRepository.findFirstByTrackingNumberOrderByUpdatedAtDesc(normalizedTrackingNumber).orElse(null));
@@ -91,6 +87,10 @@ public class RouteServiceImpl implements RouteService {
             if (latestEvent != null && hasValidCoordinates(latestEvent.getLatitude(), latestEvent.getLongitude())) {
                 currentCoords = new double[]{latestEvent.getLatitude(), latestEvent.getLongitude()};
             }
+        }
+
+        if (currentCoords == null && request.getOriginLatitude() != null && request.getOriginLongitude() != null) {
+            currentCoords = new double[]{request.getOriginLatitude(), request.getOriginLongitude()};
         }
 
         if (currentCoords == null) {

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Future;
 import java.math.BigDecimal;
 
 import java.time.LocalDate;
@@ -43,7 +44,6 @@ public class CreateShipmentRequest {
     private String senderCity;
     private String receiverName;
     private String receiverCity;
-    private String packageType;
     private String weight;
     private String deliveryAddress;
     private LocalDate eta;
