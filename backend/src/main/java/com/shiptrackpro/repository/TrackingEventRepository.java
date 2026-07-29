@@ -4,6 +4,7 @@ import com.shiptrackpro.entity.TrackingEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import com.shiptrackpro.entity.Shipment;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,4 +48,6 @@ public interface TrackingEventRepository extends JpaRepository<TrackingEvent, Lo
         WHERE te.shipment.trackingNumber = :trackingNumber OR te.trackingNumberCache = :trackingNumber
         """)
     boolean existsByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    List<TrackingEvent> findByShipmentOrderByUpdatedAtAsc(Shipment shipment);
 }
