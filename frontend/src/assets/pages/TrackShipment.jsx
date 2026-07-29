@@ -3,12 +3,8 @@ import { ShipmentContext } from "../context/shipments";
 
 import {
   calculateRoute,
-<<<<<<< HEAD
-  
-=======
   getDeliveryForecast,
   getETA,
->>>>>>> origin/main
   getShipmentAlerts,
   getShipments,
   getTrackingLocation,
