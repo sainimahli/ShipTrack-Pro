@@ -86,6 +86,9 @@ public class Shipment {
     @Column(name = "shipment_type", length = 20)
     private String shipmentType;
 
+    @Column(name = "package_type", length = 50)
+    private String packageType;
+
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 

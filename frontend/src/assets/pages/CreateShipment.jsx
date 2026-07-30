@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
@@ -6,8 +6,11 @@ import { ShipmentContext } from "../context/shipments";
 const initialForm = {
   senderName: "",
   senderCity: "",
+  senderAddressId: "",
   receiverName: "",
   receiverCity: "",
+  receiverAddressId: "",
+  shipmentType: "STANDARD",
   packageType: "General Cargo",
   weight: "",
   deliveryAddress: "",
@@ -37,7 +40,8 @@ function CreateShipment() {
   const { createShipment } = useContext(ShipmentContext);
   const [form, setForm] = useState(initialForm);
   const [created, setCreated] = useState(null);
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const role = normalizeRole(auth.user.role);
   const isCustomer = role === "Customer";
 
@@ -47,23 +51,30 @@ function CreateShipment() {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
-    if (!canCreate) return;
+    if (!canCreate || submitting) return;
 
-    const requiresApproval = role !== "Administrator";
+    setSubmitError(null);
+    setSubmitting(true);
     try {
-      setError("");
+      const requiresApproval = role !== "Administrator";
       const shipment = await createShipment({
         ...form,
         requestStatus: requiresApproval ? "Pending Approval" : "Created",
       });
       setCreated(shipment);
       setForm(initialForm);
-    } catch (requestError) {
-      setError(requestError.message || "Unable to create shipment.");
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ??
+        err?.response?.data ??
+        "Failed to create shipment. Please check all required fields.";
+      setSubmitError(typeof msg === "string" ? msg : JSON.stringify(msg));
+    } finally {
+      setSubmitting(false);
     }
-  };
+  }, [canCreate, createShipment, form, role, submitting]);
 
   return (
     <div className="page">
@@ -88,13 +99,18 @@ function CreateShipment() {
         </div>
       )}
 
-      {created && (
-        <div className="alert success" style={{ marginBottom: 18 }}>
-          Shipment {created.trackingNumber} {created.status === "Pending Approval" ? "submitted for approval" : "created"}.
+      {submitError && (
+        <div className="alert error" style={{ marginBottom: 18 }}>
+          {submitError}
         </div>
       )}
 
-      {error && <div className="alert error" style={{ marginBottom: 18 }}>{error}</div>}
+      {created && (
+        <div className="alert success" style={{ marginBottom: 18 }}>
+          Shipment <strong>{created.trackingNumber}</strong>{" "}
+          {created.status === "Pending Approval" ? "submitted for approval" : "created successfully"}.
+        </div>
+      )}
 
       <form className="panel" onSubmit={handleSubmit}>
         <div className="form-grid">
@@ -125,6 +141,20 @@ function CreateShipment() {
           </div>
 
           <div className="form-field">
+            <label htmlFor="senderAddressId">Sender address ID <span style={{fontWeight:400,fontSize:12,color:'#888'}}>(DB record ID)</span></label>
+            <input
+              className="input"
+              disabled={!canCreate}
+              id="senderAddressId"
+              name="senderAddressId"
+              onChange={handleChange}
+              required
+              type="number"
+              placeholder="e.g. 1"
+            />
+          </div>
+
+          <div className="form-field">
             <label htmlFor="receiverName">Receiver name</label>
             <input
               className="input"
@@ -151,6 +181,36 @@ function CreateShipment() {
           </div>
 
           <div className="form-field">
+            <label htmlFor="receiverAddressId">Receiver address ID <span style={{fontWeight:400,fontSize:12,color:'#888'}}>(DB record ID)</span></label>
+            <input
+              className="input"
+              disabled={!canCreate}
+              id="receiverAddressId"
+              name="receiverAddressId"
+              onChange={handleChange}
+              required
+              type="number"
+              placeholder="e.g. 2"
+            />
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="shipmentType">Shipment service type</label>
+            <select
+              className="select"
+              disabled={!canCreate}
+              id="shipmentType"
+              name="shipmentType"
+              onChange={handleChange}
+              value={form.shipmentType}
+            >
+              <option value="STANDARD">STANDARD</option>
+              <option value="EXPRESS">EXPRESS</option>
+              <option value="SAME_DAY">SAME_DAY</option>
+            </select>
+          </div>
+
+          <div className="form-field">
             <label htmlFor="packageType">Package type</label>
             <select
               className="select"
@@ -159,6 +219,7 @@ function CreateShipment() {
               name="packageType"
               onChange={handleChange}
               placeholder="Select Package Type"
+              value={form.packageType}
             >
               <option>General Cargo</option>
               <option>Electronics</option>
@@ -226,8 +287,8 @@ function CreateShipment() {
         </div>
 
         <div className="toolbar" style={{ margin: "22px 0 0" }}>
-          <button className="button primary" disabled={!canCreate} type="submit">
-            {isCustomer ? "Request shipment" : "Create shipment"}
+          <button className="button primary" disabled={!canCreate || submitting} type="submit">
+            {submitting ? "Saving…" : isCustomer ? "Request shipment" : "Create shipment"}
           </button>
           <button
             className="button secondary"

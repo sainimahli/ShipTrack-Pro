@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.validation.constraints.Future;
 import java.math.BigDecimal;
 
 import java.time.LocalDate;
@@ -32,6 +33,9 @@ public class CreateShipmentRequest {
 
     private String shipmentType;
 
+    private String packageType;
+
+    @Future(message = "Expected delivery date must be in the future")
     private LocalDate expectedDeliveryDate;
 
     // Fields used by the shipment-management screen.  They let the API create
@@ -40,7 +44,6 @@ public class CreateShipmentRequest {
     private String senderCity;
     private String receiverName;
     private String receiverCity;
-    private String packageType;
     private String weight;
     private String deliveryAddress;
     private LocalDate eta;

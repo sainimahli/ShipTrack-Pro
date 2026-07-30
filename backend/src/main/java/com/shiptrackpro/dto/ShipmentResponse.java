@@ -72,6 +72,9 @@ public class ShipmentResponse {
 
     private String delayReason;
 
+    private Double currentLatitude;
+    private Double currentLongitude;
+
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

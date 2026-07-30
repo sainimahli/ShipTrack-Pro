@@ -78,8 +78,8 @@ export const predictShipmentDelay = (shipmentId, signals = {}) =>
   API.post(`/shipments/${shipmentId}/predict-delay`, signals);
 
 // Route Calculation
-export const calculateRoute = (originCity, destinationCity) =>
-  API.post("/route/calculate", { originCity, destinationCity });
+export const calculateRoute = (params) =>
+  API.post("/route/calculate", params);
 
 
 // Admin
@@ -99,5 +99,14 @@ export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
 export const verifyOtp = (data) => API.post("/auth/verify-otp", data);
 
 export const resetPassword = (data) => API.post("/auth/reset-password", data);
+
+// Shipments
+export const getShipmentById = (id) => API.get(`/shipments/${id}`);
+
+export const deleteShipment = (id) => API.delete(`/shipments/${id}`);
+
+export const updateTrackingStatus = (data) => API.put("/tracking/status", data);
+
+export const updateTrackingLocation = (data) => API.put("/tracking/location", data);
 
 export default API;

@@ -24,6 +24,7 @@ import java.util.Set;
 import java.time.OffsetDateTime;
 import java.time.Duration;
 import java.util.List;
+import java.math.BigDecimal;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.shiptrackpro.service.NotificationService;
@@ -230,8 +231,9 @@ public class TrackingServiceImpl implements TrackingService {
         event.setTrackingNumberCache(trackingNumber);
         event.setStatus(request.getStatus());
         event.setDescription(request.getDescription().trim());
-        event.setLocationName(request.getLocation() == null || request.getLocation().isBlank()
-                ? null : request.getLocation().trim());
+        if (request.getLocationName() != null && !request.getLocationName().isBlank()) {
+            event.setLocationName(request.getLocationName().trim());
+        }
         event.setUpdatedBy(getCurrentUsername());
         event.setUpdatedAt(OffsetDateTime.now());
 
@@ -261,10 +263,15 @@ public class TrackingServiceImpl implements TrackingService {
         Shipment shipment = findShipment(trackingNumber);
         TrackingEvent latestEvent = findLatestEventOrNull(trackingNumber);
 
-        TrackingEvent event = new TrackingEvent();
-        event.setShipment(shipment);
-        event.setTrackingNumberCache(trackingNumber);
-        event.setStatus(latestEvent != null ? latestEvent.getStatus() : shipment.getShipmentStatus());
+        TrackingEvent event = trackingEventRepository
+                .findLatestLocationByTrackingNumber(trackingNumber)
+                .orElse(null);
+        if (event == null) {
+            event = new TrackingEvent();
+            event.setShipment(shipment);
+            event.setTrackingNumberCache(trackingNumber);
+            event.setStatus(latestEvent != null ? latestEvent.getStatus() : shipment.getShipmentStatus());
+        }
         event.setLatitude(request.getLatitude());
         event.setLongitude(request.getLongitude());
         event.setLocationName(request.getLocationName().trim());
@@ -273,6 +280,10 @@ public class TrackingServiceImpl implements TrackingService {
         event.setUpdatedAt(OffsetDateTime.now());
 
         TrackingEvent savedEvent = trackingEventRepository.save(event);
+        if (request.getDistanceRemainingKm() != null) {
+            shipment.setDistanceRemainingKm(BigDecimal.valueOf(Math.max(0, request.getDistanceRemainingKm())));
+            shipmentRepository.save(shipment);
+        }
         return toLocationResponse(savedEvent);
     }
 
