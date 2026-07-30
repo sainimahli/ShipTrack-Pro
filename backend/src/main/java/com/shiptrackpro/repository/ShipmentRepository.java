@@ -3,6 +3,9 @@ package com.shiptrackpro.repository;
 import com.shiptrackpro.entity.Shipment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import com.shiptrackpro.enums.ShipmentStatus;
+import java.time.OffsetDateTime;
+import java.util.List;
 
 import java.util.Optional;
 
@@ -31,4 +34,9 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
         )
         """)
     java.util.List<com.shiptrackpro.dto.ShipmentWithLatestLocationDto> findAllWithLatestLocation();
+    long countByShipmentStatus(ShipmentStatus shipmentStatus);
+    List<Shipment> findByCreatedAtBetween(
+            OffsetDateTime start,
+            OffsetDateTime end
+    );
 }
