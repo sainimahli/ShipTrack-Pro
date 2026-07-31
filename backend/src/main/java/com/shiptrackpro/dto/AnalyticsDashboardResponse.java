@@ -16,4 +16,6 @@ public class AnalyticsDashboardResponse {
     private long pendingShipments;
 
     private long failedShipments;
+
+    private long successfulShipments;
 }
