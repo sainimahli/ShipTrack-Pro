@@ -1,33 +1,347 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Google Login Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShipTrack Pro Backend Demo</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+        }
+
+        h2 {
+            text-align: center;
+            color: #0d6efd;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        input {
+            padding: 10px;
+            width: 150px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #0d6efd;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0b5ed7;
+        }
+
+        #podDetails {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        img {
+            width: 220px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .image-card {
+            display: inline-block;
+            margin: 15px;
+            text-align: center;
+        }
+    </style>
+
 </head>
+
 <body>
 
-<h2>Google OAuth Test</h2>
+    <div class="container">
 
-<button onclick="loginWithGoogle()">
-    Login with Google
-</button>
+        <h2>ShipTrack Pro Backend Demo</h2>
 
-<br><br>
+        <h3>JWT Token</h3>
 
-<p><strong>JWT Token:</strong></p>
+        <textarea id="token" placeholder="Paste JWT Token here"></textarea>
 
-<textarea id="token" rows="10" cols="100"></textarea>
+        <button onclick="saveToken()">Save Token</button>
 
-<script>
-    function loginWithGoogle() {
-        window.location.href = "/oauth2/authorization/google";
-    }
+        <hr>
 
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+        <h3>Proof Of Delivery</h3>
 
-    document.getElementById("token").value =
-        token ? token : "No token received";
-</script>
+        POD ID :
+
+        <input type="number" id="podId" value="6">
+
+        <button onclick="loadPod()">Get POD</button>
+
+        <hr>
+
+        <div id="podDetails">
+
+            POD details will appear here...
+
+        </div>
+
+    </div>
+
+    <script>
+
+        let jwtToken = "";
+
+        function saveToken() {
+
+            jwtToken = document.getElementById("token").value.trim();
+
+            if (jwtToken === "") {
+
+                alert("Paste JWT Token");
+
+                return;
+
+            }
+
+            alert("JWT Token Saved");
+
+        }
+
+        async function loadPod() {
+
+            if (jwtToken === "") {
+
+                alert("Save JWT Token First");
+
+                return;
+
+            }
+
+            const podId = document.getElementById("podId").value;
+
+            try {
+
+                const response = await fetch("/api/pod/" + podId, {
+
+                    headers: {
+                        "Authorization": "Bearer " + jwtToken
+                    }
+
+                });
+
+                if (!response.ok) {
+
+                    throw new Error("Unable to load POD");
+
+                }
+
+                const pod = await response.json();
+
+                document.getElementById("podDetails").innerHTML = `
+
+            <h2>Proof Of Delivery</h2>
+
+            <p><b>POD ID :</b> ${pod.podId}</p>
+
+            <p><b>Shipment ID :</b> ${pod.shipmentId}</p>
+
+            <p><b>Tracking Number :</b> ${pod.trackingNumber}</p>
+
+            <p><b>Delivered To :</b> ${pod.deliveredToName}</p>
+
+            <p><b>Verification :</b> ${pod.verificationMethod}</p>
+
+            <p><b>Sender City :</b> ${pod.senderCity}</p>
+
+            <p><b>Receiver City :</b> ${pod.receiverCity}</p>
+
+            <p><b>Delivery Notes :</b> ${pod.deliveryNotes}</p>
+
+            <hr>
+
+            <h3>Signature</h3>
+
+            <img src="${pod.signatureUrl}">
+
+            <br>
+
+            <button onclick="downloadSignature(${pod.podId})">
+
+                Download Signature
+
+            </button>
+
+            <hr>
+
+            <h3>Package Images</h3>
+
+            <div id="images"></div>
+
+            <hr>
+
+            <button onclick="downloadPdf(${pod.podId})">
+
+                Download POD PDF
+
+            </button>
+
+        `;
+
+                const imageContainer = document.getElementById("images");
+
+                pod.images.forEach((image, index) => {
+
+                    imageContainer.innerHTML += `
+
+                <div class="image-card">
+
+                    <img src="${image}">
+
+                    <br>
+
+                    <button onclick="downloadImage('${image}')">
+
+                        Download Image ${index + 1}
+
+                    </button>
+
+                </div>
+
+            `;
+
+                });
+
+            }
+
+            catch (e) {
+
+                alert(e.message);
+
+            }
+
+        }
+
+        async function downloadPdf(podId) {
+
+            const response = await fetch("/api/pod/" + podId + "/download/pdf", {
+
+                headers: {
+                    "Authorization": "Bearer " + jwtToken
+                }
+
+            });
+
+            const blob = await response.blob();
+
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+
+            a.href = url;
+
+            a.download = "ProofOfDelivery_" + podId + ".pdf";
+
+            a.click();
+
+        }
+
+        async function downloadSignature(podId) {
+
+            const response = await fetch("/api/pod/" + podId + "/download/signature", {
+
+                headers: {
+                    "Authorization": "Bearer " + jwtToken
+                }
+
+            });
+
+            const blob = await response.blob();
+
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+
+            a.href = url;
+
+            a.download = "signature.png";
+
+            a.click();
+
+        }
+
+        async function downloadImage(imageUrl) {
+
+            if (jwtToken === "") {
+
+                alert("Please save JWT Token first.");
+                return;
+
+            }
+
+            try {
+
+                const response = await fetch(
+                    "/api/pod/image/download?url=" + encodeURIComponent(imageUrl),
+                    {
+                        headers: {
+                            "Authorization": "Bearer " + jwtToken
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+
+                    throw new Error("Failed to download image.");
+
+                }
+
+                const blob = await response.blob();
+
+                const downloadUrl = window.URL.createObjectURL(blob);
+
+                const a = document.createElement("a");
+
+                a.href = downloadUrl;
+                a.download = "pod-image.jpg";
+
+                document.body.appendChild(a);
+
+                a.click();
+
+                document.body.removeChild(a);
+
+                window.URL.revokeObjectURL(downloadUrl);
+
+            } catch (error) {
+
+                alert(error.message);
+
+            }
+
+        }
+
+    </script>
 
 </body>
+
 </html>
