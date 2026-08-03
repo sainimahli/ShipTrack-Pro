@@ -65,6 +65,11 @@ function AnalyticsDashboard() {
       ? "admin"
       : "customer";
   const data = dashboards[selected];
+  const dashboardLabel = userRole === "LOGISTICS_OPERATOR"
+    ? "Logistics Dashboard"
+    : userRole === "ADMINISTRATOR"
+      ? "Admin Dashboard"
+      : data.label;
   const percentage = useMemo(() => selected === "customer" ? 88 : selected === "admin" ? 96 : 94.8, [selected]);
 
   return <div className="analytics-page">
@@ -73,7 +78,7 @@ function AnalyticsDashboard() {
       <div className="analytics-controls"><label>Reporting period<select value={range} onChange={(event) => setRange(event.target.value)}><option>Last 7 days</option><option>Last 30 days</option><option>Last quarter</option></select></label><button type="button">Export report <span>↓</span></button></div>
     </section>
 
-    <div className="role-banner"><span>Viewing analytics for</span><strong>{data.label}</strong><i>Role-based access</i></div>
+    <div className="role-banner"><span>Viewing analytics for</span><strong>{dashboardLabel}</strong><i>Role-based access</i></div>
 
     <section className="metric-row">{data.metrics.map(([label, value, note, tone]) => <article className={`analytics-metric ${tone}`} key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</section>
 
