@@ -33,6 +33,25 @@ const flowSteps = [
   ["Booked", "1,284"], ["Picked up", "1,017"], ["In transit", "728"], ["Out for delivery", "216"], ["Delivered", "1,079"],
 ];
 
+const moduleDetails = {
+  "Active shipments": { metric: "8 live", description: "Packages currently moving through your delivery journey.", rows: [["ST-841920", "Bengaluru → Chennai", "Out for delivery"], ["ST-841882", "Mumbai → Pune", "In transit"], ["ST-841744", "Delhi → Jaipur", "Picked up"]] },
+  "Shipment history": { metric: "24 delivered", description: "Your latest completed shipment records and proof-of-delivery status.", rows: [["ST-840390", "Delivered yesterday", "Proof available"], ["ST-840112", "Delivered 03 Aug", "On time"], ["ST-839827", "Delivered 01 Aug", "On time"]] },
+  "Delivery status overview": { metric: "96% on time", description: "A breakdown of delivery milestones across your shipments.", rows: [["Delivered", "61%", "24 shipments"], ["In transit", "24%", "8 shipments"], ["Needs attention", "5%", "2 shipments"]] },
+  "Notification center": { metric: "3 unread", description: "Important updates from your active deliveries.", rows: [["ETA updated", "ST-841920", "10 min ago"], ["Package picked up", "ST-841744", "38 min ago"], ["Delivery complete", "ST-840390", "Yesterday"]] },
+  "Tracking insights": { metric: "88% healthy", description: "Predictive signals based on package scans and route progress.", rows: [["On schedule", "7 shipments", "Healthy"], ["Possible delay", "1 shipment", "Review ETA"], ["Route update", "2 shipments", "New scan"]] },
+  "Shipment analytics": { metric: "1,284 shipments", description: "Volume, service type, and route trends for your account.", rows: [["Express service", "548", "+14%"], ["Standard service", "486", "+8%"], ["Freight service", "250", "+6%"]] },
+  "Delivery performance": { metric: "94.8% on time", description: "Carrier service performance against promised delivery dates.", rows: [["On-time delivery", "94.8%", "+1.8%"], ["Average transit", "2.4 days", "-0.3 days"], ["First-attempt success", "97.1%", "+0.6%"]] },
+  "Delay analysis": { metric: "37 at risk", description: "Delay causes and the shipments that need operational attention.", rows: [["Traffic delays", "16 shipments", "43%"], ["Weather disruption", "12 shipments", "32%"], ["Address exception", "9 shipments", "25%"]] },
+  "Logistics overview": { metric: "18 active routes", description: "Route capacity, fleet movement, and fulfilment status.", rows: [["Vehicle utilization", "82%", "On target"], ["Active routes", "18", "3 nearing capacity"], ["Hub processing", "97.6%", "Healthy"]] },
+  "Customer activity": { metric: "342 active accounts", description: "Customer shipment behaviour and support signals.", rows: [["Returning customers", "76%", "+4%"], ["New accounts", "48", "+12%"], ["Support requests", "14", "-18%"]] },
+  "User management": { metric: "2,860 users", description: "User access, approval queue, and account activity.", rows: [["Active users", "2,860", "+74 this month"], ["Pending approvals", "14", "Review needed"], ["Restricted accounts", "3", "Security review"]] },
+  "Shipment monitoring": { metric: "12,480 tracked", description: "Network-wide shipment health and live delivery exceptions.", rows: [["Moving normally", "11,905", "95.4%"], ["At risk", "428", "Needs review"], ["Exception", "147", "Escalated"]] },
+  "Delivery analytics": { metric: "96.2% successful", description: "Network completion, delivery quality, and proof-of-delivery results.", rows: [["Completed", "12,002", "96.2%"], ["First-attempt success", "11,756", "94.2%"], ["Proof captured", "11,930", "99.4%"]] },
+  "Route performance": { metric: "91.7% efficient", description: "Compare network routes by ETA accuracy and delivery efficiency.", rows: [["Bengaluru → Chennai", "97.2%", "Top route"], ["Mumbai → Pune", "94.8%", "On target"], ["Delhi → Jaipur", "82.1%", "Investigate"]] },
+  "System monitoring": { metric: "99.98% healthy", description: "Live platform services, API availability, and background processing.", rows: [["API gateway", "Operational", "99.99%"], ["Tracking events", "Operational", "99.97%"], ["Database", "Operational", "99.98%"]] },
+  "Reports management": { metric: "12 scheduled", description: "Create, schedule, and review analytics reports for your operation.", rows: [["Daily delivery report", "Sent 08:00", "Active"], ["Weekly exceptions", "Due Monday", "Active"], ["Monthly performance", "Draft", "Review"]] },
+};
+
 function DonutChart() {
   const data = [["Delivered", 61, "#1da581"], ["In transit", 24, "#3979e8"], ["Out for delivery", 10, "#f2a93b"], ["Exceptions", 5, "#ed6a5e"]];
   let offset = 0;
@@ -58,6 +77,7 @@ function TrendChart() {
 function AnalyticsDashboard() {
   const { auth } = useContext(AuthContext);
   const [range, setRange] = useState("Last 30 days");
+  const [activeModule, setActiveModule] = useState(null);
   const userRole = auth?.user?.role || "CUSTOMER";
   const selected = userRole === "BUSINESS_CLIENT"
     ? "business"
@@ -65,12 +85,15 @@ function AnalyticsDashboard() {
       ? "admin"
       : "customer";
   const data = dashboards[selected];
+  const selectedModule = activeModule ? moduleDetails[activeModule] : null;
   const dashboardLabel = userRole === "LOGISTICS_OPERATOR"
-    ? "Logistics Dashboard"
+    ? "Logistics Dashboard Capabilities"
     : userRole === "ADMINISTRATOR"
-      ? "Admin Dashboard"
+      ? "Admin Dashboard Capabilities"
       : data.label;
   const percentage = useMemo(() => selected === "customer" ? 88 : selected === "admin" ? 96 : 94.8, [selected]);
+
+  const openModule = (module) => setActiveModule(module === activeModule ? null : module);
 
   return <div className="analytics-page">
     <section className="analytics-hero">
@@ -92,7 +115,9 @@ function AnalyticsDashboard() {
       <article className="analytics-card insights-card"><div className="card-heading"><div><span>Tracking insights</span><h2>Attention needed</h2></div><a href="#reports">View all</a></div><div className="alert-item"><i className="alert-mark warning">!</i><div><strong>7 shipments may miss their ETA</strong><span>Weather and traffic conditions are affecting delivery routes.</span></div><button type="button">Review</button></div><div className="alert-item"><i className="alert-mark info">↗</i><div><strong>Delivery velocity is improving</strong><span>Average delivery time is 18% faster than last month.</span></div><button type="button">Details</button></div></article>
     </section>
 
-    <section className="feature-area" id="reports"><div className="feature-head"><div><span>Dashboard modules</span><h2>{data.label} capabilities</h2></div><p>Interactive frontend preview · {range}</p></div><div className="module-grid">{data.modules.map((module, index) => <article key={module}><span>0{index + 1}</span><h3>{module}</h3><p>{module === "Notification center" ? "Keep important delivery updates in one clear, timely view." : "Explore performance signals and operational details at a glance."}</p><button type="button">Open module <b>→</b></button></article>)}</div></section>
+    <section className="feature-area" id="reports"><div className="feature-head"><div><span>{dashboardLabel.replace(" Dashboard", "")}</span><h2>{dashboardLabel}</h2></div><p>Role-specific frontend tools · {range}</p></div><div className="module-grid">{data.modules.map((module, index) => { const details = moduleDetails[module]; return <article className={activeModule === module ? "selected" : ""} key={module}><span>0{index + 1}</span><h3>{module}</h3><strong>{details.metric}</strong><p>{details.description}</p><button type="button" onClick={() => openModule(module)}>{activeModule === module ? "Close" : "Open"} <b>→</b></button></article>; })}</div>
+      {selectedModule && <article className="module-panel"><div><span>{activeModule}</span><h2>{selectedModule.metric}</h2><p>{selectedModule.description}</p></div><button className="close-module" type="button" onClick={() => setActiveModule(null)}>×</button><div className="module-data">{selectedModule.rows.map(([primary, secondary, state]) => <div key={`${primary}-${secondary}`}><strong>{primary}</strong><span>{secondary}</span><b>{state}</b></div>)}</div><button className="module-action" type="button">View full {activeModule.toLowerCase()} →</button></article>}
+    </section>
   </div>;
 }
 

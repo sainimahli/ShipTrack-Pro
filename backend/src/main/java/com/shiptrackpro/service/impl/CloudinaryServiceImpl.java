@@ -19,6 +19,11 @@ public class CloudinaryServiceImpl implements CloudinaryService {
     @Override
     public String uploadImage(MultipartFile file) {
 
+        if (cloudinary.config.cloudName == null || cloudinary.config.cloudName.isBlank()) {
+            throw new IllegalStateException(
+                    "Cloudinary image uploads are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.");
+        }
+
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Please select an image.");
         }
