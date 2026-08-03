@@ -59,6 +59,11 @@ export const getTrackingTimeline = (trackingNumber) => API.get(`/tracking/timeli
 export const updateTrackingStatus = (data) => API.put("/tracking/status", data);
 export const updateTrackingLocation = (data) => API.post("/tracking/location", data);
 
+// Route History APIs
+export const saveRouteHistory = (data) => API.post("/route-history", data);
+export const getRouteHistory = (shipmentId) => API.get(`/route-history/${encodeURIComponent(shipmentId)}`);
+export const deleteRouteHistory = (id) => API.delete(`/route-history/${id}`);
+
 // Profile API
 export const getProfile = () => API.get("/profile");
 

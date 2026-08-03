@@ -7,6 +7,7 @@ const navigation = [
   { to: "/shipments", label: "Shipments", icon: "S" },
   { to: "/shipments/new", label: "Create Shipment", icon: "+" },
   { to: "/track", label: "Track", icon: "T" },
+  { to: "/route-history", label: "Route History", icon: "H" },
   { to: "/profile", label: "Profile", icon: "P" },
 ];
 

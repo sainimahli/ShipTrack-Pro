@@ -14,8 +14,9 @@ export const loadGoogleMaps = () => {
     getMapConfig()
       .then((response) => {
         const apiKey = response.data?.apiKey || "";
-        if (!apiKey) {
-          reject(new Error("Google Maps API key not found in configuration"));
+        const isKeyValid = response.data?.keyValid ?? true;
+        if (!apiKey || !isKeyValid) {
+          reject(new Error("Google Maps API key not found or invalid in configuration"));
           return;
         }
 

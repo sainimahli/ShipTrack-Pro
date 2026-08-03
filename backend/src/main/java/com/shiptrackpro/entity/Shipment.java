@@ -98,6 +98,18 @@ public class Shipment {
     @Column(name = "expected_delivery_date")
     private LocalDateTime expectedDeliveryDate;
 
+    @Column(name = "origin_address", length = 255)
+    private String originAddressText;
+
+    @Column(name = "destination_address", length = 255)
+    private String destinationAddressText;
+
+    @Column(name = "current_lat")
+    private Double currentLat;
+
+    @Column(name = "current_lng")
+    private Double currentLng;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

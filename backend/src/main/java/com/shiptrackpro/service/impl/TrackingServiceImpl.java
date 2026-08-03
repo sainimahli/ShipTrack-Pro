@@ -8,10 +8,12 @@ import com.shiptrackpro.dto.UpdateLocationRequest;
 import com.shiptrackpro.dto.UpdateTrackingStatusRequest;
 import com.shiptrackpro.entity.Shipment;
 import com.shiptrackpro.entity.TrackingEvent;
+import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.enums.ShipmentStatus;
 import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.repository.TrackingEventRepository;
 import com.shiptrackpro.service.TrackingService;
+import com.shiptrackpro.service.GoogleMapsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,13 +30,16 @@ public class TrackingServiceImpl implements TrackingService {
 
     private final TrackingEventRepository trackingEventRepository;
     private final ShipmentRepository shipmentRepository;
+    private final GoogleMapsService googleMapsService;
 
     public TrackingServiceImpl(
             TrackingEventRepository trackingEventRepository,
-            ShipmentRepository shipmentRepository) {
+            ShipmentRepository shipmentRepository,
+            GoogleMapsService googleMapsService) {
 
         this.trackingEventRepository = trackingEventRepository;
         this.shipmentRepository = shipmentRepository;
+        this.googleMapsService = googleMapsService;
     }
 
     @Override
@@ -93,7 +98,7 @@ public class TrackingServiceImpl implements TrackingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public DeliveryForecastResponse getDeliveryForecast(String trackingNumber) {
         String normalizedTrackingNumber = normalizeTrackingNumber(trackingNumber);
         Shipment shipment = findShipment(normalizedTrackingNumber);
@@ -112,16 +117,45 @@ public class TrackingServiceImpl implements TrackingService {
             response.setConfidencePercentage(100);
             response.setRiskLevel("DELIVERED");
             response.setReason("Delivery has been confirmed.");
+            response.setRemainingDistanceKm(0.0);
+            response.setRemainingDurationMinutes(0L);
             return response;
         }
 
-        long remainingMinutes = remainingMinutes(shipment.getShipmentStatus());
-        boolean staleUpdate = latestEvent != null && latestEvent.getUpdatedAt().isBefore(now.minusHours(8));
-        if (staleUpdate) {
-            remainingMinutes += 120;
+        // Fetch origin & destination coordinates
+        Double originLat = null;
+        Double originLng = null;
+        TrackingEvent latestLocationEvent = findLatestLocationEventOrNull(normalizedTrackingNumber);
+        if (latestLocationEvent != null && latestLocationEvent.getLatitude() != null && latestLocationEvent.getLongitude() != null) {
+            originLat = latestLocationEvent.getLatitude();
+            originLng = latestLocationEvent.getLongitude();
+        } else {
+            Address originAddr = shipment.getOriginAddress();
+            if (originAddr.getLatitude() == null) {
+                googleMapsService.geocodeAddress(originAddr);
+            }
+            originLat = originAddr.getLatitude();
+            originLng = originAddr.getLongitude();
         }
 
-        OffsetDateTime predictedDelivery = now.plusMinutes(remainingMinutes);
+        Address destAddr = shipment.getDestinationAddress();
+        if (destAddr.getLatitude() == null) {
+            googleMapsService.geocodeAddress(destAddr);
+        }
+        Double destLat = destAddr.getLatitude();
+        Double destLng = destAddr.getLongitude();
+
+        // Calculate dynamic distance and duration using Google Maps (with Haversine fallback)
+        GoogleMapsService.RouteDetails route = googleMapsService.calculateRoute(originLat, originLng, destLat, destLng);
+        double distanceKm = route.getDistanceKm();
+        long durationMinutes = route.getDurationMinutes();
+
+        boolean staleUpdate = latestEvent != null && latestEvent.getUpdatedAt().isBefore(now.minusHours(8));
+        if (staleUpdate) {
+            durationMinutes += 120;
+        }
+
+        OffsetDateTime predictedDelivery = now.plusMinutes(durationMinutes);
         long delayMinutes = expectedDelivery == null || !predictedDelivery.isAfter(expectedDelivery)
                 ? 0
                 : Duration.between(expectedDelivery, predictedDelivery).toMinutes();
@@ -130,7 +164,12 @@ public class TrackingServiceImpl implements TrackingService {
         response.setPredictedDelayMinutes(delayMinutes);
         response.setConfidencePercentage(Math.max(55, staleUpdate ? 65 : 82));
         response.setRiskLevel(delayMinutes > 240 ? "HIGH" : delayMinutes > 0 || staleUpdate ? "WATCH" : "ON_TRACK");
-        response.setReason(buildForecastReason(shipment.getShipmentStatus(), staleUpdate, delayMinutes));
+        response.setRemainingDistanceKm(distanceKm);
+        response.setRemainingDurationMinutes(durationMinutes);
+
+        String reason = buildForecastReason(shipment.getShipmentStatus(), staleUpdate, delayMinutes) 
+                + " (Remaining: " + String.format("%.1f", distanceKm) + " km, Est. Duration: " + durationMinutes + " mins)";
+        response.setReason(reason);
         return response;
     }
 
@@ -181,6 +220,30 @@ public class TrackingServiceImpl implements TrackingService {
         event.setUpdatedAt(OffsetDateTime.now());
 
         TrackingEvent savedEvent = trackingEventRepository.save(event);
+
+        // Update current location coordinates in shipments table
+        shipment.setCurrentLat(request.getLatitude());
+        shipment.setCurrentLng(request.getLongitude());
+        shipmentRepository.save(shipment);
+
+        // Update Shipment ETA dynamically based on current location updates
+        try {
+            Address destAddr = shipment.getDestinationAddress();
+            if (destAddr.getLatitude() == null) {
+                googleMapsService.geocodeAddress(destAddr);
+            }
+            if (destAddr.getLatitude() != null && destAddr.getLongitude() != null) {
+                GoogleMapsService.RouteDetails route = googleMapsService.calculateRoute(
+                        request.getLatitude(), request.getLongitude(),
+                        destAddr.getLatitude(), destAddr.getLongitude()
+                );
+                shipment.setExpectedDeliveryDate(java.time.LocalDateTime.now().plusMinutes(route.getDurationMinutes()));
+                shipmentRepository.save(shipment);
+            }
+        } catch (Exception e) {
+            // Log warning but proceed gracefully
+        }
+
         return toLocationResponse(savedEvent);
     }
 
@@ -201,6 +264,13 @@ public class TrackingServiceImpl implements TrackingService {
         event.setDescription("Shipment Created");
         event.setUpdatedBy(SYSTEM_USER);
         event.setUpdatedAt(OffsetDateTime.now());
+
+        Address origin = shipment.getOriginAddress();
+        if (origin != null) {
+            event.setLatitude(origin.getLatitude());
+            event.setLongitude(origin.getLongitude());
+            event.setLocationName(origin.getCity());
+        }
 
         trackingEventRepository.save(event);
     }
@@ -242,17 +312,6 @@ public class TrackingServiceImpl implements TrackingService {
         return event.getLatitude() != null
                 || event.getLongitude() != null
                 || (event.getLocationName() != null && !event.getLocationName().isBlank());
-    }
-
-    private long remainingMinutes(ShipmentStatus status) {
-        return switch (status) {
-            case CREATED -> 1_440;
-            case PICKED_UP -> 960;
-            case IN_TRANSIT -> 480;
-            case OUT_FOR_DELIVERY -> 120;
-            case CANCELLED, RETURNED -> 0;
-            case DELIVERED -> 0;
-        };
     }
 
     private String buildForecastReason(ShipmentStatus status, boolean staleUpdate, long delayMinutes) {

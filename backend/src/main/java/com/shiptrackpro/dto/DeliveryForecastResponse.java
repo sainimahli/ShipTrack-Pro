@@ -14,6 +14,8 @@ public class DeliveryForecastResponse {
     private int confidencePercentage;
     private String riskLevel;
     private String reason;
+    private Double remainingDistanceKm;
+    private Long remainingDurationMinutes;
 
     public String getTrackingNumber() { return trackingNumber; }
     public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
@@ -27,4 +29,8 @@ public class DeliveryForecastResponse {
     public void setRiskLevel(String riskLevel) { this.riskLevel = riskLevel; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
+    public Double getRemainingDistanceKm() { return remainingDistanceKm; }
+    public void setRemainingDistanceKm(Double remainingDistanceKm) { this.remainingDistanceKm = remainingDistanceKm; }
+    public Long getRemainingDurationMinutes() { return remainingDurationMinutes; }
+    public void setRemainingDurationMinutes(Long remainingDurationMinutes) { this.remainingDurationMinutes = remainingDurationMinutes; }
 }

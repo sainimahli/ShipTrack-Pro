@@ -14,6 +14,7 @@ import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.service.ShipmentService;
 import com.shiptrackpro.service.TrackingService;
+import com.shiptrackpro.service.GoogleMapsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final UserRepository userRepository;
     private final TrackingService trackingService;
+    private final GoogleMapsService googleMapsService;
 
     /**
      * Constructor injection — preferred over field injection for
@@ -46,15 +48,29 @@ public class ShipmentServiceImpl implements ShipmentService {
      */
     public ShipmentServiceImpl(ShipmentRepository shipmentRepository,
                                UserRepository userRepository,
-                               TrackingService trackingService) {
+                               TrackingService trackingService,
+                               GoogleMapsService googleMapsService) {
         this.shipmentRepository = shipmentRepository;
         this.userRepository = userRepository;
         this.trackingService = trackingService;
+        this.googleMapsService = googleMapsService;
     }
 
     @Override
     public ShipmentResponse createShipment(CreateShipmentRequest request, Long createdByUserId) {
         User createdBy = findUserOrThrow(createdByUserId, "creator");
+
+        Address originAddress = toAddressEntity(request.getOriginAddress());
+        Address destinationAddress = toAddressEntity(request.getDestinationAddress());
+
+        // Perform Google Maps backend geocoding (with fallback)
+        googleMapsService.geocodeAddress(originAddress);
+        googleMapsService.geocodeAddress(destinationAddress);
+
+        String originText = originAddress.getLine1() + ", " + originAddress.getCity() + ", " + originAddress.getState() + ", " + originAddress.getCountry();
+        String destText = destinationAddress.getLine1() + ", " + destinationAddress.getCity() + ", " + destinationAddress.getState() + ", " + destinationAddress.getCountry();
+        if (originText.length() > 255) originText = originText.substring(0, 255);
+        if (destText.length() > 255) destText = destText.substring(0, 255);
 
         Shipment shipment = Shipment.builder()
                 .trackingNumber(generateUniqueTrackingNumber())
@@ -64,8 +80,12 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .receiverName(request.getReceiverName())
                 .receiverPhone(request.getReceiverPhone())
                 .receiverUser(resolveOptionalUser(request.getReceiverUserId()))
-                .originAddress(toAddressEntity(request.getOriginAddress()))
-                .destinationAddress(toAddressEntity(request.getDestinationAddress()))
+                .originAddress(originAddress)
+                .destinationAddress(destinationAddress)
+                .originAddressText(originText)
+                .destinationAddressText(destText)
+                .currentLat(originAddress.getLatitude())
+                .currentLng(originAddress.getLongitude())
                 .packageWeight(request.getPackageWeight())
                 .shipmentType(request.getShipmentType())
                 .packageType(request.getPackageType())
@@ -118,6 +138,20 @@ public class ShipmentServiceImpl implements ShipmentService {
         // dirty checking; the explicit save() below is just for clarity.
         copyAddressFields(shipment.getOriginAddress(), request.getOriginAddress());
         copyAddressFields(shipment.getDestinationAddress(), request.getDestinationAddress());
+
+        // Re-geocode updated addresses
+        googleMapsService.geocodeAddress(shipment.getOriginAddress());
+        googleMapsService.geocodeAddress(shipment.getDestinationAddress());
+
+        String originText = shipment.getOriginAddress().getLine1() + ", " + shipment.getOriginAddress().getCity() + ", " + shipment.getOriginAddress().getState() + ", " + shipment.getOriginAddress().getCountry();
+        String destText = shipment.getDestinationAddress().getLine1() + ", " + shipment.getDestinationAddress().getCity() + ", " + shipment.getDestinationAddress().getState() + ", " + shipment.getDestinationAddress().getCountry();
+        if (originText.length() > 255) originText = originText.substring(0, 255);
+        if (destText.length() > 255) destText = destText.substring(0, 255);
+
+        shipment.setOriginAddressText(originText);
+        shipment.setDestinationAddressText(destText);
+        shipment.setCurrentLat(shipment.getOriginAddress().getLatitude());
+        shipment.setCurrentLng(shipment.getOriginAddress().getLongitude());
 
         // id, trackingNumber, shipmentStatus, createdBy, createdAt are
         // intentionally left untouched — system-managed / immutable via
@@ -173,6 +207,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .state(request.getState())
                 .postalCode(request.getPostalCode())
                 .country(request.getCountry())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .build();
     }
 
@@ -183,6 +219,8 @@ public class ShipmentServiceImpl implements ShipmentService {
         target.setState(source.getState());
         target.setPostalCode(source.getPostalCode());
         target.setCountry(source.getCountry());
+        target.setLatitude(source.getLatitude());
+        target.setLongitude(source.getLongitude());
     }
 
     private AddressResponse mapAddress(Address address) {
@@ -194,6 +232,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .state(address.getState())
                 .postalCode(address.getPostalCode())
                 .country(address.getCountry())
+                .latitude(address.getLatitude())
+                .longitude(address.getLongitude())
                 .build();
     }
 

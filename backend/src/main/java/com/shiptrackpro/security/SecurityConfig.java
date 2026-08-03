@@ -89,6 +89,10 @@ public class SecurityConfig {
                                                 .hasRole("ADMINISTRATOR")
                                                 .requestMatchers(HttpMethod.POST, "/api/tracking/location")
                                                 .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR")
+                                                .requestMatchers(HttpMethod.POST, "/api/route-history")
+                                                .hasAnyRole("LOGISTICS_OPERATOR", "ADMINISTRATOR", "SUPPORT_AGENT")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/route-history/**")
+                                                .hasRole("ADMINISTRATOR")
                                                 .anyRequest().authenticated())
 
                                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))

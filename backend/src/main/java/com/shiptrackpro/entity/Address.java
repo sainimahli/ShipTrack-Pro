@@ -58,4 +58,10 @@ public class Address {
     @Column(name = "country", nullable = false, length = 100)
     private String country;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
 }

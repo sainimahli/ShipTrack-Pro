@@ -1355,6 +1355,10 @@ a {
   border: 2px solid #ffffff;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
+.pulsating-marker {
+  animation: pulse-marker 1.8s infinite;
+}
+
 @keyframes pulse-marker {
   0% {
     box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);

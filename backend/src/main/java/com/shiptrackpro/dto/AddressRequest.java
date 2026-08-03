@@ -43,5 +43,8 @@ public class AddressRequest {
     @Size(max = 100)
     private String country;
 
+    private Double latitude;
+    private Double longitude;
+
 }
 

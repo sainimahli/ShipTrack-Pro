@@ -8,10 +8,10 @@ import com.shiptrackpro.dto.TrackingTimelineResponse;
 import com.shiptrackpro.dto.UpdateLocationRequest;
 import com.shiptrackpro.dto.UpdateTrackingStatusRequest;
 import com.shiptrackpro.service.TrackingService;
+import com.shiptrackpro.service.GoogleMapsService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,10 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/tracking")
-@CrossOrigin(origins = "*")
 public class TrackingController {
 
     private final TrackingService trackingService;
+    private final GoogleMapsService googleMapsService;
 
     @Value("${google.maps.api-key:}")
     private String googleMapsApiKey;
@@ -33,8 +33,9 @@ public class TrackingController {
     @Value("${google.maps.default-center:12.9716,77.5946}")
     private String defaultCenter;
 
-    public TrackingController(TrackingService trackingService) {
+    public TrackingController(TrackingService trackingService, GoogleMapsService googleMapsService) {
         this.trackingService = trackingService;
+        this.googleMapsService = googleMapsService;
     }
 
     @GetMapping("/{trackingNumber}")
@@ -59,7 +60,8 @@ public class TrackingController {
 
     @GetMapping("/map-config")
     public ResponseEntity<MapConfigResponse> getMapConfig() {
-        return ResponseEntity.ok(new MapConfigResponse(googleMapsApiKey, defaultCenter));
+        boolean isValid = googleMapsService.isApiKeyValid();
+        return ResponseEntity.ok(new MapConfigResponse(googleMapsApiKey, defaultCenter, isValid));
     }
 
     @PutMapping("/status")
