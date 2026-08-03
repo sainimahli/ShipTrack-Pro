@@ -87,9 +87,9 @@ function AnalyticsDashboard() {
   const data = dashboards[selected];
   const selectedModule = activeModule ? moduleDetails[activeModule] : null;
   const dashboardLabel = userRole === "LOGISTICS_OPERATOR"
-    ? "Logistics Dashboard Capabilities"
+    ? "Logistics Dashboard"
     : userRole === "ADMINISTRATOR"
-      ? "Admin Dashboard Capabilities"
+      ? "Admin Dashboard"
       : data.label;
   const percentage = useMemo(() => selected === "customer" ? 88 : selected === "admin" ? 96 : 94.8, [selected]);
 
