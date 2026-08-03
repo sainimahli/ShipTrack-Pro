@@ -2,7 +2,6 @@ package com.shiptrackpro.service;
 
 import com.shiptrackpro.dto.RouteRequest;
 import com.shiptrackpro.dto.RouteResponse;
-import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.repository.AddressRepository;
 import com.shiptrackpro.service.impl.RouteServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,12 +23,18 @@ class RouteServiceImplTest {
 
     @Mock
     private com.shiptrackpro.repository.TrackingEventRepository trackingEventRepository;
+    @Mock
+    private com.shiptrackpro.repository.DriverLocationRepository driverLocationRepository;
 
     private RouteServiceImpl routeService;
 
     @BeforeEach
     void setUp() {
-        routeService = new RouteServiceImpl(addressRepository, trackingEventRepository);
+        routeService = new RouteServiceImpl(
+                addressRepository,
+                trackingEventRepository,
+                driverLocationRepository
+        );
     }
 
     @Test
@@ -57,9 +62,6 @@ class RouteServiceImplTest {
         when(trackingEventRepository.findLatestLocationByTrackingNumber("ST123456"))
                 .thenReturn(Optional.of(event));
 
-        RouteRequest fullRequest = new RouteRequest(19.0760, 72.8777, 28.6139, 77.2090);
-        RouteResponse fullResponse = routeService.calculateRoute(fullRequest);
-
         RouteRequest trackingRequest = new RouteRequest();
         trackingRequest.setTrackingNumber("ST123456");
         trackingRequest.setOriginLatitude(19.0760);
@@ -69,6 +71,13 @@ class RouteServiceImplTest {
         RouteResponse trackingResponse = routeService.calculateRoute(trackingRequest);
 
         assertNotNull(trackingResponse);
-        assertTrue(trackingResponse.getDistanceKm() < fullResponse.getDistanceKm());
+
+// Verify that the tracking event coordinates were used as the origin
+        assertEquals(18.5204, trackingResponse.getOriginCoords()[0], 0.0001);
+        assertEquals(73.8567, trackingResponse.getOriginCoords()[1], 0.0001);
+
+// Destination should remain unchanged
+        assertEquals(28.6139, trackingResponse.getDestinationCoords()[0], 0.0001);
+        assertEquals(77.2090, trackingResponse.getDestinationCoords()[1], 0.0001);
     }
 }

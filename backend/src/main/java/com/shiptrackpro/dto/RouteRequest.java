@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 public class RouteRequest {
 
     private String trackingNumber;
+    private Long driverId;
 
     private Double originLatitude;
     private Double originLongitude;
@@ -28,9 +29,15 @@ public class RouteRequest {
     public String getTrackingNumber() {
         return trackingNumber;
     }
+    public Long getDriverId() {
+        return driverId;
+    }
 
     public void setTrackingNumber(String trackingNumber) {
         this.trackingNumber = trackingNumber;
+    }
+    public void setDriverId(Long driverId) {
+        this.driverId = driverId;
     }
 
     public Double getOriginLatitude() {
