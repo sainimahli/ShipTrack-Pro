@@ -84,7 +84,7 @@ function RouteManagement() {
     <div className="page">
       <div className="page-header">
         <div>
-          <div className="eyebrow">Milestone 2</div>
+          <div className="eyebrow">Route Management</div>
           <h1>Route Management</h1>
           <div className="subtle">Enter a source and destination to visualize the optimal driving route on the map.</div>
         </div>
