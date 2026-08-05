@@ -4,6 +4,7 @@ import { AuthContext } from "../../context/auth";
 
 const navigation = [
   { to: "/dashboard", label: "Dashboard", icon: "D" },
+  { to: "/analytics", label: "Analytics", icon: "A" },
   { to: "/shipments", label: "Shipments", icon: "S" },
   { to: "/shipments/new", label: "Create Shipment", icon: "+" },
   { to: "/track", label: "Track", icon: "T" },

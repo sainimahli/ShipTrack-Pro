@@ -8,6 +8,7 @@ import { AuthProvider } from "./assets/context/AuthContext";
 import { ShipmentProvider } from "./assets/context/ShipmentContext";
 import CreateShipment from "./assets/pages/CreateShipment";
 import Dashboard from "./assets/pages/Dashboard";
+import AnalyticsDashboard from "./assets/pages/AnalyticsDashboard";
 import ForgotPassword from "./assets/pages/ForgotPassword";
 import Login from "./assets/pages/Login";
 import ManageUsers from "./assets/pages/ManageUsers";
@@ -51,6 +52,7 @@ function AppLayout() {
           <Navbar />
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
             <Route path="/track" element={<TrackShipment />} />
