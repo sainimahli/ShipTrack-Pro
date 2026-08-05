@@ -1,11 +1,14 @@
 package com.shiptrackpro.service.impl;
 
+import com.shiptrackpro.entity.DriverLocation;
+import com.shiptrackpro.repository.DriverLocationRepository;
 import com.shiptrackpro.dto.RouteRequest;
 import com.shiptrackpro.dto.RouteResponse;
 import com.shiptrackpro.service.RouteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
 
 import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.entity.TrackingEvent;
@@ -32,6 +35,7 @@ public class RouteServiceImpl implements RouteService {
 
     private final AddressRepository addressRepository;
     private final TrackingEventRepository trackingEventRepository;
+    private final DriverLocationRepository driverLocationRepository;
     private final String googleMapsApiKey;
     private final double[] defaultCenter;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -39,18 +43,22 @@ public class RouteServiceImpl implements RouteService {
 
     public RouteServiceImpl(
             AddressRepository addressRepository,
-            TrackingEventRepository trackingEventRepository) {
-        this(addressRepository, trackingEventRepository, null, "19.0760,72.8777");
+            TrackingEventRepository trackingEventRepository,
+            DriverLocationRepository driverLocationRepository) {
+        this(addressRepository, trackingEventRepository,driverLocationRepository, null, "19.0760,72.8777");
     }
 
     @Autowired
     public RouteServiceImpl(
             @Autowired(required = false) AddressRepository addressRepository,
             @Autowired(required = false) TrackingEventRepository trackingEventRepository,
+            @Autowired(required = false) DriverLocationRepository driverLocationRepository,
+
             @Value("${google.maps.api-key:AIzaSyAEqs7_2CT49g297KuQ86TBWgx1UP-g434}") String googleMapsApiKey,
             @Value("${google.maps.default-center:19.0760,72.8777}") String defaultCenterStr) {
         this.addressRepository = addressRepository;
         this.trackingEventRepository = trackingEventRepository;
+        this.driverLocationRepository = driverLocationRepository;
         this.googleMapsApiKey = googleMapsApiKey;
         
         double[] center = new double[]{19.0760, 72.8777};
@@ -89,12 +97,39 @@ public class RouteServiceImpl implements RouteService {
             }
         }
 
-        if (currentCoords == null && request.getOriginLatitude() != null && request.getOriginLongitude() != null) {
-            currentCoords = new double[]{request.getOriginLatitude(), request.getOriginLongitude()};
+        // Second preference: Driver Location table
+        if (currentCoords == null
+                && request.getDriverId() != null
+                && driverLocationRepository != null) {
+
+            DriverLocation driverLocation = driverLocationRepository
+                    .findFirstByDriverIdOrderByTimestampDesc(request.getDriverId())
+                    .orElse(null);
+
+            if (driverLocation != null) {
+                currentCoords = new double[]{
+                        driverLocation.getLatitude(),
+                        driverLocation.getLongitude()
+                };
+            }
+        }
+
+// Third preference: Origin coordinates from request
+        if (currentCoords == null
+                && request.getOriginLatitude() != null
+                && request.getOriginLongitude() != null) {
+
+            currentCoords = new double[]{
+                    request.getOriginLatitude(),
+                    request.getOriginLongitude()
+            };
         }
 
         if (currentCoords == null) {
-            currentCoords = defaultCenter;
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Driver location not found. Please update the driver's location first."
+            );
         }
 
         double distanceKm = haversineDistance(

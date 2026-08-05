@@ -5,6 +5,7 @@ import NotificationBell from "./NotificationBell";
 
 const titles = {
   "/dashboard": ["Dashboard", ""],
+  "/analytics": ["Analytics Dashboard", "Customer, business, and platform delivery intelligence"],
   "/shipments": ["Shipment Management", "Create, monitor, and update shipment lifecycle records"],
   "/shipments/new": ["Create Shipment", "Register a new package into the tracking workflow"],
   "/track": ["Tracking Dashboard", "Search by tracking number and view delivery progress"],
