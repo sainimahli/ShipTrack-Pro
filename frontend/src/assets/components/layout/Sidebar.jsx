@@ -15,6 +15,7 @@ const navigation = [
   },
 
   { to: "/profile", label: "Profile", icon: "P" },
+  { to: "/signature", label: "Signature Verification", icon: "V" },
   
 
 ];

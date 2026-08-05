@@ -109,4 +109,12 @@ export const updateTrackingStatus = (data) => API.put("/tracking/status", data);
 
 export const updateTrackingLocation = (data) => API.put("/tracking/location", data);
 
+// Proof of Delivery (Milestone 3)
+export const getProofOfDelivery = (podId) =>
+  API.get(`/pod/${podId}`);
+
+export const downloadPodSignature = (podId) =>
+  API.get(`/pod/${podId}/download/signature`, {
+    responseType: "blob",
+  });
 export default API;
