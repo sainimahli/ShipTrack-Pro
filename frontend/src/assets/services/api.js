@@ -93,6 +93,9 @@ export const approveUser = (id) => API.put(`/admin/users/${id}/approve`);
 
 export const rejectUser = (id) => API.put(`/admin/users/${id}/reject`);
 
+export const getAdminDashboardAnalytics = () =>
+  API.get("/admin/dashboard/analytics");
+
 // ForgotPassword
 export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
 

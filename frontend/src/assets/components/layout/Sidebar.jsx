@@ -7,13 +7,9 @@ const navigation = [
   { to: "/analytics", label: "Analytics", icon: "A" },
   { to: "/shipments", label: "Shipments", icon: "S" },
   { to: "/shipments/new", label: "Create Shipment", icon: "+" },
+  { to: "/shipments/my", label: "My Shipments", icon: "M" },
   { to: "/track", label: "Track", icon: "T" },
-   {
-    to: "/routes",
-    label: "Route Management",
-    icon: "R",
-  },
-
+  { to: "/routes", label: "Route Management", icon: "R" },
   { to: "/profile", label: "Profile", icon: "P" },
   
 
@@ -29,7 +25,7 @@ const roleLabels = {
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 
-const canManageShipments = (role) => role === "Administrator";
+const canManageShipments = (role) => role === "Administrator" || role === "Logistics Operator";
 
 const canManageUsers = (role) => role === "Administrator";
 
