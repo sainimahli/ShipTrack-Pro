@@ -11,6 +11,7 @@ const titles = {
   "/track": ["Tracking Dashboard", "Search by tracking number and view delivery progress"],
   "/users/manage": ["Manage Users", "Review pending, approved, and rejected account registrations"],
   "/profile": ["Profile & Access", "JWT session preview and role capabilities"],
+  "/signature": ["Customer Signature Verification", "View and download the captured customer signature"],
 };
 
 function Navbar() {
