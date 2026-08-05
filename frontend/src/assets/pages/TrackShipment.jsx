@@ -346,6 +346,50 @@ function TrackShipment() {
       return undefined;
     }
 
+    const timer = window.setInterval(async () => {
+      const nextProgress = Math.min(1, liveProgressRef.current + 0.02);
+      const latitude = mapOrigin[0] + ((mapDestination[0] - mapOrigin[0]) * nextProgress);
+      const longitude = mapOrigin[1] + ((mapDestination[1] - mapOrigin[1]) * nextProgress);
+      const remainingKm = Math.round(haversineKm(latitude, longitude, mapDestination[0], mapDestination[1]) * 10) / 10;
+      liveProgressRef.current = nextProgress;
+      setRouteData((current) => current ? {
+        ...current,
+        remaining: {
+          ...current.remaining,
+          distanceKm: remainingKm,
+          estimatedMinutes: Math.round(remainingKm),
+          estimatedTravelTime: formatDuration(Math.round(remainingKm)),
+        },
+      } : current);
+
+      try {
+        await updateTrackingLocation({
+          trackingNumber: shipment.trackingNumber,
+          latitude,
+          longitude,
+          locationName: nextProgress >= 1 ? shipment.receiverCity : `Live route (${Math.round(nextProgress * 100)}%)`,
+          description: `Live movement update; ${remainingKm} km remaining.`,
+          distanceRemainingKm: remainingKm,
+        });
+        await refetch();
+        if (nextProgress >= 1 && deliveredRef.current !== shipment.trackingNumber) {
+          deliveredRef.current = shipment.trackingNumber;
+          await updateTrackingStatus({
+            trackingNumber: shipment.trackingNumber,
+            status: "DELIVERED",
+            description: "Shipment reached the destination.",
+            locationName: shipment.receiverCity,
+          });
+          await refetch();
+        }
+      } catch (error) {
+        console.error("Live movement update failed:", error);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [routeData, shipment, mapOrigin, mapDestination, refetch]);
+
   const latestEvent = shipment?.history?.at(-1);
   const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
   const liveLocation = liveTracking?.location?.locationName;
