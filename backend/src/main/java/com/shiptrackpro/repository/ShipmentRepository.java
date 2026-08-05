@@ -1,17 +1,16 @@
 package com.shiptrackpro.repository;
 
+import com.shiptrackpro.dto.ShipmentWithLatestLocationDto;
 import com.shiptrackpro.entity.Shipment;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import com.shiptrackpro.enums.ShipmentStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
 import java.time.OffsetDateTime;
 import java.util.List;
-
 import java.util.Optional;
 
-/**
- * Repository for {@link Shipment}.
- */
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
 
@@ -19,7 +18,7 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
 
     boolean existsByTrackingNumber(String trackingNumber);
 
-    @org.springframework.data.jpa.repository.Query("""
+    @Query("""
         SELECT new com.shiptrackpro.dto.ShipmentWithLatestLocationDto(
             s,
             te.latitude,
@@ -27,16 +26,46 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
         )
         FROM Shipment s
         LEFT JOIN TrackingEvent te ON te.id = (
-            SELECT te2.id FROM TrackingEvent te2
+            SELECT te2.id
+            FROM TrackingEvent te2
             WHERE (te2.shipment = s OR te2.trackingNumberCache = s.trackingNumber)
-              AND (te2.latitude IS NOT NULL OR te2.longitude IS NOT NULL OR te2.locationName IS NOT NULL)
-            ORDER BY te2.updatedAt DESC LIMIT 1
+              AND (
+                    te2.latitude IS NOT NULL
+                 OR te2.longitude IS NOT NULL
+                 OR te2.locationName IS NOT NULL
+              )
+            ORDER BY te2.updatedAt DESC
+            LIMIT 1
         )
-        """)
-    java.util.List<com.shiptrackpro.dto.ShipmentWithLatestLocationDto> findAllWithLatestLocation();
+    """)
+    List<ShipmentWithLatestLocationDto> findAllWithLatestLocation();
+
     long countByShipmentStatus(ShipmentStatus shipmentStatus);
+
     List<Shipment> findByCreatedAtBetween(
             OffsetDateTime start,
             OffsetDateTime end
     );
+
+    // Customer / Business Dashboard
+
+    List<Shipment> findByUserId(Long userId);
+
+    long countByUserId(Long userId);
+
+    long countByUserIdAndShipmentStatus(
+            Long userId,
+            ShipmentStatus shipmentStatus
+    );
+
+    long countByUserIdAndShipmentStatusIn(
+            Long userId,
+            List<ShipmentStatus> shipmentStatuses
+    );
+
+    long countByUserIdAndIsDelayedTrue(Long userId);
+
+    // Admin Dashboard
+
+    long countByIsDelayedTrue();
 }
