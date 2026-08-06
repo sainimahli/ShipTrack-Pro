@@ -13,6 +13,11 @@ const navigation = [
     label: "Route Management",
     icon: "R",
   },
+  {
+    to: "/route-history",
+    label: "Route History",
+    icon: "H",
+  },
 
   { to: "/profile", label: "Profile", icon: "P" },
   

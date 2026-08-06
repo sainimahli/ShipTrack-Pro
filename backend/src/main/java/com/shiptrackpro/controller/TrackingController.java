@@ -56,6 +56,11 @@ public class TrackingController {
         return ResponseEntity.ok(trackingService.updateTrackingStatus(request));
     }
 
+    @GetMapping("/history/{trackingNumber}")
+    public ResponseEntity<TrackingTimelineResponse> getRouteHistory(@PathVariable String trackingNumber) {
+        return ResponseEntity.ok(trackingService.getRouteHistory(trackingNumber));
+    }
+
     @PutMapping("/location")
     public ResponseEntity<TrackingLocationResponse> updateLocation(
             @Valid @RequestBody UpdateLocationRequest request) {

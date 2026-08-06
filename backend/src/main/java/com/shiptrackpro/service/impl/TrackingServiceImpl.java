@@ -257,21 +257,22 @@ public class TrackingServiceImpl implements TrackingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public TrackingTimelineResponse getRouteHistory(String trackingNumber) {
+        return getTrackingTimeline(trackingNumber);
+    }
+
+    @Override
     @Transactional
     public TrackingLocationResponse updateLocation(UpdateLocationRequest request) {
         String trackingNumber = normalizeTrackingNumber(request.getTrackingNumber());
         Shipment shipment = findShipment(trackingNumber);
         TrackingEvent latestEvent = findLatestEventOrNull(trackingNumber);
 
-        TrackingEvent event = trackingEventRepository
-                .findLatestLocationByTrackingNumber(trackingNumber)
-                .orElse(null);
-        if (event == null) {
-            event = new TrackingEvent();
-            event.setShipment(shipment);
-            event.setTrackingNumberCache(trackingNumber);
-            event.setStatus(latestEvent != null ? latestEvent.getStatus() : shipment.getShipmentStatus());
-        }
+        TrackingEvent event = new TrackingEvent();
+        event.setShipment(shipment);
+        event.setTrackingNumberCache(trackingNumber);
+        event.setStatus(latestEvent != null ? latestEvent.getStatus() : shipment.getShipmentStatus());
         event.setLatitude(request.getLatitude());
         event.setLongitude(request.getLongitude());
         event.setLocationName(request.getLocationName().trim());

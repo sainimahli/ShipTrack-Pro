@@ -18,6 +18,7 @@ import Register from "./assets/pages/Register";
 import ShipmentList from "./assets/pages/ShipmentList";
 import TrackShipment from "./assets/pages/TrackShipment";
 import RouteManagement from "./assets/pages/RouteManagement";
+import RouteHistory from "./assets/pages/RouteHistory";
 
 
 const roleLabels = {
@@ -60,6 +61,7 @@ function AppLayout() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="/routes" element={<RouteManagement />} />
+            <Route path="/route-history" element={<RouteHistory />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
