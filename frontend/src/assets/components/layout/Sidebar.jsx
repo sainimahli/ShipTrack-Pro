@@ -9,6 +9,17 @@ const navigation = [
   { to: "/shipments/new", label: "Create Shipment", icon: "+" },
   { to: "/shipments/my", label: "My Shipments", icon: "M" },
   { to: "/track", label: "Track", icon: "T" },
+   {
+    to: "/routes",
+    label: "Route Management",
+    icon: "R",
+  },
+  {
+    to: "/route-history",
+    label: "Route History",
+    icon: "H",
+  },
+
   { to: "/routes", label: "Route Management", icon: "R" },
   { to: "/profile", label: "Profile", icon: "P" },
   { to: "/signature", label: "Signature Verification", icon: "V" },

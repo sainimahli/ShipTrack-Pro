@@ -21,5 +21,7 @@ public interface TrackingService {
 
     TrackingLocationResponse updateLocation(UpdateLocationRequest request);
 
+    TrackingTimelineResponse getRouteHistory(String trackingNumber);
+
     void recordShipmentCreated(String trackingNumber);
 }

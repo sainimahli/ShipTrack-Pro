@@ -1,6 +1,41 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 import { ShipmentContext } from "../context/shipments";
-import { calculateRoute, getDeliveryForecast, getETA, getTrackingLocation, updateTrackingLocation, updateTrackingStatus } from "../services/api";
+import { calculateRoute, getDeliveryForecast, getETA, getRouteHistory, getTrackingLocation, updateTrackingLocation, updateTrackingStatus } from "../services/api";
+
+const sourceIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+});
+
+const destIcon = new L.Icon({
+  iconUrl:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='25' height='41' viewBox='0 0 25 41'><path d='M12.5 0C5.6 0 0 5.6 0 12.5 0 22 12.5 41 12.5 41S25 22 25 12.5C25 5.6 19.4 0 12.5 0z' fill='#c2410c'/><circle cx='12.5' cy='12.5' r='5' fill='#fff'/></svg>`
+    ),
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+});
+
+const currentIcon = new L.Icon({
+  iconUrl:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='30' height='45' viewBox='0 0 30 45'><path d='M15 0C6.7 0 0 6.7 0 15c0 11.3 15 30 15 30s15-18.7 15-30C30 6.7 23.3 0 15 0z' fill='#2563eb'/><circle cx='15' cy='15' r='6' fill='#fff'/></svg>`
+    ),
+  iconSize: [30, 45], iconAnchor: [15, 45], popupAnchor: [1, -34],
+});
+
+function FitBounds({ bounds }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds) map.fitBounds(bounds, { padding: [40, 40] });
+  }, [bounds, map]);
+  return null;
+}
 
 const DEFAULT_CENTER = [12.9716, 77.5946];
 
@@ -78,10 +113,10 @@ function getForecast(shipment) {
   };
 }
 
-function DraggableRouteMap({ shipment, totalDistance, initialProgress, onPositionChange }) {
+function DraggableRouteMap({ shipment, totalDistance, initialProgress, mapOrigin, mapDestination, onPositionChange }) {
   const [progress, setProgress] = useState(initialProgress);
-  const origin = DEFAULT_CENTER;
-  const destination = DEFAULT_CENTER;
+  const origin = mapOrigin || DEFAULT_CENTER;
+  const destination = mapDestination || DEFAULT_CENTER;
 
   useEffect(() => {
     setProgress(initialProgress);
@@ -148,6 +183,11 @@ function TrackShipment() {
   const liveProgressRef = useRef(0);
   const deliveredRef = useRef(null);
 
+  const [routeHistory, setRouteHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [simulating, setSimulating] = useState(false);
+
   const shipment = useMemo(
     () =>
       shipments.find(
@@ -159,6 +199,43 @@ function TrackShipment() {
   const handleSubmit = (event) => {
     event.preventDefault();
     setSubmittedTracking(trackingNumber);
+  };
+
+  const handleSimulateCheckpoint = async () => {
+    if (!shipment || shipment.progress >= 100 || shipment.status === "Delivered") return;
+    setSimulating(true);
+    try {
+      const mapOrigin = routeData?.originCoords || DEFAULT_CENTER;
+      const mapDestination = routeData?.destinationCoords || DEFAULT_CENTER;
+      const currentCount = routeHistory.length;
+      const nextProgress = Math.min(1, (currentCount + 1) * 0.15);
+      const latitude = mapOrigin[0] + ((mapDestination[0] - mapOrigin[0]) * nextProgress);
+      const longitude = mapOrigin[1] + ((mapDestination[1] - mapOrigin[1]) * nextProgress);
+      const remainingKm = Math.round(haversineKm(latitude, longitude, mapDestination[0], mapDestination[1]) * 10) / 10;
+      
+      await updateTrackingLocation({
+        trackingNumber: shipment.trackingNumber,
+        latitude,
+        longitude,
+        locationName: nextProgress >= 1 ? shipment.receiverCity : `Checkpoint #${currentCount + 1} (${Math.round(nextProgress * 100)}% route)`,
+        description: nextProgress >= 1 ? "Shipment reached destination." : `Simulated location check-in. ${remainingKm} km remaining.`,
+        distanceRemainingKm: remainingKm,
+      });
+      if (nextProgress >= 1) {
+        await updateTrackingStatus({
+          trackingNumber: shipment.trackingNumber,
+          status: "DELIVERED",
+          description: "Shipment reached destination.",
+          locationName: shipment.receiverCity,
+        });
+      }
+      await refetch();
+      refreshLiveTracking();
+    } catch (err) {
+      console.error("Simulation failed:", err);
+    } finally {
+      setSimulating(false);
+    }
   };
 
 
@@ -198,7 +275,7 @@ function TrackShipment() {
   }, [refetch, refreshLiveTracking, shipment]);
 
   useEffect(() => {
-    const refreshTimer = window.setInterval(refreshLiveTracking, 15_000);
+    const refreshTimer = window.setInterval(refreshLiveTracking, 10 * 60 * 1000);
     return () => window.clearInterval(refreshTimer);
   }, [refreshLiveTracking]);
 
@@ -237,71 +314,101 @@ function TrackShipment() {
     };
 
 
-  }, [shipment, refreshVersion]);
+  }, [shipment?.trackingNumber, refreshVersion]);
 
   useEffect(() => {
     if (!shipment) {
-      setCurrentLocation(null);
+      setRouteHistory([]);
       return undefined;
     }
 
     let ignoreResponse = false;
-    getTrackingLocation(shipment.trackingNumber)
-      .then((response) => {
-        if (!ignoreResponse) {
-          const loc = response.data;
-          if (loc && loc.latitude != null && loc.longitude != null) {
-            setCurrentLocation({ latitude: loc.latitude, longitude: loc.longitude });
+
+    const fetchHistory = () => {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      getRouteHistory(shipment.trackingNumber)
+        .then((response) => {
+          if (!ignoreResponse) {
+            setRouteHistory(response.data?.events || []);
+            setHistoryLoading(false);
           }
-        }
-      })
-      .catch(() => {
-        if (!ignoreResponse) setCurrentLocation(null);
-      });
+        })
+        .catch((err) => {
+          if (!ignoreResponse) {
+            setHistoryError(err.response?.data?.message || "Failed to load route history.");
+            setHistoryLoading(false);
+          }
+        });
+    };
+
+    fetchHistory();
+    const historyTimer = window.setInterval(fetchHistory, 10 * 60 * 1000);
 
     return () => {
       ignoreResponse = true;
+      window.clearInterval(historyTimer);
     };
   }, [shipment?.trackingNumber, refreshVersion]);
 
-   useEffect(() => {
-     if (!shipment?.senderCity || !shipment?.receiverCity) {
-       setRouteData(null);
-       return undefined;
-     }
-
-    const destLat = shipment.destinationLatitude ?? 26.8467;
-    const destLng = shipment.destinationLongitude ?? 80.9462;
-    const origLat = shipment.originLatitude ?? 12.9716;
-    const origLng = shipment.originLongitude ?? 77.5946;
+  useEffect(() => {
+    if (!shipment?.senderCity || !shipment?.receiverCity) {
+      setRouteData(null);
+      return undefined;
+    }
 
     let ignoreResponse = false;
-    Promise.all([
-      calculateRoute({
-        originLatitude: origLat,
-        originLongitude: origLng,
-        destinationLatitude: destLat,
-        destinationLongitude: destLng,
-      }),
-      calculateRoute({
-        trackingNumber: shipment.trackingNumber,
-        originLatitude: origLat,
-        originLongitude: origLng,
-        destinationLatitude: destLat,
-        destinationLongitude: destLng,
-      }),
-    ])
-      .then(([totalResponse, remainingResponse]) => {
-        if (!ignoreResponse) {
-          setRouteData({ 
-            total: totalResponse.data, 
-            remaining: remainingResponse.data,
-            originCoords: totalResponse.data.originCoords || DEFAULT_CENTER,
-            destinationCoords: totalResponse.data.destinationCoords || DEFAULT_CENTER
-          });
+
+    async function geocodeCity(query) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query + ", India")}`;
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length) {
+            return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+          }
         }
-      })
-      .catch(() => { /* route calculation error handle */ });
+      } catch (e) { /* fallback */ }
+      return null;
+    }
+
+    async function loadAccurateRoute() {
+      const origGeo = await geocodeCity(shipment.senderCity);
+      const destGeo = await geocodeCity(shipment.receiverCity);
+
+      const origLat = origGeo ? origGeo[0] : (shipment.originLatitude ?? 12.9716);
+      const origLng = origGeo ? origGeo[1] : (shipment.originLongitude ?? 77.5946);
+      const destLat = destGeo ? destGeo[0] : (shipment.destinationLatitude ?? 26.8467);
+      const destLng = destGeo ? destGeo[1] : (shipment.destinationLongitude ?? 80.9462);
+
+      const originCoords = [origLat, origLng];
+      const destinationCoords = [destLat, destLng];
+
+      let polylineCoords = [originCoords, destinationCoords];
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origLng},${origLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=false`;
+        const res = await fetch(osrmUrl);
+        if (res.ok) {
+          const osrmData = await res.json();
+          if (osrmData.routes?.length) {
+            polylineCoords = osrmData.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+          }
+        }
+      } catch (e) { /* fallback straight line */ }
+
+      if (!ignoreResponse) {
+        setRouteData({
+          total: { distanceKm: Math.round(haversineKm(origLat, origLng, destLat, destLng)) },
+          remaining: { distanceKm: Math.round(haversineKm(origLat, origLng, destLat, destLng)), estimatedTravelTime: formatDuration(Math.round(haversineKm(origLat, origLng, destLat, destLng))) },
+          originCoords,
+          destinationCoords,
+          polylineCoords,
+        });
+      }
+    }
+
+    loadAccurateRoute();
 
     return () => {
       ignoreResponse = true;
@@ -310,6 +417,11 @@ function TrackShipment() {
 
   const mapOrigin = useMemo(() => routeData?.originCoords || DEFAULT_CENTER, [routeData]);
   const mapDestination = useMemo(() => routeData?.destinationCoords || DEFAULT_CENTER, [routeData]);
+
+  const mapBounds = useMemo(() => {
+    if (!mapOrigin || !mapDestination) return null;
+    return [mapOrigin, mapDestination];
+  }, [mapOrigin, mapDestination]);
 
   const currentLat = currentLocation
     ? currentLocation.latitude
@@ -342,7 +454,7 @@ function TrackShipment() {
   }, [markerProgress]);
 
   useEffect(() => {
-    if (!shipment || !routeData || !mapOrigin || !mapDestination || shipment.status === "Delivered") {
+    if (!shipment || !routeData || !mapOrigin || !mapDestination || shipment.status === "Delivered" || shipment.progress >= 100 || liveProgressRef.current >= 1) {
       return undefined;
     }
 
@@ -385,7 +497,7 @@ function TrackShipment() {
       } catch (error) {
         console.error("Live movement update failed:", error);
       }
-    }, 5000);
+    }, 10 * 60 * 1000);
 
     return () => window.clearInterval(timer);
   }, [routeData, shipment, mapOrigin, mapDestination, refetch]);
@@ -394,13 +506,24 @@ function TrackShipment() {
   const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
   const liveLocation = liveTracking?.location?.locationName;
   const displayStatus = serverStatus || shipment?.status;
-  const displayTimeline = liveTracking?.timeline?.length
+  const rawTimeline = liveTracking?.timeline?.length
     ? liveTracking.timeline.map((event) => ({
         status: event.status?.replaceAll("_", " ") || "Update",
         location: event.locationName || event.description || "Location update pending",
         timestamp: event.updatedAt,
       }))
     : shipment?.history || [];
+
+  const displayTimeline = useMemo(() => {
+    const seenStatuses = new Set();
+    return rawTimeline.filter((event) => {
+      if (seenStatuses.has(event.status)) {
+        return false;
+      }
+      seenStatuses.add(event.status);
+      return true;
+    });
+  }, [rawTimeline]);
   const localForecast = shipment ? getForecast(shipment) : null;
   const forecast = serverForecast
     ? {
@@ -493,25 +616,72 @@ function TrackShipment() {
                 <h2 className="section-title" style={{ marginTop: 6 }}>Live route map</h2>
 
                 <p className="subtle" style={{ margin: "4px 0 0" }}>
-                  Auto-refreshes every 30 seconds · Last synced {formatDateTime(lastCheckedAt)}
+                  Auto-refreshes every 20 minutes · Last synced {formatDateTime(lastCheckedAt)}
                 </p>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <button
+                  className="button primary compact"
+                  disabled={simulating || shipment.progress >= 100 || shipment.status === "Delivered"}
+                  onClick={handleSimulateCheckpoint}
+                  type="button"
+                >
+                  {simulating
+                    ? "Simulating..."
+                    : shipment.progress >= 100 || shipment.status === "Delivered"
+                      ? "✓ Route Completed"
+                      : "📍 Simulate Route Checkpoint"}
+                </button>
                 <button className="button secondary compact" onClick={refreshLiveTracking} type="button">
                   Refresh now
                 </button>
                 <a className="button secondary compact" href={`https://www.google.com/maps/dir/${encodeURIComponent(shipment.senderCity)}/${encodeURIComponent(shipment.receiverCity)}`} rel="noreferrer" target="_blank">Open in Google Maps</a>
               </div>
             </div>
-            <div className="map-with-marker">
-              <iframe
-                className="tracking-map"
-                key={`${shipment.trackingNumber}-${refreshVersion}-${currentLat ?? 0}-${currentLng ?? 0}`}
-                title={`Current shipment location for ${shipment.trackingNumber}`}
-                src={`https://www.google.com/maps?q=${mapQuery}&output=embed&refresh=${refreshVersion}`}
-              />
+            <div className="map-with-marker" style={{ height: 420, overflow: "hidden", position: "relative" }}>
+              <MapContainer
+                center={mapOrigin}
+                zoom={6}
+                scrollWheelZoom
+                style={{ height: "100%", width: "100%", borderRadius: "8px 8px 0 0" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={mapOrigin} icon={sourceIcon}>
+                  <Popup>
+                    <strong>Origin: {shipment.senderCity}</strong>
+                    <div style={{ fontSize: 12 }}>{shipment.senderName}</div>
+                  </Popup>
+                </Marker>
+                <Marker position={mapDestination} icon={destIcon}>
+                  <Popup>
+                    <strong>Destination: {shipment.receiverCity}</strong>
+                    <div style={{ fontSize: 12 }}>{shipment.receiverName}</div>
+                  </Popup>
+                </Marker>
+                {currentLat != null && currentLng != null && (
+                  <Marker position={[currentLat, currentLng]} icon={currentIcon}>
+                    <Popup>
+                      <strong>Current Checkpoint: {displayStatus}</strong>
+                      <div style={{ fontSize: 12 }}>{liveLocation || latestEvent?.location || "In Transit"}</div>
+                      <div style={{ fontSize: 11, color: "#666" }}>
+                        {currentLat.toFixed(4)}, {currentLng.toFixed(4)}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+                <Polyline
+                  positions={routeData?.polylineCoords || [mapOrigin, mapDestination]}
+                  pathOptions={{ color: "#146c94", weight: 5, opacity: 0.85 }}
+                />
+                <FitBounds bounds={mapBounds} />
+              </MapContainer>
               <DraggableRouteMap
                 initialProgress={markerProgress}
+                mapDestination={mapDestination}
+                mapOrigin={mapOrigin}
                 onPositionChange={updateMarkerPosition}
                 shipment={shipment}
                 totalDistance={totalDistanceKm}
