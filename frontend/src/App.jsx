@@ -19,6 +19,7 @@ import ShipmentList from "./assets/pages/ShipmentList";
 import TrackShipment from "./assets/pages/TrackShipment";
 import RouteManagement from "./assets/pages/RouteManagement";
 import RouteHistory from "./assets/pages/RouteHistory";
+import SignatureVerification from "./assets/pages/SignatureVerification";
 
 
 const roleLabels = {
@@ -64,6 +65,7 @@ function AppLayout() {
             <Route path="/route-history" element={<RouteHistory />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/signature" element={<SignatureVerification />} />  
           </Routes>
         </main>
       </div>

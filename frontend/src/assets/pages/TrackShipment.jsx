@@ -717,7 +717,12 @@ function TrackShipment() {
             {eta.estimatedArrival}
           </p>
         </div>
-
+           <div className="schema-box">
+  <strong>Remaining Distance</strong>
+  <p className="subtle">
+    {remainingDistanceKm}
+  </p>
+</div>
         <div className="schema-box">
           <strong>Remaining Time</strong>
           <p className="subtle">

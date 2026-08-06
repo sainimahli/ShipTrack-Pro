@@ -15,6 +15,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhone(String phone);
 
-    List<User> findByRegistrationStatus(RegistrationStatus registrationStatus);
+    List<User> findByRegistrationStatus(
+            RegistrationStatus registrationStatus
+    );
 
+    // -------------------------
+    // Admin Dashboard
+    // -------------------------
+
+    long countByRole_RoleName(String roleName);
 }
