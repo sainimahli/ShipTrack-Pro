@@ -90,7 +90,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/tracking/location")
                         .hasRole("LOGISTICS_OPERATOR")
+                        .requestMatchers("/api/dashboard/customer")
+                        .hasRole("CUSTOMER")
 
+                        .requestMatchers("/api/dashboard/business")
+                        .hasRole("BUSINESS_CLIENT")
+
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMINISTRATOR")
                         .anyRequest().authenticated())
 
                 .oauth2Login(oauth2 ->
