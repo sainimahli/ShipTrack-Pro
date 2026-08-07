@@ -39,58 +39,72 @@ public class PdfReportGenerator {
 
             document.add(heading);
 
-            PdfPTable table = new PdfPTable(14);
+            PdfPTable table = new PdfPTable(18);
 
             table.setWidthPercentage(100);
 
             table.setWidths(new float[]{
-                    2.2f,
-                    2f,
-                    3f,
-                    3f,
-                    2f,
-                    2f,
-                    2f,
-                    2f,
-                    2f,
-                    2f,
-                    2f,
-                    2f,
-                    2f,
-                    2f
+                    1.4f, // Shipment ID
+                    2.0f, // Tracking
+                    2.0f, // Customer
+                    1.6f, // Driver
+                    2.0f, // Status
+                    2.0f, // ETA
+                    2.0f, // Delivered
+                    2.0f, // Delivery Time
+                    2.0f, // Delay
+                    1.4f, // POD
+                    1.4f, // Verified
+                    2.8f, // Sender
+                    2.8f, // Receiver
+                    2.0f, // Failed
+                    2.0f, // Cancelled
+                    2.0f, // Returned
+                    2.0f, // Updated By
+                    2.0f  // Created
             });
 
+            addHeader(table, "Shipment ID");
             addHeader(table, "Tracking");
             addHeader(table, "Customer");
+            addHeader(table, "Driver ID");
+            addHeader(table, "Status");
+            addHeader(table, "ETA");
+            addHeader(table, "Delivered");
+            addHeader(table, "Delivery Time");
+            addHeader(table, "Delay");
+            addHeader(table, "POD");
+            addHeader(table, "Verified");
             addHeader(table, "Sender");
             addHeader(table, "Receiver");
-            addHeader(table, "Status");
-            addHeader(table, "Created");
-            addHeader(table, "Picked Up");
-            addHeader(table, "In Transit");
-            addHeader(table, "Out For Delivery");
-            addHeader(table, "Delivered");
             addHeader(table, "Failed");
             addHeader(table, "Cancelled");
             addHeader(table, "Returned");
             addHeader(table, "Updated By");
+            addHeader(table, "Created");
 
             for (ShipmentReportDto report : reports) {
 
+                addCell(table, String.valueOf(report.getShipmentId()));
                 addCell(table, report.getTrackingNumber());
                 addCell(table, report.getCustomerName());
+                addCell(table, report.getAssignedDriverId() == null
+                        ? ""
+                        : String.valueOf(report.getAssignedDriverId()));
+                addCell(table, String.valueOf(report.getCurrentStatus()));
+                addCell(table, format(report.getEstimatedArrival()));
+                addCell(table, format(report.getDeliveredAt()));
+                addCell(table, report.getDeliveryTime());
+                addCell(table, report.getDelay());
+                addCell(table, yesNo(report.getProofOfDeliveryAvailable()));
+                addCell(table, yesNo(report.getProofVerified()));
                 addCell(table, report.getSenderAddress());
                 addCell(table, report.getReceiverAddress());
-                addCell(table, String.valueOf(report.getCurrentStatus()));
-                addCell(table, format(report.getShipmentCreatedAt()));
-                addCell(table, format(report.getPickedUpAt()));
-                addCell(table, format(report.getInTransitAt()));
-                addCell(table, format(report.getOutForDeliveryAt()));
-                addCell(table, format(report.getDeliveredAt()));
                 addCell(table, format(report.getFailedDeliveryAt()));
                 addCell(table, format(report.getCancelledAt()));
                 addCell(table, format(report.getReturnedAt()));
                 addCell(table, report.getLastUpdatedBy());
+                addCell(table, format(report.getShipmentCreatedAt()));
             }
 
             document.add(table);
@@ -125,5 +139,20 @@ public class PdfReportGenerator {
         }
 
         return time.format(FORMATTER);
+    }
+
+    private String yesNo(Boolean value) {
+
+        if (value == null) {
+            return "";
+        }
+
+        return value ? "Yes" : "No";
+    }
+    public byte[] generateSingleReport(
+            ShipmentReportDto report,
+            String title) {
+
+        return generate(List.of(report), title);
     }
 }
