@@ -1,8 +1,8 @@
 package com.shiptrackpro.controller;
 
 import com.shiptrackpro.dto.DriverLocationRequest;
-import com.shiptrackpro.dto.DriverLocationResponse;
 import com.shiptrackpro.service.DriverLocationService;
+import com.shiptrackpro.dto.DriverLocationResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

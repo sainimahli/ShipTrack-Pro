@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback,useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "./shipments";
 import {
   getShipments as apiGetShipments,
@@ -6,6 +6,7 @@ import {
   updateShipment as apiUpdateShipment,
   updateTrackingStatus as apiUpdateTrackingStatus,
   getTrackingTimeline as apiGetTrackingTimeline,
+  getDeliveryConfirmation as apiGetDeliveryConfirmation,
 } from "../services/api";
 
 // ---------------------------------------------------------------------------
@@ -142,9 +143,16 @@ export function ShipmentProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    fetchShipments();
+    const initialLoadTimer = window.setTimeout(() => {
+      fetchShipments();
+    }, 0);
+
     const refreshTimer = window.setInterval(fetchShipments, 30_000);
-    return () => window.clearInterval(refreshTimer);
+
+    return () => {
+      window.clearTimeout(initialLoadTimer);
+      window.clearInterval(refreshTimer);
+    };
   }, [fetchShipments]);
 
   // -------------------------------------------------------------------------
@@ -190,6 +198,11 @@ export function ShipmentProvider({ children }) {
     [fetchShipments],
   );
 
+
+  const getDeliveryConfirmation = useCallback(async (shipmentId) => {
+    const res = await apiGetDeliveryConfirmation(shipmentId);
+    return res.data;
+  }, []);
   const updateStatus = useCallback(async (trackingNumber, status, location) => {
     await apiUpdateTrackingStatus({
       trackingNumber,
@@ -281,36 +294,39 @@ export function ShipmentProvider({ children }) {
   }, [shipments]);
 
   const value = useMemo(
-    () => ({
-      shipments,
-      loading,
-      error,
-      createShipment,
-      updateStatus,
-      updateShipment,
-      cancelShipment,
-      rejectShipment,
-      metrics,
-      statuses: Object.keys(statusProgress).filter(
-        (k) => !k.includes("_"), // expose only human-readable keys
-      ),
-      refetch: fetchShipments,
-    }),
-    [
-      cancelShipment,
-      createShipment,
-      error,
-      fetchShipments,
-      loading,
-      metrics,
-      rejectShipment,
-      shipments,
-      updateShipment,
-      updateStatus,
-    ],
+      () => ({
+        shipments,
+        loading,
+        error,
+        createShipment,
+        getDeliveryConfirmation,
+        updateStatus,
+        updateShipment,
+        cancelShipment,
+        rejectShipment,
+        metrics,
+        statuses: Object.keys(statusProgress).filter(
+            (k) => !k.includes("_"), // expose only human-readable keys
+        ),
+        refetch: fetchShipments,
+      }),
+      [
+        cancelShipment,
+        createShipment,
+        getDeliveryConfirmation,
+        error,
+        fetchShipments,
+        loading,
+        metrics,
+        rejectShipment,
+        shipments,
+        updateShipment,
+        updateStatus,
+      ],
   );
-
   return (
-    <ShipmentContext.Provider value={value}>{children}</ShipmentContext.Provider>
+      <ShipmentContext.Provider value={value}>
+        {children}
+      </ShipmentContext.Provider>
   );
 }

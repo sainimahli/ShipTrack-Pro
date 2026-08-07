@@ -1,8 +1,12 @@
 package com.shiptrackpro.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class DriverLocationRequest {
+
+    @NotBlank(message = "Location name is required")
+    private String locationName;
 
     @NotNull(message = "Latitude is required")
     private Double latitude;
@@ -11,6 +15,14 @@ public class DriverLocationRequest {
     private Double longitude;
 
     public DriverLocationRequest() {
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public Double getLatitude() {
@@ -28,5 +40,4 @@ public class DriverLocationRequest {
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
     }
-
 }

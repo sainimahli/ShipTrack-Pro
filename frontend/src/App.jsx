@@ -7,6 +7,7 @@ import { AuthContext } from "./assets/context/auth";
 import { AuthProvider } from "./assets/context/AuthContext";
 import { ShipmentProvider } from "./assets/context/ShipmentContext";
 import CreateShipment from "./assets/pages/CreateShipment";
+import DeliveryConfirmation from "./assets/pages/DeliveryConfirmation";
 import Dashboard from "./assets/pages/Dashboard";
 import ForgotPassword from "./assets/pages/ForgotPassword";
 import Login from "./assets/pages/Login";
@@ -53,6 +54,7 @@ function AppLayout() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
+            <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
             <Route path="/track" element={<TrackShipment />} />
             <Route path="/tracking" element={<TrackShipment />} />
             <Route path="/profile" element={<Profile />} />

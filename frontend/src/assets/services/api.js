@@ -109,4 +109,25 @@ export const updateTrackingStatus = (data) => API.put("/tracking/status", data);
 
 export const updateTrackingLocation = (data) => API.put("/tracking/location", data);
 
+
+export const sendDeliveryOtp = (shipmentId) =>
+    API.post(`/shipments/${shipmentId}/delivery-confirmation/send-otp`);
+
+
+export const verifyDeliveryOtp = (shipmentId, data) =>
+    API.post(
+        `/shipments/${shipmentId}/delivery-confirmation/verify-otp`,
+        data
+    );
+
+
+export const getDeliveryConfirmation = (shipmentId) =>
+    API.get(`/shipments/${shipmentId}/delivery-confirmation`);
+
+
+export const assignDriverToShipment = (shipmentId, data) =>
+    API.put(`/shipments/${shipmentId}/assign-driver`, data);
+
+export const getDriverLocation = (driverId) =>
+    API.get(`/drivers/${driverId}/location`);
 export default API;

@@ -32,4 +32,52 @@ public class EmailServiceImpl implements EmailService {
 
         mailSender.send(message);
     }
+    @Override
+    public void sendDeliveryOtpEmail(
+            String toEmail,
+            String otp,
+            String trackingNumber
+    ) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(toEmail);
+
+        message.setSubject("Delivery Verification OTP");
+
+        message.setText(
+                "Hello,\n\n" +
+                        "Your shipment is out for delivery.\n\n" +
+                        "Tracking Number: " + trackingNumber + "\n\n" +
+                        "Delivery OTP: " + otp + "\n\n" +
+                        "Please share this OTP with the delivery personnel only after receiving your shipment.\n\n" +
+                        "Regards,\n" +
+                        "ShipTrack Pro Team"
+        );
+
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendDeliverySuccessEmail(
+            String toEmail,
+            String trackingNumber
+    ) {
+
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo(toEmail);
+        message.setSubject("Shipment Delivered Successfully");
+
+        message.setText(
+                "Hello,\n\n" +
+                        "Your shipment has been delivered successfully.\n\n" +
+                        "Tracking Number: " + trackingNumber + "\n\n" +
+                        "Thank you for choosing ShipTrack Pro.\n\n" +
+                        "Regards,\n" +
+                        "ShipTrack Pro Team"
+        );
+
+        mailSender.send(message);
+    }
 }

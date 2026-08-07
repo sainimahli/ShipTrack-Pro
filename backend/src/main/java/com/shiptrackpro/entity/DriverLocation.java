@@ -39,6 +39,9 @@ public class DriverLocation {
     @Column(name = "longitude", nullable = false)
     private Double longitude;
 
+    @Column(name = "location_name")
+    private String locationName;
+
     @Column(name = "timestamp", nullable = false, updatable = false)
     private LocalDateTime timestamp;
 
@@ -84,6 +87,13 @@ public class DriverLocation {
 
     public LocalDateTime getTimestamp() {
         return timestamp;
+    }
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
 }

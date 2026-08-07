@@ -25,6 +25,7 @@ public class DriverLocationServiceImpl implements DriverLocationService {
         location.setDriverId(driverId);
         location.setLatitude(request.getLatitude());
         location.setLongitude(request.getLongitude());
+        location.setLocationName(request.getLocationName());
 
         return mapToResponse(driverLocationRepository.save(location));
     }
@@ -41,6 +42,7 @@ public class DriverLocationServiceImpl implements DriverLocationService {
     private DriverLocationResponse mapToResponse(DriverLocation location) {
         return new DriverLocationResponse(
                 location.getDriverId(),
+                location.getLocationName(),
                 location.getLatitude(),
                 location.getLongitude(),
                 location.getTimestamp()

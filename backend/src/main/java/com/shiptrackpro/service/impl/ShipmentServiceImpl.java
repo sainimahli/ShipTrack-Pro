@@ -120,6 +120,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .totalWeightKg(totalWeight)
                 .shipmentType(request.getShipmentType() != null ? request.getShipmentType() : "STANDARD")
                 .packageType(request.getPackageType() != null ? request.getPackageType() : "General Cargo")
+                .receiverName(request.getReceiverName())
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .estimatedArrival(null)
                 .actualDeliveryDate(null)
@@ -236,39 +237,76 @@ public class ShipmentServiceImpl implements ShipmentService {
     }
 
     private ShipmentResponse mapToResponse(Shipment shipment, Double latitude, Double longitude) {
+
         Address senderAddress = shipment.getSenderAddressId() == null
-                ? null : addressRepository.findById(shipment.getSenderAddressId()).orElse(null);
+                ? null
+                : addressRepository.findById(shipment.getSenderAddressId()).orElse(null);
+
         Address receiverAddress = shipment.getReceiverAddressId() == null
-                ? null : addressRepository.findById(shipment.getReceiverAddressId()).orElse(null);
+                ? null
+                : addressRepository.findById(shipment.getReceiverAddressId()).orElse(null);
+
+        User sender = shipment.getUserId() == null
+                ? null
+                : userRepository.findById(shipment.getUserId()).orElse(null);
+
+        String senderName = null;
+
+        if (sender != null) {
+            senderName = sender.getFirstName();
+
+            if (sender.getLastName() != null && !sender.getLastName().isBlank()) {
+                senderName = senderName + " " + sender.getLastName();
+            }
+        }
 
         return ShipmentResponse.builder()
                 .shipmentId(shipment.getShipmentId())
                 .trackingNumber(shipment.getTrackingNumber())
                 .userId(shipment.getUserId())
+
                 .senderAddressId(shipment.getSenderAddressId())
                 .receiverAddressId(shipment.getReceiverAddressId())
+
+                // Names
+                .senderName(senderName)
+                .receiverName(shipment.getReceiverName())
+
+                // Address details
                 .senderCity(senderAddress == null ? null : senderAddress.getCity())
                 .receiverCity(receiverAddress == null ? null : receiverAddress.getCity())
                 .deliveryAddress(receiverAddress == null ? null : receiverAddress.getAddressLine1())
+
                 .originWarehouseId(shipment.getOriginWarehouseId())
                 .destinationWarehouseId(shipment.getDestinationWarehouseId())
+
                 .assignedDriverId(shipment.getAssignedDriverId())
                 .assignedVehicleId(shipment.getAssignedVehicleId())
+
                 .shipmentStatus(shipment.getShipmentStatus())
+
                 .totalWeightKg(shipment.getTotalWeightKg())
+
                 .shipmentType(shipment.getShipmentType())
                 .packageType(shipment.getPackageType())
+
                 .expectedDeliveryDate(shipment.getExpectedDeliveryDate())
                 .actualDeliveryDate(shipment.getActualDeliveryDate())
                 .estimatedArrival(shipment.getEstimatedArrival())
+
                 .distanceRemainingKm(shipment.getDistanceRemainingKm())
+
                 .forecastConfidence(shipment.getForecastConfidence())
+
                 .isDelayed(shipment.getIsDelayed())
                 .delayReason(shipment.getDelayReason())
+
                 .currentLatitude(latitude)
                 .currentLongitude(longitude)
+
                 .createdAt(shipment.getCreatedAt())
                 .updatedAt(shipment.getUpdatedAt())
+
                 .build();
     }
 

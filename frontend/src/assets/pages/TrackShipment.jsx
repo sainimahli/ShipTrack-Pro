@@ -1,6 +1,16 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
-import { calculateRoute, getDeliveryForecast, getETA, getTrackingLocation, updateTrackingLocation, updateTrackingStatus } from "../services/api";
+import {
+  calculateRoute,
+  getDeliveryForecast,
+  getETA,
+  getTrackingLocation,
+  updateTrackingLocation,
+  updateTrackingStatus,
+  getDriverLocation,
+  predictShipmentDelay,
+  getShipmentAlerts,
+} from "../services/api";
 
 const DEFAULT_CENTER = [12.9716, 77.5946];
 
@@ -143,6 +153,10 @@ function TrackShipment() {
   console.log("ETA State:", eta);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [liveTracking, setLiveTracking] = useState(null);
+  const [driver, setDriver] = useState(null);
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [delayPrediction, setDelayPrediction] = useState(null);
+  const [alerts, setAlerts] = useState([]);
   const [routeData, setRouteData] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const liveProgressRef = useRef(0);
@@ -238,6 +252,44 @@ function TrackShipment() {
 
 
   }, [shipment, refreshVersion]);
+
+  useEffect(() => {
+    if (!shipment) return;
+
+    async function loadMilestone2() {
+      try {
+        const [delayRes, alertsRes] = await Promise.all([
+          predictShipmentDelay(shipment.shipmentId),
+          getShipmentAlerts(shipment.shipmentId),
+        ]);
+
+        setDelayPrediction(delayRes.data);
+        setAlerts(alertsRes.data || []);
+
+        if (shipment.assignedDriverId) {
+          setDriver({
+            name: `Driver #${shipment.assignedDriverId}`,
+            driverId: shipment.assignedDriverId,
+          });
+
+          try {
+            const locationRes = await getDriverLocation(shipment.assignedDriverId);
+            setDriverLocation(locationRes.data);
+          } catch (error) {
+            console.error("Unable to load driver location", error);
+            setDriverLocation(null);
+          }
+        } else {
+          setDriver(null);
+          setDriverLocation(null);
+        }
+      } catch (err) {
+        console.error("Milestone 2 data load failed", err);
+      }
+    }
+
+    void loadMilestone2();
+  }, [shipment]);
 
   useEffect(() => {
     if (!shipment) {
@@ -572,6 +624,80 @@ function TrackShipment() {
     </article>
   </section>
 )}
+          <section style={{ marginBottom: 20 }}>
+            <article className="panel">
+              <div className="eyebrow">Driver Details</div>
+
+              {driver ? (
+                  <div className="grid grid-2">
+                    <div className="schema-box">
+                      <strong>Name</strong>
+                      <p>{driver.name}</p>
+                    </div>
+
+                    <div className="schema-box">
+                      <strong>Phone</strong>
+                      <p>{driver.phone}</p>
+                    </div>
+
+                    <div className="schema-box">
+                      <strong>Vehicle</strong>
+                      <p>{driver.vehicleNumber}</p>
+                    </div>
+
+                    <div className="schema-box">
+                      <strong>Status</strong>
+                      <p>{driver.status}</p>
+                    </div>
+                  </div>
+              ) : (
+                  <p>No driver assigned.</p>
+              )}
+            </article>
+          </section>
+          {delayPrediction && (
+              <section style={{ marginBottom: 20 }}>
+                <article className="panel">
+                  <div className="eyebrow">Delay Prediction</div>
+
+                  <div
+                      className="schema-box"
+                      style={{
+                        marginTop: 12,
+                        borderLeft:
+                            delayPrediction.riskLevel === "HIGH"
+                                ? "5px solid red"
+                                : delayPrediction.riskLevel === "MEDIUM"
+                                    ? "5px solid orange"
+                                    : "5px solid green",
+                      }}
+                  >
+                    <strong>Risk Level</strong>
+                    <p>{delayPrediction.riskLevel}</p>
+
+                    <strong>Reason</strong>
+                    <p>{delayPrediction.reason}</p>
+                  </div>
+                </article>
+              </section>
+          )}
+          {alerts.length > 0 && (
+              <section style={{ marginBottom: 20 }}>
+                <article className="panel">
+                  <div className="eyebrow">Shipment Alerts</div>
+
+                  <ul>
+                    {alerts.map((alert) => (
+                        <li key={alert.alertId}>
+                          {alert.message}
+                        </li>
+                    ))}
+                  </ul>
+                </article>
+              </section>
+          )}
+
+
           <section className="grid grid-2">
             <div className="panel">
               <div className="toolbar">

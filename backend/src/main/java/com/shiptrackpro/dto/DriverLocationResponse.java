@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class DriverLocationResponse {
 
     private Long driverId;
+    private String locationName;
     private Double latitude;
     private Double longitude;
     private LocalDateTime timestamp;
@@ -12,7 +13,19 @@ public class DriverLocationResponse {
     public DriverLocationResponse() {
     }
 
-    public DriverLocationResponse(Long driverId, Double latitude, Double longitude, LocalDateTime timestamp) {
+    public DriverLocationResponse(Long driverId, String locationName,
+                                  Double latitude, Double longitude,
+                                  LocalDateTime timestamp) {
+        this.driverId = driverId;
+        this.locationName = locationName;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.timestamp = timestamp;
+    }
+    public DriverLocationResponse(Long driverId,
+                                  Double latitude,
+                                  Double longitude,
+                                  LocalDateTime timestamp) {
         this.driverId = driverId;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -25,6 +38,14 @@ public class DriverLocationResponse {
 
     public void setDriverId(Long driverId) {
         this.driverId = driverId;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public Double getLatitude() {
@@ -50,5 +71,4 @@ public class DriverLocationResponse {
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
-
 }

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../context/auth";
 import {
   approveUser,
@@ -50,7 +50,7 @@ function ManageUsers() {
     [users],
   );
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     setFeedback({ type: "", message: "" });
 
@@ -66,8 +66,11 @@ function ManageUsers() {
         approved: Array.isArray(approved.data) ? approved.data : [],
         rejected: Array.isArray(rejected.data) ? rejected.data : [],
       });
+
       setUsingLocalUsers(false);
-    } catch (error) {
+
+    } catch {
+
       const fallback = localUsers.map((user, index) => ({
         userId: user.userId || user.id || `local-${index + 1}`,
         firstName: user.firstName || user.name?.split(" ")[0] || "User",
@@ -83,19 +86,27 @@ function ManageUsers() {
         approved: fallback.filter((user) => user.registrationStatus === "APPROVED"),
         rejected: fallback.filter((user) => user.registrationStatus === "REJECTED"),
       });
+
       setUsingLocalUsers(true);
+
       setFeedback({
         type: "success",
-        message: "User service is unavailable. Showing available local accounts.",
+        message: "User service is unavailable. Showing local accounts.",
       });
+
     } finally {
       setLoading(false);
     }
-  };
+
+  }, [localUsers]);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    const fetchUsers = async () => {
+      await loadUsers();
+    };
+
+    fetchUsers();
+  }, [loadUsers]);
 
   const moveUser = (userId, from, to) => {
     setUsers((current) => {
@@ -110,15 +121,29 @@ function ManageUsers() {
   };
 
   const handleApprove = async (userId) => {
-    if (usingLocalUsers) {
-      moveUser(userId, "pending", "approved");
-      setFeedback({ type: "success", message: "User approved locally." });
+
+    if (!window.confirm("Are you sure you want to approve this user?")) {
       return;
     }
+
+    if (usingLocalUsers) {
+      moveUser(userId, "pending", "approved");
+      setFeedback({
+        type: "success",
+        message: "User approved locally."
+      });
+      return;
+    }
+
     try {
       await approveUser(userId);
       moveUser(userId, "pending", "approved");
-      setFeedback({ type: "success", message: "User approved successfully." });
+
+      setFeedback({
+        type: "success",
+        message: "User approved successfully."
+      });
+
     } catch (error) {
       setFeedback({
         type: "error",
@@ -128,23 +153,36 @@ function ManageUsers() {
   };
 
   const handleReject = async (userId) => {
-    if (usingLocalUsers) {
-      moveUser(userId, "pending", "rejected");
-      setFeedback({ type: "success", message: "User rejected locally." });
+
+    if (!window.confirm("Are you sure you want to reject this user?")) {
       return;
     }
+
+    if (usingLocalUsers) {
+      moveUser(userId, "pending", "rejected");
+      setFeedback({
+        type: "success",
+        message: "User rejected locally."
+      });
+      return;
+    }
+
     try {
       await rejectUser(userId);
       moveUser(userId, "pending", "rejected");
-      setFeedback({ type: "success", message: "User rejected successfully." });
+
+      setFeedback({
+        type: "success",
+        message: "User rejected successfully."
+      });
+
     } catch (error) {
       setFeedback({
         type: "error",
-        message: error.response?.data?.message || "Failed to reject user.",
+        message: error.response?.data?.message || "Failed to reject user."
       });
     }
   };
-
   return (
     <div className="page">
       <div className="page-header">

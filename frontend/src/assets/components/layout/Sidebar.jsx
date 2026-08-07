@@ -13,6 +13,7 @@ const navigation = [
     icon: "R",
   },
 
+
   { to: "/profile", label: "Profile", icon: "P" },
   
 

@@ -104,30 +104,29 @@ useEffect(() => {
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="form-field">
               <label htmlFor="email">Email</label>
-              <input
-                className="input"
-                id="email"
-                name="email"
-                onChange={handleChange}
-                required
-                type="email"
-                placeholder="Enter your email"
-              />
+                <input
+                    className="input"
+                    id="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                    type="email"
+                />
             </div>
 
             <div className="form-field">
               <label htmlFor="password">Password</label>
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <input
-                  className="input"
-                  id="password"
-                  name="password"
-                  onChange={handleChange}
-                  required
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  style={{ paddingRight: "40px" }}
-                />
+                  <input
+                      className="input"
+                      id="password"
+                      name="password"
+                      value={form.password}
+                      onChange={handleChange}
+                      required
+                      type={showPassword ? "text" : "password"}
+                  />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
