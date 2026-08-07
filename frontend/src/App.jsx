@@ -9,6 +9,7 @@ import { ShipmentProvider } from "./assets/context/ShipmentContext";
 import CreateShipment from "./assets/pages/CreateShipment";
 import DeliveryConfirmation from "./assets/pages/DeliveryConfirmation";
 import Dashboard from "./assets/pages/Dashboard";
+import AnalyticsDashboard from "./assets/pages/AnalyticsDashboard";
 import ForgotPassword from "./assets/pages/ForgotPassword";
 import Login from "./assets/pages/Login";
 import ManageUsers from "./assets/pages/ManageUsers";
@@ -18,6 +19,8 @@ import Register from "./assets/pages/Register";
 import ShipmentList from "./assets/pages/ShipmentList";
 import TrackShipment from "./assets/pages/TrackShipment";
 import RouteManagement from "./assets/pages/RouteManagement";
+import RouteHistory from "./assets/pages/RouteHistory";
+import SignatureVerification from "./assets/pages/SignatureVerification";
 
 
 const roleLabels = {
@@ -52,6 +55,7 @@ function AppLayout() {
           <Navbar />
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
@@ -60,8 +64,10 @@ function AppLayout() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="/routes" element={<RouteManagement />} />
+            <Route path="/route-history" element={<RouteHistory />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/signature" element={<SignatureVerification />} />  
           </Routes>
         </main>
       </div>
