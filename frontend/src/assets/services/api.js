@@ -92,6 +92,9 @@ export const getRejectedUsers = () => API.get("/admin/rejected-users");
 export const approveUser = (id) => API.put(`/admin/users/${id}/approve`);
 
 export const rejectUser = (id) => API.put(`/admin/users/${id}/reject`);
+// Admin Analytics
+export const getAdminDashboardAnalytics = () =>
+    API.get("/admin/dashboard/analytics");
 
 // ForgotPassword
 export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
@@ -130,4 +133,19 @@ export const assignDriverToShipment = (shipmentId, data) =>
 
 export const getDriverLocation = (driverId) =>
     API.get(`/drivers/${driverId}/location`);
+
+// Route History
+export const getRouteHistory = (trackingNumber) =>
+    API.get(`/tracking/history/${encodeURIComponent(trackingNumber)}`);
+
+// Proof of Delivery
+export const getProofOfDelivery = (podId) =>
+    API.get(`/pod/${podId}`);
+
+// Download POD Signature
+export const downloadPodSignature = (podId) =>
+    API.get(`/pod/${podId}/download/signature`, {
+        responseType: "blob",
+    });
+
 export default API;
