@@ -59,6 +59,9 @@ export const getTrackingTimeline = (trackingNumber) =>
 export const getTrackingLocation = (trackingNumber) =>
   API.get(`/tracking/location/${encodeURIComponent(trackingNumber)}`);
 
+export const getRouteHistory = (trackingNumber) =>
+  API.get(`/tracking/history/${encodeURIComponent(trackingNumber)}`);
+
 export const getShipments = () => API.get("/shipments");
 
 export const createShipment = (data) => API.post("/shipments", data);
@@ -92,6 +95,8 @@ export const getRejectedUsers = () => API.get("/admin/rejected-users");
 export const approveUser = (id) => API.put(`/admin/users/${id}/approve`);
 
 export const rejectUser = (id) => API.put(`/admin/users/${id}/reject`);
+
+export const getAdminDashboardAnalytics = () => API.get("/admin/dashboard/analytics");
 
 // ForgotPassword
 export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
@@ -130,4 +135,9 @@ export const assignDriverToShipment = (shipmentId, data) =>
 
 export const getDriverLocation = (driverId) =>
     API.get(`/drivers/${driverId}/location`);
+
+// Proof of Delivery
+export const getProofOfDelivery = (podId) => API.get(`/pod/${podId}`);
+export const downloadPodSignature = (podId) => API.get(`/pod/${podId}/download/signature`, { responseType: "blob" });
+
 export default API;
