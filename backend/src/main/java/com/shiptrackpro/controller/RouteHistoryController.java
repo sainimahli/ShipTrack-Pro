@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Controller for managing shipment route histories.
+ * Controller for managing shipment route history.
  */
 @RestController
 @RequestMapping("/api/route-history")
