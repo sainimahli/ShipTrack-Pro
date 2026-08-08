@@ -10,6 +10,7 @@ import {
   getDriverLocation,
   predictShipmentDelay,
   getShipmentAlerts,
+  markAlertAsRead,
 } from "../services/api";
 
 const DEFAULT_CENTER = [12.9716, 77.5946];
@@ -442,6 +443,17 @@ function TrackShipment() {
     return () => window.clearInterval(timer);
   }, [routeData, shipment, mapOrigin, mapDestination, refetch]);
 
+  const handleMarkAlertRead = useCallback(async (alertId) => {
+    try {
+      await markAlertAsRead(alertId);
+      setAlerts((prev) =>
+        prev.map((a) => (a.id === alertId ? { ...a, isRead: true } : a))
+      );
+    } catch (err) {
+      console.error("Could not mark alert as read:", err);
+    }
+  }, []);
+
   const latestEvent = shipment?.history?.at(-1);
   const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
   const liveLocation = liveTracking?.location?.locationName;
@@ -665,15 +677,22 @@ function TrackShipment() {
                       style={{
                         marginTop: 12,
                         borderLeft:
-                            delayPrediction.riskLevel === "HIGH"
+                            delayPrediction.delayRisk === "HIGH"
                                 ? "5px solid red"
-                                : delayPrediction.riskLevel === "MEDIUM"
+                                : delayPrediction.delayRisk === "MEDIUM"
                                     ? "5px solid orange"
                                     : "5px solid green",
                       }}
                   >
                     <strong>Risk Level</strong>
-                    <p>{delayPrediction.riskLevel}</p>
+                    <p>{delayPrediction.delayRisk}</p>
+
+                    <strong>Predicted Delay</strong>
+                    <p>
+                      {delayPrediction.predictedDelayMinutes > 0
+                        ? `${delayPrediction.predictedDelayMinutes} min`
+                        : "No delay predicted"}
+                    </p>
 
                     <strong>Reason</strong>
                     <p>{delayPrediction.reason}</p>
@@ -686,10 +705,30 @@ function TrackShipment() {
                 <article className="panel">
                   <div className="eyebrow">Shipment Alerts</div>
 
-                  <ul>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {alerts.map((alert) => (
-                        <li key={alert.alertId}>
-                          {alert.message}
+                        <li
+                          key={alert.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "8px 0",
+                            borderBottom: "1px solid var(--border, #e5e7eb)",
+                            opacity: alert.isRead ? 0.5 : 1,
+                          }}
+                        >
+                          <span>{alert.message}</span>
+                          {!alert.isRead && (
+                            <button
+                              className="button secondary compact"
+                              onClick={() => handleMarkAlertRead(alert.id)}
+                              type="button"
+                              style={{ marginLeft: 12, flexShrink: 0 }}
+                            >
+                              Mark as read
+                            </button>
+                          )}
                         </li>
                     ))}
                   </ul>
