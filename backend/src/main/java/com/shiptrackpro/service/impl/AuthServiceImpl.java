@@ -261,7 +261,11 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(
                 token,
                 user.getRole().getRoleName(),
-                "Login successful."
+                "Login successful.",
+                user.getUserId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail()
         );
 
     }
@@ -291,7 +295,11 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(
                 token,
                 user.getRole().getRoleName(),
-                "Google login successful."
+                "Google login successful.",
+                user.getUserId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail()
         );
 
     }

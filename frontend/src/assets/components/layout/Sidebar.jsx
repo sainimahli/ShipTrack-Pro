@@ -2,64 +2,100 @@ import { useContext } from "react";
 import { NavLink } from "react-router-dom";
 import { AuthContext } from "../../context/auth";
 
+// -----------------------------------------------------------------------
+// Role-specific navigation definitions
+// -----------------------------------------------------------------------
 
-const navigation = [
-  { to: "/dashboard", label: "Dashboard", icon: "D" },
-  { to: "/analytics", label: "Analytics", icon: "A" },
-  { to: "/shipments", label: "Shipments", icon: "S" },
-  { to: "/shipments/new", label: "Create Shipment", icon: "+" },
-  { to: "/shipments/my", label: "My Shipments", icon: "M" },
-  { to: "/track", label: "Track", icon: "T" },
-   {
-    to: "/routes",
-    label: "Route Management",
-    icon: "R",
-  },
-  {
-    to: "/route-history",
-    label: "Route History",
-    icon: "H",
-  },
-
- 
-  { to: "/profile", label: "Profile", icon: "P" },
-  { to: "/signature", label: "Signature Verification", icon: "V" },
-  
-
+const CUSTOMER_NAV = [
+  { to: "/dashboard",      label: "Dashboard",       icon: "🏠" },
+  { to: "/shipments/my",   label: "My Shipments",    icon: "📦" },
+  { to: "/shipments/new",  label: "Create Shipment", icon: "➕" },
+  { to: "/track",          label: "Track Shipment",  icon: "🔍" },
+  { to: "/profile",        label: "Profile",         icon: "👤" },
 ];
 
+const LOGISTICS_OPERATOR_NAV = [
+  { to: "/dashboard",      label: "Dashboard",           icon: "🏠" },
+  { to: "/shipments",      label: "Manage Shipments",    icon: "🚚" },
+  { to: "/shipments/new",  label: "Create Shipment",     icon: "➕" },
+  { to: "/track",          label: "Track Shipment",      icon: "🔍" },
+  { to: "/routes",         label: "Route Management",    icon: "🗺️" },
+  { to: "/route-history",  label: "Route History",       icon: "📋" },
+  { to: "/profile",        label: "Profile",             icon: "👤" },
+];
+
+const ADMINISTRATOR_NAV = [
+  { to: "/dashboard",      label: "Dashboard",           icon: "🏠" },
+  { to: "/analytics",      label: "Analytics",           icon: "📊" },
+  { to: "/shipments",      label: "Manage Shipments",    icon: "🚚" },
+  { to: "/shipments/new",  label: "Create Shipment",     icon: "➕" },
+  { to: "/track",          label: "Track Shipment",      icon: "🔍" },
+  { to: "/routes",         label: "Route Management",    icon: "🗺️" },
+  { to: "/route-history",  label: "Route History",       icon: "📋" },
+  { to: "/users/manage",   label: "Manage Users",        icon: "👥" },
+  { to: "/signature",      label: "Signature Verify",    icon: "✍️" },
+  { to: "/profile",        label: "Profile",             icon: "👤" },
+];
+
+const BUSINESS_CLIENT_NAV = [
+  { to: "/dashboard",      label: "Dashboard",           icon: "🏠" },
+  { to: "/shipments",      label: "Shipments",           icon: "🚚" },
+  { to: "/shipments/new",  label: "Create Shipment",     icon: "➕" },
+  { to: "/track",          label: "Track Shipment",      icon: "🔍" },
+  { to: "/profile",        label: "Profile",             icon: "👤" },
+];
+
+const SUPPORT_AGENT_NAV = [
+  { to: "/dashboard",      label: "Dashboard",           icon: "🏠" },
+  { to: "/shipments",      label: "Shipments",           icon: "🚚" },
+  { to: "/track",          label: "Track Shipment",      icon: "🔍" },
+  { to: "/profile",        label: "Profile",             icon: "👤" },
+];
+
+// -----------------------------------------------------------------------
+// Role normalisation
+// -----------------------------------------------------------------------
+
 const roleLabels = {
-  CUSTOMER: "Customer",
-  BUSINESS_CLIENT: "Business Client",
+  CUSTOMER:           "Customer",
+  BUSINESS_CLIENT:    "Business Client",
   LOGISTICS_OPERATOR: "Logistics Operator",
-  SUPPORT_AGENT: "Support Agent",
-  ADMINISTRATOR: "Administrator",
+  SUPPORT_AGENT:      "Support Agent",
+  ADMINISTRATOR:      "Administrator",
 };
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 
-const canManageShipments = (role) => role === "Administrator";
-
-const canManageUsers = (role) => role === "Administrator";
-
-const getNavLabel = (item, role) => {
-  if (item.to === "/shipments" && canManageShipments(role)) {
-    return "Manage Shipments";
+function getNavForRole(role) {
+  switch (role) {
+    case "Administrator":      return ADMINISTRATOR_NAV;
+    case "Logistics Operator": return LOGISTICS_OPERATOR_NAV;
+    case "Business Client":    return BUSINESS_CLIENT_NAV;
+    case "Support Agent":      return SUPPORT_AGENT_NAV;
+    default:                   return CUSTOMER_NAV; // CUSTOMER and unknown roles
   }
+}
 
-  if (item.to === "/shipments/new" && role === "Customer") {
-    return "Request Shipment";
-  }
-
-  return item.label;
-};
+// -----------------------------------------------------------------------
+// Component
+// -----------------------------------------------------------------------
 
 function Sidebar() {
   const { auth } = useContext(AuthContext);
-  const role = normalizeRole(auth.user.role);
+  const role = normalizeRole(auth?.user?.role);
+
+  // Build display name from auth context identity fields
+  const firstName   = auth?.user?.firstName;
+  const displayName = auth?.user?.name ||
+    (firstName ? `${firstName} ${auth?.user?.lastName || ""}`.trim() : null) ||
+    auth?.user?.email ||
+    role;
+
+  const navItems = getNavForRole(role);
 
   return (
     <aside className="sidebar">
+      {/* Brand */}
       <div className="brand">
         <div className="brand-mark">ST</div>
         <div>
@@ -68,26 +104,21 @@ function Sidebar() {
         </div>
       </div>
 
-      <div className="nav-section-label">Core</div>
+      {/* Navigation */}
+      <div className="nav-section-label">Navigation</div>
       <nav>
-        {navigation.map((item) => (
+        {navItems.map((item) => (
           <NavLink className="nav-link" key={item.to} to={item.to}>
-            <span className="nav-icon">{item.icon}</span>
-            <span>{getNavLabel(item, role)}</span>
+            <span className="nav-icon" style={{ fontSize: "1rem" }}>{item.icon}</span>
+            <span>{item.label}</span>
           </NavLink>
         ))}
-
-        {canManageUsers(role) && (
-          <NavLink className="nav-link" to="/users/manage">
-            <span className="nav-icon">U</span>
-            <span>Manage Users</span>
-          </NavLink>
-        )}
       </nav>
 
+      {/* Session info */}
       <div className="nav-section-label">Session</div>
       <div style={{ padding: "0 8px", color: "#dce7f3", fontSize: 14 }}>
-        <strong>{auth.user.name}</strong>
+        <strong>{displayName}</strong>
         <div style={{ color: "#aab8c7", marginTop: 4 }}>{role}</div>
       </div>
     </aside>

@@ -34,6 +34,15 @@ public interface ShipmentService {
     List<ShipmentResponse> getAllShipments();
 
     /**
+     * Retrieves all shipments that belong to the given user (customer ownership).
+     * Used when the authenticated principal is a CUSTOMER role so that the backend
+     * enforces data isolation — callers cannot see each other's shipments.
+     *
+     * @param userId the authenticated customer's primary key
+     */
+    List<ShipmentResponse> getMyShipments(Long userId);
+
+    /**
      * Retrieves a single shipment by its primary key.
      *
      * @throws com.shiptrackpro.exception.ResourceNotFoundException if no shipment exists with the given id

@@ -4,40 +4,8 @@ import { AuthContext, roleCapabilities } from "./auth";
 const STORAGE_KEY = "shiptrack_auth";
 const OTP_STORAGE_KEY = "shiptrack_otps";
 
-const demoUsers = [
-  {
-    id: "USR-001",
-    name: "Priya Sharma",
-    email: "admin@shiptrack.com",
-    password: "admin123",
-    role: "Administrator",
-    company: "ShipTrack Control Tower",
-  },
-  {
-    id: "USR-004",
-    name: "Google Admin",
-    email: "admin.google@shiptrack.com",
-    password: "google-oauth-admin",
-    role: "Administrator",
-    company: "Google Workspace",
-  },
-  {
-    id: "USR-002",
-    name: "Rahul Mehta",
-    email: "operator@shiptrack.com",
-    password: "operator123",
-    role: "Logistics Operator",
-    company: "West Zone Fulfillment",
-  },
-  {
-    id: "USR-003",
-    name: "Ananya Rao",
-    email: "customer@shiptrack.com",
-    password: "customer123",
-    role: "Customer",
-    company: "Personal Account",
-  },
-];
+// Keys we persist in localStorage for identity (not security)
+const IDENTITY_KEYS = ["token", "role", "userId", "firstName", "lastName", "email"];
 
 const withoutPassword = (user) => {
   const safeUser = { ...user };
@@ -48,19 +16,26 @@ const withoutPassword = (user) => {
 const createToken = (user) =>
   `demo-jwt.${btoa(JSON.stringify({ sub: user.id, role: user.role, iat: Date.now() }))}.shiptrack`;
 
+/**
+ * Read persisted auth state from localStorage.
+ * We store token + role + identity fields after login so that
+ * a page refresh doesn't lose the user's name.
+ */
 const getStoredAuth = () => {
   try {
     const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    const role  = localStorage.getItem("role");
 
-    if (!token) {
-      return null;
-    }
+    if (!token) return null;
 
     return {
       token,
       user: {
         role,
+        userId:    localStorage.getItem("userId")    ? Number(localStorage.getItem("userId")) : undefined,
+        firstName: localStorage.getItem("firstName") || undefined,
+        lastName:  localStorage.getItem("lastName")  || undefined,
+        email:     localStorage.getItem("email")     || undefined,
       },
     };
   } catch {
@@ -96,50 +71,67 @@ const getGoogleSeedUser = (options = {}) => {
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
 
+  // Re-hydrate on mount (handles refresh)
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-
-    if (token) {
-      setAuth({
-        token,
-        user: {
-          role,
-        },
-      });
-    }
+    const stored = getStoredAuth();
+    if (stored) setAuth(stored);
   }, []);
 
+  // Demo registered users (for OTP / forgot-password flow only — not used for real login)
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     try {
       const saved = localStorage.getItem("shiptrack_users");
-      return saved ? JSON.parse(saved) : demoUsers;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return demoUsers;
+      return [];
     }
   });
+
   const [otpRequests, setOtpRequests] = useState(getStoredOtpRequests);
 
   useEffect(() => {
     localStorage.setItem("shiptrack_users", JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
+  // Persist auth state to localStorage whenever it changes
   useEffect(() => {
     if (auth?.token) {
       localStorage.setItem("token", auth.token);
 
-      if (auth.user?.role) {
-        localStorage.setItem("role", auth.user.role);
-      }
+      if (auth.user?.role)      localStorage.setItem("role",      auth.user.role);
+      if (auth.user?.userId)    localStorage.setItem("userId",    String(auth.user.userId));
+      if (auth.user?.firstName) localStorage.setItem("firstName", auth.user.firstName);
+      if (auth.user?.lastName)  localStorage.setItem("lastName",  auth.user.lastName);
+      if (auth.user?.email)     localStorage.setItem("email",     auth.user.email);
     } else {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
+      IDENTITY_KEYS.forEach((k) => localStorage.removeItem(k));
     }
   }, [auth]);
 
   useEffect(() => {
     localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otpRequests));
   }, [otpRequests]);
+
+  // -------------------------------------------------------------------------
+  // updateAuth — called by Login.jsx after successful backend login.
+  // Accepts the full backend AuthResponse payload.
+  // -------------------------------------------------------------------------
+  const updateAuth = useCallback((token, role, userData = {}) => {
+    setAuth({
+      token,
+      user: {
+        role,
+        userId:    userData.userId    ?? undefined,
+        firstName: userData.firstName ?? undefined,
+        lastName:  userData.lastName  ?? undefined,
+        email:     userData.email     ?? undefined,
+        // Convenience display name
+        name: userData.firstName
+          ? `${userData.firstName} ${userData.lastName || ""}`.trim()
+          : undefined,
+      },
+    });
+  }, []);
 
   const googleLogin = useCallback(
     (externalUser = null, options = {}) => {
@@ -220,11 +212,6 @@ export function AuthProvider({ children }) {
         return { ok: false, message: "The verification code has expired. Please request a new one." };
       }
 
-      console.log(`[OTP] Verification attempt for ${normalizedEmail}:`, {
-        enteredOtp: String(otp).trim(),
-        expectedOtp: record.code,
-      });
-
       if (String(otp).trim() !== record.code) {
         return { ok: false, message: "The verification code is invalid." };
       }
@@ -268,21 +255,12 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => setAuth(null), []);
 
-  const updateAuth = useCallback((token, role) => {
-    setAuth({
-      token,
-      user: {
-        role,
-      },
-    });
-  }, []);
-
   const updateAuthenticatedUser = useCallback((profile) => {
     setAuth((current) => {
       if (!current) return current;
 
       const firstName = profile.firstName ?? current.user?.firstName ?? "";
-      const lastName = profile.lastName ?? current.user?.lastName ?? "";
+      const lastName  = profile.lastName  ?? current.user?.lastName  ?? "";
 
       return {
         ...current,

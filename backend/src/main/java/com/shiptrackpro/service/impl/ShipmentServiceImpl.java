@@ -158,6 +158,15 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<ShipmentResponse> getMyShipments(Long userId) {
+        return shipmentRepository.findByUserId(userId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public ShipmentResponse getShipmentById(Long id) {
         return mapToResponse(findShipmentOrThrow(id));
     }

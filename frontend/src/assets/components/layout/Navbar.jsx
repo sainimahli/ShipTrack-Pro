@@ -20,9 +20,15 @@ function Navbar() {
   const location = useLocation();
   const [title, subtitle] = titles[location.pathname] || titles["/dashboard"];
 
-  const initials = (auth?.user?.role || "U")
-  .charAt(0)
-  .toUpperCase();
+  // Derive display name from identity fields stored in auth context
+  const firstName   = auth?.user?.firstName;
+  const displayName = auth?.user?.name ||
+    (firstName ? `${firstName} ${auth?.user?.lastName || ""}`.trim() : null) ||
+    auth?.user?.email ||
+    auth?.user?.role ||
+    "User";
+
+  const initials = displayName.charAt(0).toUpperCase();
 
   const handleLogout = () => {
     logout();
@@ -41,8 +47,8 @@ function Navbar() {
         <div className="avatar">{initials}</div>
         <div>
          <div>
-  <strong>{auth?.user?.role || "User"}</strong>
-  <div className="topbar-meta">ShipTrack Pro</div>
+  <strong>{displayName}</strong>
+  <div className="topbar-meta">{auth?.user?.role || "User"}</div>
 </div>
         </div>
         <button className="button danger" onClick={handleLogout} type="button">

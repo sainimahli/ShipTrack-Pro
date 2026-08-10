@@ -1,0 +1,347 @@
+/* ============================================================
+   CustomerDashboard.css
+   Styles for the customer-facing dashboard portal.
+   Uses the existing ShipTrack Pro design-token vocabulary
+   (colours, spacing, shadows) to stay visually consistent.
+   ============================================================ */
+
+/* --- Hero / Welcome Banner --------------------------------- */
+.cdb-hero {
+  background: linear-gradient(135deg, #132238 0%, #1e3a5f 60%, #2563a8 100%);
+  border-radius: 16px;
+  padding: 36px 40px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  box-shadow: 0 4px 24px rgba(19, 34, 56, 0.18);
+}
+
+.cdb-hero-text h1 {
+  margin: 0 0 6px;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.cdb-hero-text p {
+  margin: 0;
+  color: #a8c4e0;
+  font-size: 0.95rem;
+}
+
+.cdb-hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cdb-hero-actions a,
+.cdb-hero-actions button {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: none;
+}
+
+.cdb-hero-actions a:hover,
+.cdb-hero-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+}
+
+.cdb-hero-btn-primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.cdb-hero-btn-secondary {
+  background: rgba(255,255,255,0.12);
+  color: #e2ecf7;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+}
+
+/* --- Stat Cards Grid --------------------------------------- */
+.cdb-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.cdb-stat-card {
+  background: #fff;
+  border: 1px solid #e4ebf3;
+  border-radius: 12px;
+  padding: 20px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(19,34,56,0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+.cdb-stat-card:hover {
+  box-shadow: 0 6px 20px rgba(19,34,56,0.1);
+}
+
+.cdb-stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7f99;
+}
+
+.cdb-stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #132238;
+  line-height: 1;
+}
+
+.cdb-stat-card.info   .cdb-stat-value { color: #2563a8; }
+.cdb-stat-card.success .cdb-stat-value { color: #16a34a; }
+.cdb-stat-card.warning .cdb-stat-value { color: #d97706; }
+.cdb-stat-card.danger  .cdb-stat-value { color: #dc2626; }
+
+/* --- Section Panel ----------------------------------------- */
+.cdb-panel {
+  background: #fff;
+  border: 1px solid #e4ebf3;
+  border-radius: 14px;
+  padding: 24px 24px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(19,34,56,0.05);
+}
+
+.cdb-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cdb-panel-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #132238;
+}
+
+.cdb-panel-header a {
+  font-size: 0.85rem;
+  color: #2563a8;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.cdb-panel-header a:hover { text-decoration: underline; }
+
+/* --- Quick Actions ----------------------------------------- */
+.cdb-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.cdb-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 16px;
+  border: 1.5px solid #d8e6f5;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #132238;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-align: center;
+  background: #f7faff;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.cdb-action-card:hover {
+  border-color: #2563a8;
+  background: #e8f1fd;
+  color: #1e3a5f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(37,99,168,0.12);
+}
+
+.cdb-action-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* --- Shipment Table ---------------------------------------- */
+.cdb-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.cdb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.cdb-table th {
+  background: #f3f7fb;
+  color: #4b5f78;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e4ebf3;
+}
+
+.cdb-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f4f9;
+  color: #1f3048;
+  vertical-align: middle;
+}
+
+.cdb-table tbody tr:last-child td { border-bottom: none; }
+
+.cdb-table tbody tr:hover td { background: #f7faff; }
+
+/* progress bar */
+.cdb-progress-track {
+  height: 6px;
+  border-radius: 4px;
+  background: #e4ebf3;
+  overflow: hidden;
+  min-width: 90px;
+}
+
+.cdb-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #3b82f6, #2563a8);
+  transition: width 0.4s ease;
+}
+
+/* status badges */
+.cdb-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cdb-badge.created         { background: #f0f4f9; color: #4b5f78; }
+.cdb-badge.in-transit      { background: #eff6ff; color: #1d4ed8; }
+.cdb-badge.picked-up       { background: #eff6ff; color: #1d4ed8; }
+.cdb-badge.out-for-delivery { background: #fffbeb; color: #b45309; }
+.cdb-badge.delivered       { background: #f0fdf4; color: #15803d; }
+.cdb-badge.cancelled       { background: #fef2f2; color: #b91c1c; }
+.cdb-badge.failed-delivery { background: #fef2f2; color: #b91c1c; }
+.cdb-badge.returned        { background: #f9f0ff; color: #6b21a8; }
+.cdb-badge.pending         { background: #fef9ec; color: #92400e; }
+
+/* --- Empty State ------------------------------------------- */
+.cdb-empty {
+  text-align: center;
+  padding: 56px 24px;
+}
+
+.cdb-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.cdb-empty h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #132238;
+  margin: 0 0 8px;
+}
+
+.cdb-empty p {
+  color: #6b7f99;
+  font-size: 0.9rem;
+  margin: 0 0 22px;
+}
+
+.cdb-empty a {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #2563a8;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background 0.15s ease;
+}
+
+.cdb-empty a:hover { background: #1d4ed8; }
+
+/* --- Notifications ----------------------------------------- */
+.cdb-notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cdb-notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f7faff;
+  border: 1px solid #e4ebf3;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.cdb-notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.cdb-notif-dot.unread { background: #2563a8; }
+
+.cdb-notif-text { color: #1f3048; line-height: 1.45; }
+
+.cdb-notif-time { font-size: 0.75rem; color: #6b7f99; margin-top: 2px; }
+
+/* --- Loading / Error States -------------------------------- */
+.cdb-loading {
+  padding: 40px;
+  text-align: center;
+  color: #6b7f99;
+  font-size: 0.9rem;
+}
+
+.cdb-error {
+  padding: 16px 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+}

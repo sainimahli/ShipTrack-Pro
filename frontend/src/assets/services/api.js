@@ -56,10 +56,22 @@ export const getTrackingStatus = (trackingNumber) =>
 export const getTrackingTimeline = (trackingNumber) =>
   API.get(`/tracking/timeline/${encodeURIComponent(trackingNumber)}`);
 
+export const getTrackingHistory = (trackingNumber) =>
+  API.get(`/tracking/history/${encodeURIComponent(trackingNumber)}`);
+
 export const getTrackingLocation = (trackingNumber) =>
   API.get(`/tracking/location/${encodeURIComponent(trackingNumber)}`);
 
+/**
+ * Fetch shipments for the authenticated user.
+ * The backend automatically scopes results:
+ *   CUSTOMER          → only that customer's shipments
+ *   LOGISTICS_OPERATOR / ADMINISTRATOR → all shipments
+ */
 export const getShipments = () => API.get("/shipments");
+
+/** Alias used explicitly by customer-facing components for clarity. */
+export const getMyShipments = () => API.get("/shipments");
 
 export const createShipment = (data) => API.post("/shipments", data);
 
@@ -134,8 +146,20 @@ export const getDeliveryConfirmation = (shipmentId) =>
     API.get(`/shipments/${shipmentId}/delivery-confirmation`);
 
 
-export const assignDriverToShipment = (shipmentId, data) =>
-    API.put(`/shipments/${shipmentId}/assign-driver`, data);
+/**
+ * Assign a driver to a shipment.
+ * Backend: PUT /api/shipments/{shipmentId}/assign-driver/{driverId}
+ * The driverId is a PATH variable — not a request body.
+ */
+export const assignDriverToShipment = (shipmentId, driverId) =>
+    API.put(`/shipments/${shipmentId}/assign-driver/${driverId}`);
+
+/**
+ * Assign a vehicle to a shipment.
+ * Backend: PUT /api/shipments/{shipmentId}/assign-vehicle/{vehicleId}
+ */
+export const assignVehicleToShipment = (shipmentId, vehicleId) =>
+    API.put(`/shipments/${shipmentId}/assign-vehicle/${vehicleId}`);
 
 export const getDriverLocation = (driverId) =>
     API.get(`/drivers/${driverId}/location`);

@@ -2,8 +2,9 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
-import { getApprovedUsers, getNotifications } from "../services/api";
+import { getApprovedUsers, getCustomerDashboardAnalytics, getNotifications } from "../services/api";
 import "./Dashboard.css";
+import "./CustomerDashboard.css";
 
 const roleLabels = {
   CUSTOMER: "Customer",
@@ -567,33 +568,245 @@ function LogisticsOperatorDashboard({ data }) {
   );
 }
 
-function CustomerDashboard({ data }) {
+/* ============================================================
+   Customer Dashboard — purpose-built, shows only the
+   authenticated customer's own data.
+   ============================================================ */
+
+function cdBadgeClass(status) {
+  const s = String(status).toLowerCase().replace(/\s+/g, "-");
+  return `cdb-badge ${s}`;
+}
+
+function CustomerDashboard() {
+  const { auth } = useContext(AuthContext);
+  const { shipments, loading, error } = useContext(ShipmentContext);
+
+  // Derive display name from auth context (real name from backend login)
+  const firstName = auth?.user?.firstName;
+  const fullName  = auth?.user?.name || (firstName
+    ? `${firstName} ${auth?.user?.lastName || ""}`.trim()
+    : null);
+  const displayName = fullName || auth?.user?.email || "Customer";
+
+  // Backend-provided metrics scoped to this customer
+  const [metrics, setMetrics] = useState(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState(null);
+
+  // Notifications scoped to this customer
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      // Load customer metrics
+      setMetricsLoading(true);
+      try {
+        const res = await getCustomerDashboardAnalytics();
+        if (active) setMetrics(res.data);
+      } catch {
+        if (active) setMetricsError("Could not load dashboard metrics.");
+      } finally {
+        if (active) setMetricsLoading(false);
+      }
+
+      // Load notifications
+      try {
+        const nRes = await getNotifications();
+        if (active) setNotifications(nRes.data ?? []);
+      } catch {
+        if (active) setNotifications([]);
+      }
+    };
+
+    load();
+    return () => { active = false; };
+  }, []);
+
+  // Recent 5 shipments (already scoped by backend to this customer)
+  const recentShipments = useMemo(() => shipments.slice(0, 5), [shipments]);
+
+  const hasShipments = shipments.length > 0;
+
   return (
-    <DashboardLayout
-      actions={[actionLinks.request, actionLinks.track]}
-      controlGroups={[]}
-      data={data}
-      notifications={[
-        "Shipment request status and pickup updates.",
-        "ETA notifications and delivery alerts.",
-        "Tracking timeline and proof of delivery updates.",
-      ]}
-      permissions={[
-        "Request new shipments with sender, receiver, package, and delivery details.",
-        "Track shipment status from created to delivered.",
-        "View shipment history, ETA updates, and delivery progress.",
-        "Receive notifications for delays and delivery completion.",
-      ]}
-      reports={[
-        { title: "Shipment history", description: "Requested shipments, current status, and past deliveries." },
-        { title: "Tracking insights", description: "Progress, ETA, route checkpoints, and delivery visibility." },
-        { title: "Delivery overview", description: "Active shipments, delivered packages, and alerts." },
-      ]}
-      role="Customer"
-      subtitle="Request shipments and track shipment progress, ETA updates, history, and delivery alerts."
-      tableTitle="My Shipment Requests"
-      title="Customer Dashboard"
-    />
+    <div className="dashboard">
+      {/* ----- Hero / Welcome Banner ----- */}
+      <section className="cdb-hero">
+        <div className="cdb-hero-text">
+          <h1>Welcome back, {displayName} 👋</h1>
+          <p>Track your shipments and stay updated on every delivery.</p>
+        </div>
+        <div className="cdb-hero-actions">
+          <Link className="cdb-hero-btn-primary cdb-hero-actions a" to="/shipments/my">
+            My Shipments
+          </Link>
+          <Link className="cdb-hero-btn-secondary cdb-hero-actions a" to="/track">
+            Track a Shipment
+          </Link>
+          <Link className="cdb-hero-btn-secondary cdb-hero-actions a" to="/shipments/new">
+            + Create Shipment
+          </Link>
+        </div>
+      </section>
+
+      {/* ----- Metrics Strip (backend-scoped to this customer) ----- */}
+      {metricsLoading && <div className="cdb-loading">Loading your shipment summary…</div>}
+      {metricsError  && <div className="cdb-error">{metricsError}</div>}
+
+      {metrics && (
+        <section className="cdb-stats-grid" aria-label="My shipment summary">
+          <div className="cdb-stat-card info">
+            <div className="cdb-stat-label">Active Shipments</div>
+            <div className="cdb-stat-value">{metrics.activeShipments ?? 0}</div>
+          </div>
+          <div className="cdb-stat-card">
+            <div className="cdb-stat-label">Total Shipments</div>
+            <div className="cdb-stat-value">{metrics.totalShipments ?? 0}</div>
+          </div>
+          <div className="cdb-stat-card success">
+            <div className="cdb-stat-label">Delivered</div>
+            <div className="cdb-stat-value">{metrics.deliveredShipments ?? 0}</div>
+          </div>
+          <div className="cdb-stat-card warning">
+            <div className="cdb-stat-label">In Progress</div>
+            <div className="cdb-stat-value">{metrics.pendingShipments ?? 0}</div>
+          </div>
+          <div className="cdb-stat-card danger">
+            <div className="cdb-stat-label">Failed / Cancelled</div>
+            <div className="cdb-stat-value">
+              {(metrics.failedShipments ?? 0) + (metrics.cancelledShipments ?? 0)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ----- Quick Actions ----- */}
+      <section className="cdb-panel" aria-label="Quick actions">
+        <div className="cdb-panel-header">
+          <h2>Quick Actions</h2>
+        </div>
+        <div className="cdb-actions-grid">
+          <Link className="cdb-action-card" to="/track">
+            <span className="cdb-action-icon">🔍</span>
+            <span>Track Shipment</span>
+          </Link>
+          <Link className="cdb-action-card" to="/shipments/my">
+            <span className="cdb-action-icon">📦</span>
+            <span>My Shipments</span>
+          </Link>
+          <Link className="cdb-action-card" to="/shipments/new">
+            <span className="cdb-action-icon">➕</span>
+            <span>Create Shipment</span>
+          </Link>
+          <Link className="cdb-action-card" to="/profile">
+            <span className="cdb-action-icon">👤</span>
+            <span>My Profile</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ----- My Active Shipments ----- */}
+      <section className="cdb-panel" aria-label="My recent shipments">
+        <div className="cdb-panel-header">
+          <h2>My Active Shipments</h2>
+          {hasShipments && <Link to="/shipments/my">View all →</Link>}
+        </div>
+
+        {error   && <div className="cdb-error">{error}</div>}
+        {loading && <div className="cdb-loading">Loading your shipments…</div>}
+
+        {!loading && !error && !hasShipments && (
+          <div className="cdb-empty">
+            <div className="cdb-empty-icon">📭</div>
+            <h3>No shipments yet</h3>
+            <p>Create your first shipment to start tracking your delivery.</p>
+            <Link to="/shipments/new">Create Shipment</Link>
+          </div>
+        )}
+
+        {!loading && !error && hasShipments && (
+          <div className="cdb-table-wrap">
+            <table className="cdb-table">
+              <thead>
+                <tr>
+                  <th>Tracking #</th>
+                  <th>Route</th>
+                  <th>Status</th>
+                  <th>ETA</th>
+                  <th>Progress</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentShipments.map((s) => (
+                  <tr key={s.id}>
+                    <td><strong>{s.trackingNumber}</strong></td>
+                    <td>
+                      <span>{s.senderCity || "—"}</span>
+                      <span style={{ margin: "0 4px", color: "#6b7f99" }}>→</span>
+                      <span>{s.receiverCity || "—"}</span>
+                    </td>
+                    <td>
+                      <span className={cdBadgeClass(s.status)}>{s.status}</span>
+                    </td>
+                    <td>{s.eta || "—"}</td>
+                    <td>
+                      <div className="cdb-progress-track">
+                        <div
+                          className="cdb-progress-fill"
+                          style={{ width: `${Number(s.progress || 0)}%` }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 11, color: "#6b7f99", marginTop: 3 }}>
+                        {s.progress}%
+                      </div>
+                    </td>
+                    <td>
+                      <Link
+                        className="button secondary compact"
+                        to={`/track?tracking=${encodeURIComponent(s.trackingNumber)}`}
+                      >
+                        Track
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ----- Notifications ----- */}
+      <section className="cdb-panel" aria-label="Notifications">
+        <div className="cdb-panel-header">
+          <h2>Recent Notifications</h2>
+        </div>
+        {notifications.length === 0 ? (
+          <p style={{ color: "#6b7f99", fontSize: "0.875rem", margin: 0 }}>
+            No notifications yet.
+          </p>
+        ) : (
+          <div className="cdb-notif-list">
+            {notifications.slice(0, 6).map((n, i) => (
+              <div className="cdb-notif-item" key={n.notificationId ?? i}>
+                <div className={`cdb-notif-dot ${n.isRead ? "" : "unread"}`} />
+                <div>
+                  <div className="cdb-notif-text">{n.message || n.title || "Shipment notification"}</div>
+                  {n.createdAt && (
+                    <div className="cdb-notif-time">
+                      {new Date(n.createdAt).toLocaleString("en-IN")}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -680,7 +893,8 @@ function Dashboard() {
   if (role === "Business Client") return <BusinessClientDashboard data={data} />;
   if (role === "Logistics Operator") return <LogisticsOperatorDashboard data={data} />;
   if (role === "Support Agent") return <SupportAgentDashboard data={data} />;
-  return <CustomerDashboard data={data} />;
+  // Customer gets its own self-contained dashboard (no shared data prop needed)
+  return <CustomerDashboard />;
 }
 
 export default Dashboard;

@@ -46,9 +46,11 @@ useEffect(() => {
     const result = await loginApi(form);
 
     if (result.status === 200) {
-        localStorage.setItem("token", result.data.token);
-        localStorage.setItem("role", result.data.role);
-        updateAuth(result.data.token, result.data.role);
+        const { token, role, userId, firstName, lastName, email } = result.data;
+        localStorage.setItem("token", token);
+        localStorage.setItem("role", role);
+        // Pass identity so AuthContext can display the user's real name
+        updateAuth(token, role, { userId, firstName, lastName, email });
         setFeedback({
             type: "success",
             message: "Login successful."
