@@ -14,6 +14,10 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 public class ShipmentReportDto {
 
+    // Existing Fields
+
+    private Long shipmentId;
+
     private String trackingNumber;
 
     private String customerName;
@@ -41,4 +45,29 @@ public class ShipmentReportDto {
     private OffsetDateTime returnedAt;
 
     private String lastUpdatedBy;
+
+    // Delivery Performance Fields
+
+    private Long assignedDriverId;
+
+    private OffsetDateTime estimatedArrival;
+
+    /**
+     * Human readable.
+     * Example:
+     * 2 Days 4 Hours
+     * 5 Hours 20 Minutes
+     */
+    private String deliveryTime;
+
+    /**
+     * Example:
+     * On Time
+     * Delayed by 1 Day 3 Hours
+     */
+    private String delay;
+
+    private Boolean proofOfDeliveryAvailable;
+
+    private Boolean proofVerified;
 }

@@ -18,20 +18,34 @@ public class CsvReportGenerator {
 
         StringBuilder csv = new StringBuilder();
 
-        csv.append("Tracking Number,Customer,Sender Address,Receiver Address,Current Status,Created,Picked Up,In Transit,Out For Delivery,Delivered,Failed Delivery,Cancelled,Returned,Last Updated By\n");
+        csv.append(
+                "Shipment ID,Tracking Number,Customer,Assigned Driver ID,"
+                        + "Sender Address,Receiver Address,Current Status,ETA,"
+                        + "Created,Picked Up,In Transit,Out For Delivery,"
+                        + "Delivered,Delivery Time,Delay,"
+                        + "Proof Of Delivery,Proof Verified,"
+                        + "Failed Delivery,Cancelled,Returned,Last Updated By\n"
+        );
 
         for (ShipmentReportDto report : reports) {
 
+            csv.append(value(report.getShipmentId())).append(",");
             csv.append(value(report.getTrackingNumber())).append(",");
             csv.append(value(report.getCustomerName())).append(",");
+            csv.append(value(report.getAssignedDriverId())).append(",");
             csv.append(value(report.getSenderAddress())).append(",");
             csv.append(value(report.getReceiverAddress())).append(",");
             csv.append(value(report.getCurrentStatus())).append(",");
+            csv.append(value(report.getEstimatedArrival())).append(",");
             csv.append(value(report.getShipmentCreatedAt())).append(",");
             csv.append(value(report.getPickedUpAt())).append(",");
             csv.append(value(report.getInTransitAt())).append(",");
             csv.append(value(report.getOutForDeliveryAt())).append(",");
             csv.append(value(report.getDeliveredAt())).append(",");
+            csv.append(value(report.getDeliveryTime())).append(",");
+            csv.append(value(report.getDelay())).append(",");
+            csv.append(value(report.getProofOfDeliveryAvailable())).append(",");
+            csv.append(value(report.getProofVerified())).append(",");
             csv.append(value(report.getFailedDeliveryAt())).append(",");
             csv.append(value(report.getCancelledAt())).append(",");
             csv.append(value(report.getReturnedAt())).append(",");
@@ -52,5 +66,10 @@ public class CsvReportGenerator {
         }
 
         return "\"" + value.toString().replace("\"", "\"\"") + "\"";
+    }
+
+    public byte[] generateSingleReport(ShipmentReportDto report) {
+
+        return generate(List.of(report));
     }
 }
