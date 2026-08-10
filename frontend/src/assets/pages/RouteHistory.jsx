@@ -7,12 +7,9 @@ function formatDateTime(value) {
   if (Number.isNaN(date.getTime())) {
     return "Unknown time";
   }
-
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 }
+
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -56,12 +53,16 @@ function RouteHistory() {
   }, []);
 
   useEffect(() => {
-    if (shipment?.trackingNumber) {
-      fetchHistory(shipment.trackingNumber);
-    } else {
-      setRouteHistory([]);
+    async function run() {
+      if (shipment?.trackingNumber) {
+        fetchHistory(shipment.trackingNumber);
+      } else {
+        setRouteHistory([]);
+      }
     }
+    run();
   }, [shipment?.trackingNumber, fetchHistory]);
+
 
   const handleSubmit = (event) => {
     event.preventDefault();

@@ -45,8 +45,6 @@ function ShipmentAdminWorkspace({
                                   close,
                                   refetch,
                                 }) {
-  console.log("ADMIN WORKSPACE OPENED:", shipment);
-  console.log("RETURNING WORKSPACE UI");
   const [details, setDetails] = useState(() => ({
     senderName: shipment.senderName || "",
     senderCity: shipment.senderCity || "",
@@ -524,9 +522,6 @@ function ShipmentList() {
   const selectedShipment = shipments.find(
       (shipment) => shipment.trackingNumber === selectedTracking,
   );
-  console.log("selectedTracking:", selectedTracking);
-  console.log("selectedShipment:", selectedShipment);
-  console.log("canManageShipments:", canManageShipments);
   const pendingRequests = useMemo(
       () => shipments.filter((shipment) => shipment.status === "Pending Approval"),
       [shipments],

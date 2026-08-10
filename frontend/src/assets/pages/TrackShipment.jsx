@@ -10,7 +10,6 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-
 import L from "leaflet";
 import { ShipmentContext } from "../context/shipments";
 import {
-  calculateRoute,
   getDeliveryForecast,
   getDriverLocation,
   getETA,
@@ -22,6 +21,7 @@ import {
   updateTrackingLocation,
   updateTrackingStatus,
 } from "../services/api";
+
 
 // ---------------------------------------------------------------------------
 // Leaflet default icon fix (needed when bundled with Vite/webpack)
@@ -241,8 +241,11 @@ function TrackShipment() {
   const [routeGeometryLoading, setRouteGeometryLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null); // { latitude, longitude } from backend
 
-  // Vehicle animation: fraction [0,1] along the OSRM route
+  // Vehicle animation: fraction [0,1] along the OSRM route.
+  // vehicleFractionRef drives animation (no stale closure); vehicleFraction
+  // is the state copy used for rendering — avoids reading ref during render.
   const vehicleFractionRef = useRef(0);
+  const [vehicleFraction, setVehicleFraction] = useState(0);
   const [vehiclePosition, setVehiclePosition] = useState(null); // [lat, lng]
   const deliveredRef = useRef(null);
 
@@ -275,38 +278,40 @@ function TrackShipment() {
 
   // ── Fetch forecast + ETA (refresh-driven) ─────────────────────────────────
   useEffect(() => {
-    if (!shipment) {
-      setServerForecast(null);
-      setETA(null);
-      return undefined;
-    }
-
     let cancelled = false;
 
-    getDeliveryForecast(shipment.trackingNumber)
-      .then((res) => { if (!cancelled) setServerForecast(res.data); })
-      .catch(() => { if (!cancelled) setServerForecast(null); });
+    async function load() {
+      if (!shipment) {
+        if (!cancelled) { setServerForecast(null); setETA(null); }
+        return;
+      }
+      getDeliveryForecast(shipment.trackingNumber)
+        .then((res) => { if (!cancelled) setServerForecast(res.data); })
+        .catch(() => { if (!cancelled) setServerForecast(null); });
+      getETA(shipment.trackingNumber)
+        .then((res) => { if (!cancelled) setETA(res.data); })
+        .catch(() => { if (!cancelled) setETA(null); });
+    }
 
-    getETA(shipment.trackingNumber)
-      .then((res) => { if (!cancelled) setETA(res.data); })
-      .catch(() => { if (!cancelled) setETA(null); });
-
+    load();
     return () => { cancelled = true; };
   }, [shipment, refreshVersion]);
 
   // ── Fetch delay prediction + alerts + driver + driver location ────────────
   useEffect(() => {
-    if (!shipment) {
-      setDelayPrediction(null);
-      setAlerts([]);
-      setDriver(null);
-      setDriverLocation(null);
-      return undefined;
-    }
-
     let cancelled = false;
 
     async function loadOperationalData() {
+      if (!shipment) {
+        if (!cancelled) {
+          setDelayPrediction(null);
+          setAlerts([]);
+          setDriver(null);
+          setDriverLocation(null);
+        }
+        return;
+      }
+
       try {
         const [delayRes, alertsRes] = await Promise.all([
           predictShipmentDelay(shipment.shipmentId),
@@ -333,11 +338,9 @@ function TrackShipment() {
         } catch {
           if (!cancelled) setDriverLocation(null);
         }
-      } else {
-        if (!cancelled) {
-          setDriver(null);
-          setDriverLocation(null);
-        }
+      } else if (!cancelled) {
+        setDriver(null);
+        setDriverLocation(null);
       }
     }
 
@@ -347,15 +350,15 @@ function TrackShipment() {
 
   // ── Fetch backend tracking timeline ──────────────────────────────────────
   useEffect(() => {
-    if (!shipment) {
-      setTimeline([]);
-      return undefined;
-    }
-
     let cancelled = false;
 
-    getTrackingTimeline(shipment.trackingNumber)
-      .then((res) => {
+    async function loadTimeline() {
+      if (!shipment) {
+        if (!cancelled) setTimeline([]);
+        return;
+      }
+      try {
+        const res = await getTrackingTimeline(shipment.trackingNumber);
         if (!cancelled) {
           const events = Array.isArray(res.data) ? res.data : [];
           setTimeline(
@@ -366,49 +369,60 @@ function TrackShipment() {
             })),
           );
         }
-      })
-      .catch(() => { if (!cancelled) setTimeline([]); });
+      } catch {
+        if (!cancelled) setTimeline([]);
+      }
+    }
 
+    loadTimeline();
     return () => { cancelled = true; };
   }, [shipment, refreshVersion]);
 
   // ── Fetch latest backend tracking location ────────────────────────────────
   useEffect(() => {
-    if (!shipment) {
-      setCurrentLocation(null);
-      return undefined;
-    }
-
     let cancelled = false;
 
-    getTrackingLocation(shipment.trackingNumber)
-      .then((res) => {
+    async function loadLocation() {
+      if (!shipment) {
+        if (!cancelled) setCurrentLocation(null);
+        return;
+      }
+      try {
+        const res = await getTrackingLocation(shipment.trackingNumber);
         if (!cancelled) {
           const loc = res.data;
           if (loc?.latitude != null && loc?.longitude != null) {
             setCurrentLocation({ latitude: loc.latitude, longitude: loc.longitude });
           }
         }
-      })
-      .catch(() => { if (!cancelled) setCurrentLocation(null); });
+      } catch {
+        if (!cancelled) setCurrentLocation(null);
+      }
+    }
 
+    loadLocation();
     return () => { cancelled = true; };
-  }, [shipment?.trackingNumber, refreshVersion]);
+  }, [shipment, refreshVersion]);
 
   // ── Fetch OSRM route geometry when shipment cities change ─────────────────
   // Same approach as RouteManagement.jsx: Nominatim geocoding → OSRM route
   useEffect(() => {
-    if (!shipment?.senderCity || !shipment?.receiverCity) {
-      setRouteGeometry(null);
-      setVehiclePosition(null);
-      vehicleFractionRef.current = 0;
-      return undefined;
-    }
-
     let cancelled = false;
-    setRouteGeometryLoading(true);
 
     async function fetchGeometry() {
+      setRouteGeometryLoading(true);
+
+      if (!shipment?.senderCity || !shipment?.receiverCity) {
+        if (!cancelled) {
+          setRouteGeometry(null);
+          setVehiclePosition(null);
+          setVehicleFraction(0);
+          vehicleFractionRef.current = 0;
+          setRouteGeometryLoading(false);
+        }
+        return;
+      }
+
       try {
         const [fromCoords, toCoords] = await Promise.all([
           geocodeCity(shipment.senderCity),
@@ -418,14 +432,15 @@ function TrackShipment() {
         if (!cancelled) {
           setRouteGeometry(routeData);
           // Seed vehicle at the current backend location if available
+          let seedFraction = 0;
           if (
             currentLocation?.latitude != null &&
             currentLocation?.longitude != null
           ) {
-            // Find fraction by closest point on the route
+            // Find closest waypoint on the route to backend location
+            const { coords } = routeData;
             let bestFrac = 0;
             let bestDist = Infinity;
-            const { coords, distanceKm } = routeData;
             let cumLen = 0;
             let totalLen = 0;
             const segLens = [];
@@ -446,14 +461,13 @@ function TrackShipment() {
               }
               cumLen += segLens[i - 1];
             }
-            vehicleFractionRef.current = Math.min(bestFrac, 1);
+            seedFraction = Math.min(bestFrac, 1);
           } else if (shipment.progress) {
-            vehicleFractionRef.current = Math.min(Number(shipment.progress) / 100, 1);
+            seedFraction = Math.min(Number(shipment.progress) / 100, 1);
           }
-          const initialPos = positionAlongRoute(
-            routeData.coords,
-            vehicleFractionRef.current,
-          );
+          vehicleFractionRef.current = seedFraction;
+          setVehicleFraction(seedFraction);
+          const initialPos = positionAlongRoute(routeData.coords, seedFraction);
           if (initialPos) setVehiclePosition(initialPos);
         }
       } catch {
@@ -466,6 +480,8 @@ function TrackShipment() {
 
     fetchGeometry();
     return () => { cancelled = true; };
+    // currentLocation intentionally omitted: we only re-seed on city/shipment change,
+    // not on every backend location poll (which would reset animation mid-journey).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shipment?.senderCity, shipment?.receiverCity, shipment?.trackingNumber]);
 
@@ -493,6 +509,7 @@ function TrackShipment() {
     const timer = window.setInterval(async () => {
       const nextFraction = Math.min(1, vehicleFractionRef.current + fractionPerTick);
       vehicleFractionRef.current = nextFraction;
+      setVehicleFraction(nextFraction);
 
       // Position along actual OSRM road waypoints — NOT straight line
       const nextPos = positionAlongRoute(coords, nextFraction);
@@ -572,7 +589,7 @@ function TrackShipment() {
   const remainingKm = vehiclePosition && routeGeometry
     ? remainingKmFromFraction(
         routeGeometry.distanceKm,
-        vehicleFractionRef.current,
+        vehicleFraction,
       )
     : null;
 
@@ -769,7 +786,7 @@ function TrackShipment() {
                       <Popup>
                         <strong>Vehicle</strong>
                         <div>
-                          {Math.round(vehicleFractionRef.current * 100)}% of
+                          {Math.round(vehicleFraction * 100)}% of
                           route completed
                         </div>
                         <div>Remaining: {remainingDistanceStr}</div>

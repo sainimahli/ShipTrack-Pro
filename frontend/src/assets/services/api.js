@@ -56,8 +56,8 @@ export const getTrackingStatus = (trackingNumber) =>
 export const getTrackingTimeline = (trackingNumber) =>
   API.get(`/tracking/timeline/${encodeURIComponent(trackingNumber)}`);
 
-export const getTrackingHistory = (trackingNumber) =>
-  API.get(`/tracking/history/${encodeURIComponent(trackingNumber)}`);
+
+
 
 export const getTrackingLocation = (trackingNumber) =>
   API.get(`/tracking/location/${encodeURIComponent(trackingNumber)}`);
