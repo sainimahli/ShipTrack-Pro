@@ -21,7 +21,7 @@ const navigation = [
     icon: "H",
   },
 
-  { to: "/routes", label: "Route Management", icon: "R" },
+ 
   { to: "/profile", label: "Profile", icon: "P" },
   { to: "/signature", label: "Signature Verification", icon: "V" },
   
