@@ -96,6 +96,12 @@ export const rejectUser = (id) => API.put(`/admin/users/${id}/reject`);
 export const getAdminDashboardAnalytics = () =>
     API.get("/admin/dashboard/analytics");
 
+export const getCustomerDashboardAnalytics = () =>
+  API.get("/dashboard/customer");
+
+export const getBusinessDashboardAnalytics = () =>
+  API.get("/dashboard/business");
+
 // ForgotPassword
 export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
 

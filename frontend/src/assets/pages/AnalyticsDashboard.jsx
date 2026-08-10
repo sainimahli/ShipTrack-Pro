@@ -1,7 +1,11 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
-import { getAdminDashboardAnalytics } from "../services/api";
+import {
+  getAdminDashboardAnalytics,
+  getBusinessDashboardAnalytics,
+  getCustomerDashboardAnalytics,
+} from "../services/api";
 import "./AnalyticsDashboard.css";
 
 const dashboards = {
@@ -40,6 +44,36 @@ function parseJwtPayload(token) {
     return null;
   }
 }
+
+function normalizeRole(role) {
+  return String(role || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+}
+
+function getDashboardScope(role) {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === "BUSINESS_CLIENT") {
+    return "business";
+  }
+
+  if (["ADMINISTRATOR", "LOGISTICS_OPERATOR", "SUPPORT_AGENT"].includes(normalizedRole)) {
+    return "admin";
+  }
+
+  return "customer";
+}
+
+const analyticsRequests = {
+  customer: getCustomerDashboardAnalytics,
+  business: getBusinessDashboardAnalytics,
+  admin: getAdminDashboardAnalytics,
+};
+
+const dashboardLabels = {
+  customer: "Customer Dashboard",
+  business: "Business Dashboard",
+  admin: "Admin & Logistics Dashboard",
+};
 
 function sortByDate(items, field, limit) {
   return [...items]
@@ -189,18 +223,11 @@ function AnalyticsDashboard() {
   const [range, setRange] = useState("Last 30 days");
   const [activeModule, setActiveModule] = useState(null);
   const [analytics, setAnalytics] = useState(null);
-  const userRole = auth?.user?.role || "CUSTOMER";
-  const selected = userRole === "BUSINESS_CLIENT"
-    ? "business"
-    : ["ADMINISTRATOR", "LOGISTICS_OPERATOR"].includes(userRole)
-      ? "admin"
-      : "customer";
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState("");
+  const selected = getDashboardScope(auth?.user?.role);
   const data = dashboards[selected];
-  const dashboardLabel = userRole === "LOGISTICS_OPERATOR"
-    ? "Logistics Dashboard"
-    : userRole === "ADMINISTRATOR"
-      ? "Admin Dashboard"
-      : data.label;
+  const dashboardLabel = dashboardLabels[selected];
 
   const currentUserId = useMemo(() => {
     const payload = parseJwtPayload(auth?.token);
@@ -217,17 +244,28 @@ function AnalyticsDashboard() {
   }, [shipments, selected, currentUserId]);
 
   useEffect(() => {
-    if (selected !== "admin") {
+    const request = analyticsRequests[selected];
+
+    if (!request) {
       return;
     }
 
     let isCurrent = true;
-    getAdminDashboardAnalytics()
+    setLoadingAnalytics(true);
+    setAnalyticsError("");
+
+    request()
       .then(({ data: response }) => {
         if (isCurrent) setAnalytics(response);
       })
-      .catch(() => {
-        if (isCurrent) setAnalytics(null);
+      .catch((error) => {
+        if (isCurrent) {
+          setAnalytics(null);
+          setAnalyticsError(error.response?.data?.message || "Unable to load analytics from the backend.");
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setLoadingAnalytics(false);
       });
 
     return () => { isCurrent = false; };
@@ -258,14 +296,30 @@ function AnalyticsDashboard() {
       ).length;
     });
 
+    const totalShipments = analytics?.totalShipments ?? total;
+    const activeShipments = analytics?.activeShipments ?? visibleShipments.filter((shipment) => !["Delivered", "Cancelled", "Rejected", "Pending Approval"].includes(shipment.status)).length;
+    const pendingShipments = analytics?.pendingShipments ?? pending;
+    const failedShipments = analytics?.failedShipments ?? failed;
+    const cancelledShipments = analytics?.cancelledShipments ?? count("Cancelled");
+    const deliveredShipments = analytics?.deliveredShipments ?? analytics?.successfulShipments ?? analytics?.completedShipments ?? delivered;
+    const delayedShipments = analytics?.delayedShipments ?? failedShipments;
+    const returnedShipments = analytics?.returnedShipments ?? 0;
+    const deliverySuccessRate = typeof analytics?.deliverySuccessRate === "number"
+      ? Math.round(analytics.deliverySuccessRate)
+      : (totalShipments ? Math.round((deliveredShipments / totalShipments) * 100) : onTimeRate);
+
     return {
-      total,
-      pending,
-      failed,
-      delivered,
+      total: totalShipments,
+      pending: pendingShipments,
+      failed: failedShipments,
+      cancelled: cancelledShipments,
+      delayed: delayedShipments,
+      returned: returnedShipments,
+      delivered: deliveredShipments,
       booked,
-      onTimeRate,
-      activeCount: visibleShipments.filter((shipment) => !["Delivered", "Cancelled", "Rejected", "Pending Approval"].includes(shipment.status)).length,
+      onTimeRate: deliverySuccessRate,
+      deliverySuccessRate,
+      activeCount: activeShipments,
       statusData,
       flow: [
         ["Booked", booked],
@@ -281,31 +335,31 @@ function AnalyticsDashboard() {
   const roleMetrics = useMemo(() => {
     if (selected === "admin") {
       return [
-        ["Total Shipments", analytics?.totalShipments ?? dashboardData.total ?? "—", "All shipments in the network", "blue"],
-        ["Pending Shipments", analytics?.pendingShipments ?? dashboardData.pending ?? "—", "Awaiting delivery completion", "amber"],
-        ["Failed Shipments", analytics?.failedShipments ?? dashboardData.failed ?? "—", "Delivery exceptions recorded", "red"],
-        ["Successful Deliveries", analytics?.successfulShipments ?? dashboardData.delivered ?? "—", "Delivered shipments", "green"],
+        ["Total Shipments", dashboardData.total ?? "—", "All shipments in the network", "blue"],
+        ["Pending Shipments", dashboardData.pending ?? "—", "Awaiting delivery completion", "amber"],
+        ["Failed Shipments", dashboardData.failed ?? "—", "Delivery exceptions recorded", "red"],
+        ["Successful Deliveries", dashboardData.delivered ?? "—", "Delivered shipments", "green"],
       ];
     }
 
     if (selected === "business") {
       return [
-        ["Shipment volume", dashboardData.total.toString(), "+ by live volume", "blue"],
-        ["On-time delivery", `${dashboardData.onTimeRate}%`, "Performance across shipments", "green"],
-        ["At-risk shipments", dashboardData.failed.toString(), "Review delayed delivery cases", "amber"],
+        ["Shipment volume", dashboardData.total.toString(), "Backend shipment volume", "blue"],
+        ["On-time delivery", `${dashboardData.deliverySuccessRate}%`, "Performance across shipments", "green"],
+        ["At-risk shipments", dashboardData.delayed.toString(), "Review delayed delivery cases", "amber"],
       ];
     }
 
     return [
       ["Active shipments", dashboardData.activeCount.toString(), `${dashboardData.activeCount} active`, "blue"],
-      ["Delivered this month", dashboardData.delivered.toString(), `${dashboardData.onTimeRate}% on time`, "green"],
+      ["Delivered this month", dashboardData.delivered.toString(), `${dashboardData.deliverySuccessRate}% on time`, "green"],
       ["Need attention", `${dashboardData.failed + dashboardData.pending}`, "Delayed or pending deliveries", "amber"],
     ];
-  }, [selected, analytics, dashboardData]);
+  }, [selected, dashboardData]);
 
   const moduleDetails = useMemo(() => buildModuleDetails(visibleShipments, dashboardData), [visibleShipments, dashboardData]);
   const selectedModule = activeModule ? moduleDetails[activeModule] : null;
-  const percentage = dashboardData.onTimeRate;
+  const percentage = dashboardData.deliverySuccessRate;
   const currentFlow = dashboardData.flow;
   const trendValues = dashboardData.week;
 
@@ -317,7 +371,7 @@ function AnalyticsDashboard() {
       <div className="analytics-controls"><label>Reporting period<select value={range} onChange={(event) => setRange(event.target.value)}><option>Last 7 days</option><option>Last 30 days</option><option>Last quarter</option></select></label><button type="button">Export report <span>↓</span></button></div>
     </section>
 
-    <div className="role-banner"><span>Viewing analytics for</span><strong>{dashboardLabel}</strong><i>Role-based access</i></div>
+    <div className="role-banner"><span>Viewing analytics for</span><strong>{dashboardLabel}</strong><i>{loadingAnalytics ? "Loading live metrics" : analyticsError || "Role-based access"}</i></div>
 
     <section className="metric-row">{roleMetrics.map(([label, value, note, tone]) => <article className={`analytics-metric ${tone}`} key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>)}</section>
 
