@@ -21,6 +21,8 @@ import TrackShipment from "./assets/pages/TrackShipment";
 import RouteManagement from "./assets/pages/RouteManagement";
 import RouteHistory from "./assets/pages/RouteHistory";
 import SignatureVerification from "./assets/pages/SignatureVerification";
+import Reports from "./assets/pages/Reports";
+import DeliveryPerformanceReport from "./assets/pages/DeliveryPerformanceReport";
 
 
 const roleLabels = {
@@ -65,6 +67,8 @@ function AppLayout() {
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="/routes" element={<RouteManagement />} />
             <Route path="/route-history" element={<RouteHistory />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/performance" element={<DeliveryPerformanceReport />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
             <Route path="/signature" element={<SignatureVerification />} />  
