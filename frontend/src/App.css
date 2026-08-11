@@ -1332,3 +1332,285 @@ a {
     display: grid;
   }
 }
+
+/* ========================================================================== */
+/* Delivery Performance Report Styles                                        */
+/* ========================================================================== */
+
+.performance-metric-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(19, 34, 56, 0.08);
+}
+
+.performance-metric-card:hover {
+  box-shadow: 0 4px 12px rgba(19, 34, 56, 0.12);
+  transform: translateY(-2px);
+}
+
+.metric-icon {
+  flex-shrink: 0;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 850;
+  line-height: 1;
+  margin-top: 6px;
+}
+
+.metric-unit {
+  font-size: 14px;
+  margin-left: 4px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+}
+
+.gauge-svg {
+  filter: drop-shadow(0 2px 4px rgba(19, 34, 56, 0.08));
+}
+
+.gauge-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.gauge-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px;
+  text-align: center;
+}
+
+.insights-panel {
+  background: linear-gradient(135deg, #f8fbfd 0%, #eef4fb 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.insight-item {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.insight-item:hover {
+  box-shadow: 0 4px 12px rgba(19, 34, 56, 0.12);
+  border-color: var(--brand);
+}
+
+.insight-icon {
+  flex-shrink: 0;
+  font-size: 24px;
+  line-height: 1;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insight-content {
+  flex: 1;
+}
+
+.insight-content h4 {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 6px;
+}
+
+.insight-content p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Badge styles for status indicators */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.badge.success {
+  background: #dffce7;
+  color: #148f77;
+  border: 1px solid #aff3cd;
+}
+
+.badge.warning {
+  background: #fff8e6;
+  color: #f59e0b;
+  border: 1px solid #ffd699;
+}
+
+.badge.danger {
+  background: #fdeceb;
+  color: #c2410c;
+  border: 1px solid #f5c6c0;
+}
+
+/* Report export notice */
+.alert {
+  background: #e7f5f8;
+  border: 1px solid #aff3cd;
+  border-left: 4px solid var(--brand);
+  border-radius: 8px;
+  color: #0c695d;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.alert.error {
+  background: #fdeceb;
+  border-color: #f5c6c0;
+  border-left-color: #c2410c;
+  color: #7a2b1f;
+}
+
+.alert.success {
+  background: #dffce7;
+  border-color: #aff3cd;
+  border-left-color: #148f77;
+  color: #0c695d;
+}
+
+/* Table styles for performance summary */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead {
+  background: #f6f9fc;
+  border-bottom: 2px solid var(--line);
+}
+
+.data-table th {
+  color: var(--ink);
+  font-weight: 800;
+  padding: 12px 14px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--line);
+  transition: background-color 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+  background: #f8fbfd;
+}
+
+.data-table td {
+  color: var(--ink);
+  padding: 12px 14px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+/* Empty state */
+.empty-state {
+  align-items: center;
+  background: #f8fbfd;
+  border: 2px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  min-height: 200px;
+  padding: 32px;
+  text-align: center;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Responsive adjustments for performance report */
+@media (max-width: 768px) {
+  .performance-metric-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gauge-panel {
+    padding: 18px;
+  }
+
+  .data-table {
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 10px 8px;
+  }
+}
