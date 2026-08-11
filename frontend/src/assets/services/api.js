@@ -114,6 +114,25 @@ export const getCustomerDashboardAnalytics = () =>
 export const getBusinessDashboardAnalytics = () =>
   API.get("/dashboard/business");
 
+/**
+ * Fetch admin/logistics analytics summary.
+ * Backend: GET /api/admin/dashboard/analytics
+ * Returns 403 for non-admin roles — Reports.jsx handles this gracefully.
+ */
+export const getAnalyticsDashboard = () =>
+  API.get("/admin/dashboard/analytics");
+
+/**
+ * Download a shipment report as CSV or PDF.
+ * Backend: GET /api/reports/{type}/{format}
+ * type: "weekly" | "monthly" | "performance"
+ * format: "csv" | "pdf"
+ */
+export const downloadReport = (type, format) =>
+  API.get(`/reports/${encodeURIComponent(type)}/${encodeURIComponent(format)}`, {
+    responseType: "arraybuffer",
+  });
+
 // ForgotPassword
 export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
 

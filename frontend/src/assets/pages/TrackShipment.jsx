@@ -560,6 +560,58 @@ function TrackShipment() {
     }
   }, []);
 
+  // ── Vehicle drag handler (demo/testing) ──────────────────────────────────
+  // Finds the closest fraction on the OSRM route to the dragged position,
+  // snaps the animation to that point, and persists the new location to the
+  // backend so live tracking reflects the manual override.
+  const handleVehicleDragEnd = useCallback(
+    async (event) => {
+      if (!routeGeometry || !shipment) return;
+      const { lat, lng } = event.target.getLatLng();
+      const { coords, distanceKm } = routeGeometry;
+
+      // Find fraction of closest waypoint to the dropped position
+      let bestFrac = 0;
+      let bestDist = Infinity;
+      let cumLen = 0;
+      let totalLen = 0;
+      const segLens = [];
+      for (let i = 1; i < coords.length; i++) {
+        const d = haversineKm(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1]);
+        segLens.push(d);
+        totalLen += d;
+      }
+      cumLen = 0;
+      for (let i = 1; i < coords.length; i++) {
+        const d = haversineKm(lat, lng, coords[i][0], coords[i][1]);
+        if (d < bestDist) {
+          bestDist = d;
+          bestFrac = totalLen > 0 ? (cumLen + segLens[i - 1]) / totalLen : 0;
+        }
+        cumLen += segLens[i - 1];
+      }
+      const clampedFrac = Math.min(Math.max(bestFrac, 0), 1);
+      vehicleFractionRef.current = clampedFrac;
+      setVehicleFraction(clampedFrac);
+      setVehiclePosition([lat, lng]);
+
+      const remainingKm = remainingKmFromFraction(distanceKm, clampedFrac);
+      try {
+        await updateTrackingLocation({
+          trackingNumber: shipment.trackingNumber,
+          latitude: lat,
+          longitude: lng,
+          locationName: `Manual position (${Math.round(clampedFrac * 100)}% complete)`,
+          description: `Demo drag; ${remainingKm} km remaining.`,
+          distanceRemainingKm: remainingKm,
+        });
+      } catch {
+        // Non-fatal — marker already moved on map
+      }
+    },
+    [routeGeometry, shipment],
+  );
+
   // ── Derived display values ────────────────────────────────────────────────
   const displayStatus = shipment?.status ?? "";
 
@@ -780,9 +832,14 @@ function TrackShipment() {
                     </Popup>
                   </Marker>
 
-                  {/* Vehicle marker — moves along OSRM road waypoints */}
+                  {/* Vehicle marker — draggable for demo/testing */}
                   {vehiclePosition && (
-                    <Marker position={vehiclePosition} icon={vehicleIcon}>
+                    <Marker
+                      position={vehiclePosition}
+                      icon={vehicleIcon}
+                      draggable
+                      eventHandlers={{ dragend: handleVehicleDragEnd }}
+                    >
                       <Popup>
                         <strong>Vehicle</strong>
                         <div>
@@ -790,6 +847,9 @@ function TrackShipment() {
                           route completed
                         </div>
                         <div>Remaining: {remainingDistanceStr}</div>
+                        <div style={{ fontSize: 11, color: "#6b7f99", marginTop: 4 }}>
+                          Drag to reposition (demo)
+                        </div>
                       </Popup>
                     </Marker>
                   )}
@@ -823,6 +883,9 @@ function TrackShipment() {
               Route: {shipment.senderCity} → {shipment.receiverCity} ·
               Total: {totalDistanceStr} · Remaining: {remainingDistanceStr} ·
               Est. travel time: {estimatedTravelTime}
+            </p>
+            <p className="subtle" style={{ marginTop: 4, marginBottom: 0, fontSize: 12 }}>
+              💡 <em>Drag the 🚚 vehicle marker to manually reposition it for demo/testing.</em>
             </p>
           </section>
 

@@ -1,9 +1,22 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
     sendDeliveryOtp,
     verifyDeliveryOtp,
 } from "../services/api";
+import { ShipmentContext } from "../context/shipments";
+import { AuthContext } from "../context/auth";
+
+/**
+ * Mask an email address for privacy display.
+ * e.g. customer@gmail.com  →  cus***@gmail.com
+ */
+function maskEmail(email) {
+    if (!email || !email.includes("@")) return email;
+    const [local, domain] = email.split("@");
+    const visible = local.length > 3 ? local.slice(0, 3) : local.slice(0, 1);
+    return `${visible}***@${domain}`;
+}
 
 const initialForm = {
     shipmentId: "",
@@ -13,12 +26,30 @@ const initialForm = {
 
 function DeliveryConfirmation() {
 
+    const { shipments } = useContext(ShipmentContext);
+    const { auth } = useContext(AuthContext);
+
     const [form, setForm] = useState(initialForm);
     const [confirmation, setConfirmation] = useState(null);
     const [otp, setOtp] = useState("");
     const [otpSent, setOtpSent] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+
+    // Derive the OTP recipient email from the shipment in context.
+    // The backend sends to: shipment.userId → User.email
+    // If the logged-in user owns the shipment, show their email masked.
+    // Otherwise show a generic note (admin/operator confirming on behalf).
+    const recipientEmail = useMemo(() => {
+        if (!form.shipmentId) return null;
+        const found = shipments.find(
+            (s) => String(s.shipmentId) === String(form.shipmentId)
+        );
+        if (!found) return null;
+        // If the current user is the shipment owner, use their email
+        if (auth?.user?.email) return auth.user.email;
+        return null;
+    }, [form.shipmentId, shipments, auth]);
 
     const handleChange = (event) => {
         setForm((current) => ({
@@ -154,7 +185,34 @@ function DeliveryConfirmation() {
                     </div>
                 )}
 
-                <div className="toolbar" style={{ margin: "22px 0 0" }}>
+                <div className="toolbar" style={{ margin: "22px 0 0", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
+                    {/* OTP recipient email info — shown before sending */}
+                    {!otpSent && form.shipmentId && (
+                        <div style={{
+                            background: "#f0f7ff",
+                            border: "1px solid #c3dafe",
+                            borderRadius: 6,
+                            padding: "10px 14px",
+                            fontSize: 14,
+                            color: "#1e3a5f",
+                            width: "100%",
+                        }}>
+                            📧 
+                            {recipientEmail ? (
+                                <span>
+                                    OTP will be sent to: 
+                                    <strong>{maskEmail(recipientEmail)}</strong>
+                                     (registered customer email)
+                                </span>
+                            ) : (
+                                <span>
+                                    OTP will be sent to the 
+                                    <strong>registered customer email</strong>
+                                     associated with this shipment.
+                                </span>
+                            )}
+                        </div>
+                    )}
                     {!otpSent ? (
                         <button
                             type="button"

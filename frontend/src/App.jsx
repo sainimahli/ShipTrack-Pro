@@ -22,6 +22,7 @@ import RouteManagement from "./assets/pages/RouteManagement";
 import RouteHistory from "./assets/pages/RouteHistory";
 import MyShipment from "./assets/pages/MyShipment";
 import SignatureVerification from "./assets/pages/SignatureVerification";
+import Reports from "./assets/pages/Reports";
 
 
 const roleLabels = {
@@ -67,9 +68,10 @@ function AppLayout() {
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="/routes" element={<RouteManagement />} />
             <Route path="/route-history" element={<RouteHistory />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/signature" element={<SignatureVerification />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/signature" element={<SignatureVerification />} />  
           </Routes>
         </main>
       </div>

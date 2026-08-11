@@ -15,26 +15,32 @@ const CUSTOMER_NAV = [
 ];
 
 const LOGISTICS_OPERATOR_NAV = [
-  { to: "/dashboard",      label: "Dashboard",           icon: "🏠" },
-  { to: "/shipments",      label: "Manage Shipments",    icon: "🚚" },
-  { to: "/shipments/new",  label: "Create Shipment",     icon: "➕" },
-  { to: "/track",          label: "Track Shipment",      icon: "🔍" },
-  { to: "/routes",         label: "Route Management",    icon: "🗺️" },
-  { to: "/route-history",  label: "Route History",       icon: "📋" },
-  { to: "/profile",        label: "Profile",             icon: "👤" },
+  { to: "/dashboard",             label: "Dashboard",           icon: "🏠" },
+  { to: "/shipments",             label: "Manage Shipments",    icon: "🚚" },
+  { to: "/shipments/new",         label: "Create Shipment",     icon: "➕" },
+  { to: "/track",                 label: "Track Shipment",      icon: "🔍" },
+  { to: "/routes",                label: "Route Management",    icon: "🗺️" },
+  { to: "/route-history",         label: "Route History",       icon: "📋" },
+  { to: "/analytics",             label: "Analytics",           icon: "📊" },
+  { to: "/reports",               label: "Reports",             icon: "📄" },
+  { to: "/delivery-confirmation", label: "Delivery Confirm.",   icon: "✅" },
+  { to: "/signature",             label: "Signature Verify",    icon: "✍️" },
+  { to: "/profile",               label: "Profile",             icon: "👤" },
 ];
 
 const ADMINISTRATOR_NAV = [
-  { to: "/dashboard",      label: "Dashboard",           icon: "🏠" },
-  { to: "/analytics",      label: "Analytics",           icon: "📊" },
-  { to: "/shipments",      label: "Manage Shipments",    icon: "🚚" },
-  { to: "/shipments/new",  label: "Create Shipment",     icon: "➕" },
-  { to: "/track",          label: "Track Shipment",      icon: "🔍" },
-  { to: "/routes",         label: "Route Management",    icon: "🗺️" },
-  { to: "/route-history",  label: "Route History",       icon: "📋" },
-  { to: "/users/manage",   label: "Manage Users",        icon: "👥" },
-  { to: "/signature",      label: "Signature Verify",    icon: "✍️" },
-  { to: "/profile",        label: "Profile",             icon: "👤" },
+  { to: "/dashboard",             label: "Dashboard",           icon: "🏠" },
+  { to: "/analytics",             label: "Analytics",           icon: "📊" },
+  { to: "/shipments",             label: "Manage Shipments",    icon: "🚚" },
+  { to: "/shipments/new",         label: "Create Shipment",     icon: "➕" },
+  { to: "/track",                 label: "Track Shipment",      icon: "🔍" },
+  { to: "/routes",                label: "Route Management",    icon: "🗺️" },
+  { to: "/route-history",         label: "Route History",       icon: "📋" },
+  { to: "/reports",               label: "Reports",             icon: "📄" },
+  { to: "/delivery-confirmation", label: "Delivery Confirm.",   icon: "✅" },
+  { to: "/users/manage",          label: "Manage Users",        icon: "👥" },
+  { to: "/signature",             label: "Signature Verify",    icon: "✍️" },
+  { to: "/profile",               label: "Profile",             icon: "👤" },
 ];
 
 const BUSINESS_CLIENT_NAV = [
