@@ -1,11 +1,10 @@
 package com.shiptrackpro.service;
 
+import java.util.List;
+
 import com.shiptrackpro.dto.CreateShipmentRequest;
-import com.shiptrackpro.dto.ForecastResponse;
 import com.shiptrackpro.dto.ShipmentResponse;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
-
-import java.util.List;
 
 /**
  * Business operations for managing shipments.

@@ -29,3 +29,54 @@
 @media (max-width: 1100px) { .main-grid, .lower-grid { grid-template-columns: 1fr; }.module-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) { .analytics-page { padding: 20px; }.analytics-hero, .analytics-controls, .feature-head { align-items: stretch; flex-direction: column; }.metric-row, .module-grid { grid-template-columns: 1fr; }.dashboard-switch { overflow-x: auto; max-width: 100%; }.dashboard-switch button { white-space: nowrap; }.role-banner { align-items: flex-start; flex-direction: column; }.role-banner i { margin-left: 0; }.status-content { gap: 12px; }.donut-wrap { flex: 0 0 140px; height: 140px; width: 140px; }.flow-track { overflow-x: auto; justify-content: flex-start; min-width: 510px; }.flow-card { overflow: hidden; }.flow-track { width: 510px; }.analytics-controls select, .analytics-controls button { width: 100%; } }
 @media (max-width: 700px) { .module-panel { grid-template-columns: 1fr auto; }.module-data div { grid-template-columns: 1fr; gap: 4px; }.module-data b { justify-self: start; } }
+
+/* ShipTrack operational palette: Analytics now shares the product theme. */
+.analytics-page .analytics-hero p,
+.analytics-page .card-heading > div > span,
+.analytics-page .feature-head > div > span {
+  color: #176b75;
+}
+
+.analytics-page .analytics-controls button {
+  background: #176b75;
+  border-color: #176b75;
+}
+
+.analytics-page .analytics-controls button:hover {
+  background: #104d59;
+  border-color: #104d59;
+}
+
+.analytics-page .dashboard-switch button.active {
+  color: #176b75;
+}
+
+.analytics-page .role-banner {
+  background: #edf8f7;
+  border-color: #cfe8e4;
+}
+
+.analytics-page .role-banner strong,
+.analytics-page .role-banner i,
+.analytics-page .card-heading a,
+.analytics-page .alert-item button,
+.analytics-page .module-grid button {
+  color: #176b75;
+}
+
+.analytics-page .role-banner i {
+  background: #dff2ef;
+}
+
+.analytics-page .analytics-metric {
+  border-left-color: #218a88;
+}
+
+.analytics-page .legend i.blue {
+  background: #218a88;
+}
+
+.analytics-page .alert-mark.info {
+  background: #e5f4f2;
+  color: #176b75;
+}
