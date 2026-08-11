@@ -26,11 +26,13 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.shiptrackpro.dto.ProofOfDeliveryListResponse;
+import java.util.List;
 
 import com.lowagie.text.Image;
 
 import java.net.URL;
-
+import java.time.OffsetDateTime;
 import java.io.ByteArrayOutputStream;
 
 import java.io.ByteArrayOutputStream;
@@ -113,6 +115,50 @@ public class ProofOfDeliveryServiceImpl implements ProofOfDeliveryService {
                                 .build();
 
                     })
+                    .toList();
+
+            proofOfDeliveryImageRepository.saveAll(images);
+        }
+
+        return mapToResponse(savedPod, shipment);
+    }
+
+    @Override
+    @Transactional
+    public ProofOfDeliveryResponse createProofOfDeliveryFromUrls(
+            Long shipmentId,
+            String deliveredToName,
+            String signatureUrl,
+            String deliveryNotes,
+            String verificationMethod,
+            OffsetDateTime deliveredAt,
+            List<String> imageUrls) {
+
+        Shipment shipment = findShipmentOrThrow(shipmentId);
+
+        if (proofOfDeliveryRepository.findByShipmentId(shipmentId).isPresent()) {
+            throw new IllegalArgumentException(
+                    "Proof of Delivery already exists for this shipment.");
+        }
+
+        ProofOfDelivery proofOfDelivery = ProofOfDelivery.builder()
+                .shipmentId(shipmentId)
+                .deliveredToName(deliveredToName)
+                .signatureUrl(signatureUrl)
+                .deliveryNotes(deliveryNotes)
+                .verificationMethod(verificationMethod)
+                .deliveredAt(deliveredAt)
+                .build();
+
+        ProofOfDelivery savedPod = proofOfDeliveryRepository.save(proofOfDelivery);
+
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+
+            List<ProofOfDeliveryImage> images = imageUrls.stream()
+                    .map(imageUrl -> ProofOfDeliveryImage.builder()
+                            .podId(savedPod.getPodId())
+                            .imageUrl(imageUrl)
+                            .build())
                     .toList();
 
             proofOfDeliveryImageRepository.saveAll(images);
@@ -326,10 +372,9 @@ public class ProofOfDeliveryServiceImpl implements ProofOfDeliveryService {
                 document.newPage();
 
                 document.add(new Paragraph("PACKAGE IMAGES", subTitleFont));
-                document.add(new Paragraph("----------------------------------------"));                
+                document.add(new Paragraph("----------------------------------------"));
 
                 for (String imageUrl : response.getImages()) {
-                    
 
                     Image image = Image.getInstance(new URL(imageUrl));
 
@@ -341,7 +386,6 @@ public class ProofOfDeliveryServiceImpl implements ProofOfDeliveryService {
 
                     document.add(new Paragraph(" "));
 
-                    
                 }
 
             }
@@ -398,6 +442,21 @@ public class ProofOfDeliveryServiceImpl implements ProofOfDeliveryService {
 
         }
 
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProofOfDeliveryListResponse> getAllProofOfDeliveries() {
+
+        return proofOfDeliveryRepository.findAll()
+                .stream()
+                .map(pod -> ProofOfDeliveryListResponse.builder()
+                        .podId(pod.getPodId())
+                        .shipmentId(pod.getShipmentId())
+                        .deliveredAt(pod.getDeliveredAt())
+                        .deliveredToName(pod.getDeliveredToName())
+                        .build())
+                .toList();
     }
 
 }

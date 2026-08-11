@@ -6,6 +6,8 @@ import com.shiptrackpro.service.ProofOfDeliveryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.shiptrackpro.dto.ProofOfDeliveryListResponse;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/pod")
@@ -55,5 +57,13 @@ public class ProofOfDeliveryController {
 
         return proofOfDeliveryService.downloadImage(url);
 
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<ProofOfDeliveryListResponse>> getAllProofOfDeliveries() {
+
+        List<ProofOfDeliveryListResponse> response = proofOfDeliveryService.getAllProofOfDeliveries();
+
+        return ResponseEntity.ok(response);
     }
 }
