@@ -92,6 +92,14 @@ public class Shipment {
     @Column(name = "receiver_name", length = 100)
     private String receiverName;
 
+    /**
+     * Free-text sender name supplied by the user at shipment-creation time.
+     * Stored independently from the User account so that the form value
+     * (e.g. "Arun") is preserved exactly as entered.
+     */
+    @Column(name = "sender_name", length = 100)
+    private String senderName;
+
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 

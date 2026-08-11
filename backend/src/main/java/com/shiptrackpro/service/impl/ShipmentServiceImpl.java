@@ -120,8 +120,13 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .totalWeightKg(totalWeight)
                 .shipmentType(request.getShipmentType() != null ? request.getShipmentType() : "STANDARD")
                 .packageType(request.getPackageType() != null ? request.getPackageType() : "General Cargo")
+                // Store both names exactly as the user entered them
+                .senderName(request.getSenderName())
                 .receiverName(request.getReceiverName())
-                .expectedDeliveryDate(request.getExpectedDeliveryDate())
+                .expectedDeliveryDate(
+                        request.getExpectedDeliveryDate() != null
+                                ? request.getExpectedDeliveryDate()
+                                : request.getEta())
                 .estimatedArrival(null)
                 .actualDeliveryDate(null)
                 .distanceRemainingKm(null)
@@ -259,15 +264,15 @@ public class ShipmentServiceImpl implements ShipmentService {
                 ? null
                 : userRepository.findById(shipment.getUserId()).orElse(null);
 
-        String senderName = null;
-
-        if (sender != null) {
-            senderName = sender.getFirstName();
-
-            if (sender.getLastName() != null && !sender.getLastName().isBlank()) {
-                senderName = senderName + " " + sender.getLastName();
-            }
-        }
+        // Prefer the name stored on the shipment record (entered at creation time).
+        // Fall back to the creator User's account name only when the stored field is empty.
+        String senderName = (shipment.getSenderName() != null && !shipment.getSenderName().isBlank())
+                ? shipment.getSenderName()
+                : (sender != null
+                        ? (sender.getFirstName()
+                                + (sender.getLastName() != null && !sender.getLastName().isBlank()
+                                        ? " " + sender.getLastName() : "")).trim()
+                        : null);
 
         return ShipmentResponse.builder()
                 .shipmentId(shipment.getShipmentId())
