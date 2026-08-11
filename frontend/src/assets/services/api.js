@@ -154,4 +154,22 @@ export const downloadPodSignature = (podId) =>
         responseType: "blob",
     });
 
+// Reports - Performance Report
+export const getDeliveryPerformanceReport = () =>
+    API.get("/reports/performance");
+
+export const getAnalyticsDashboard = () =>
+    API.get("/admin/dashboard/analytics");
+
+// Reports - Download Reports (Weekly, Monthly, Performance, Individual Shipment)
+export const downloadReport = (type, format) =>
+    API.get(`/reports/${type}/${format}`, {
+        responseType: "blob",
+    });
+
+export const downloadShipmentReport = (trackingNumber, format) =>
+    API.get(`/reports/shipment/${encodeURIComponent(trackingNumber)}/${format}`, {
+        responseType: "blob",
+    });
+
 export default API;

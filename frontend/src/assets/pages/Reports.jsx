@@ -36,19 +36,19 @@ function StatusPieChart({ data }) {
     );
   }
 
-  let cumulativeAngle = 0;
   const radius = 70;
   const strokeWidth = 26;
   const center = 100;
   const circumference = 2 * Math.PI * radius;
 
-  const slices = data.map((item) => {
+  const slices = data.reduce((acc, item) => {
     const percentage = item.value / total;
     const strokeDasharray = `${percentage * circumference} ${circumference}`;
-    const strokeDashoffset = -cumulativeAngle * circumference;
-    cumulativeAngle += percentage;
-    return { ...item, percentage, strokeDasharray, strokeDashoffset };
-  });
+    const strokeDashoffset = -acc.cumulativeAngle * circumference;
+    acc.cumulativeAngle += percentage;
+    acc.slices.push({ ...item, percentage, strokeDasharray, strokeDashoffset });
+    return acc;
+  }, { cumulativeAngle: 0, slices: [] }).slices;
 
   return (
     <div
