@@ -26,7 +26,8 @@ export const getRoles = () => API.get("/roles");
 
 // Profile
 export const getProfile = () => API.get("/profile");
-
+export const getAccountActivity = () =>
+    API.get("/api/account/activity");
 export const updateProfile = (data) => API.put("/profile", data);
 
 // Notifications
@@ -196,5 +197,6 @@ export const downloadPodSignature = (podId) =>
     API.get(`/pod/${podId}/download/signature`, {
         responseType: "blob",
     });
+
 
 export default API;

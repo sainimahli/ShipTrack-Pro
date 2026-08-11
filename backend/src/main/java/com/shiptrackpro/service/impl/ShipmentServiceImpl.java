@@ -10,6 +10,7 @@ import com.shiptrackpro.entity.TrackingEvent;
 import com.shiptrackpro.entity.User;
 import com.shiptrackpro.enums.NotificationChannel;
 import com.shiptrackpro.enums.NotificationEventType;
+import com.shiptrackpro.service.AccountActivityService;
 import com.shiptrackpro.enums.ShipmentStatus;
 import com.shiptrackpro.enums.AddressType;
 import com.shiptrackpro.exception.ResourceNotFoundException;
@@ -45,13 +46,16 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final NotificationService notificationService;
     private final TrackingService trackingService;
     private final TrackingEventRepository trackingEventRepository;
+    private final AccountActivityService accountActivityService;
 
     public ShipmentServiceImpl(
             ShipmentRepository shipmentRepository,
             AddressRepository addressRepository,
             UserRepository userRepository,
             NotificationService notificationService,
-            TrackingService trackingService, TrackingEventRepository trackingEventRepository) {
+            TrackingService trackingService,
+            TrackingEventRepository trackingEventRepository,
+            AccountActivityService accountActivityService) {
 
         this.shipmentRepository = shipmentRepository;
         this.addressRepository = addressRepository;
@@ -59,6 +63,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         this.notificationService = notificationService;
         this.trackingService = trackingService;
         this.trackingEventRepository = trackingEventRepository;
+        this.accountActivityService = accountActivityService;
     }
 
     @Override
@@ -148,6 +153,12 @@ public class ShipmentServiceImpl implements ShipmentService {
                 "Shipment " + saved.getTrackingNumber()
                         + " has been created successfully."
         );
+
+        accountActivityService.record(
+                createdByUserId,
+                "SHIPMENT_CREATED",
+                "Shipment " + saved.getTrackingNumber() + " created.",
+                true, null);
 
         return mapToResponse(saved);
     }

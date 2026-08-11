@@ -5,6 +5,7 @@ import com.shiptrackpro.entity.*;
 import com.shiptrackpro.exception.*;
 import com.shiptrackpro.repository.*;
 import com.shiptrackpro.security.JwtService;
+import com.shiptrackpro.service.AccountActivityService;
 import com.shiptrackpro.service.AuthService;
 import com.shiptrackpro.service.EmailService;
 
@@ -50,6 +51,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    private AccountActivityService accountActivityService;
 
 
     private final SecureRandom secureRandom = new SecureRandom();
@@ -233,12 +237,18 @@ public class AuthServiceImpl implements AuthService {
 
 
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (Exception ex) {
+            accountActivityService.record(user.getUserId(), "LOGIN_FAILURE",
+                    "Login attempt failed: " + ex.getMessage(), false, null);
+            throw ex;
+        }
 
 
 
@@ -256,7 +266,8 @@ public class AuthServiceImpl implements AuthService {
                 user
         );
 
-
+        accountActivityService.record(user.getUserId(), "LOGIN_SUCCESS",
+                "Logged in successfully.", true, null);
 
         return new AuthResponse(
                 token,
