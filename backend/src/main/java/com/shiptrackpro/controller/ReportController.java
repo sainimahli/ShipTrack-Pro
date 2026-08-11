@@ -80,6 +80,16 @@ public class ReportController {
     }
 
     // --------------------------------------------------------
+    // Delivery Performance Report — JSON (used by the frontend dashboard)
+    // --------------------------------------------------------
+
+    @GetMapping("/performance")
+    public ResponseEntity<PerformanceReportDto> getDeliveryPerformanceReport() {
+        PerformanceReportDto report = reportService.generateDeliveryPerformanceReport();
+        return ResponseEntity.ok(report);
+    }
+
+    // --------------------------------------------------------
     // Weekly / Monthly / Delivery Performance Reports
     // --------------------------------------------------------
 
