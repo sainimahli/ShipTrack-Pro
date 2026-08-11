@@ -57,6 +57,7 @@ function AppLayout() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
+            <Route path="/shipments/my" element={<ShipmentList ownOnly />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
             <Route path="/track" element={<TrackShipment />} />

@@ -6,10 +6,9 @@ import { ShipmentContext } from "../context/shipments";
 const initialForm = {
   senderName: "",
   senderCity: "",
-  senderAddressId: "",
   receiverName: "",
   receiverCity: "",
-  receiverAddressId: "",
+  receiverMobile: "",
   shipmentType: "STANDARD",
   packageType: "General Cargo",
   weight: "",
@@ -141,20 +140,6 @@ function CreateShipment() {
           </div>
 
           <div className="form-field">
-            <label htmlFor="senderAddressId">Sender address ID <span style={{fontWeight:400,fontSize:12,color:'#888'}}>(DB record ID)</span></label>
-            <input
-              className="input"
-              disabled={!canCreate}
-              id="senderAddressId"
-              name="senderAddressId"
-              onChange={handleChange}
-              required
-              type="number"
-              placeholder="e.g. 1"
-            />
-          </div>
-
-          <div className="form-field">
             <label htmlFor="receiverName">Receiver name</label>
             <input
               className="input"
@@ -181,16 +166,18 @@ function CreateShipment() {
           </div>
 
           <div className="form-field">
-            <label htmlFor="receiverAddressId">Receiver address ID <span style={{fontWeight:400,fontSize:12,color:'#888'}}>(DB record ID)</span></label>
+            <label htmlFor="receiverMobile">Receiver mobile number</label>
             <input
               className="input"
               disabled={!canCreate}
-              id="receiverAddressId"
-              name="receiverAddressId"
+              id="receiverMobile"
+              inputMode="tel"
+              name="receiverMobile"
               onChange={handleChange}
+              pattern="[0-9]{10}"
               required
-              type="number"
-              placeholder="e.g. 2"
+              type="tel"
+              placeholder="Enter 10-digit mobile number"
             />
           </div>
 

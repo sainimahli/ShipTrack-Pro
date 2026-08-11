@@ -1,37 +1,16 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
 import {
-  calculateRoute,
   getDeliveryForecast,
   getETA,
   getTrackingLocation,
-  updateTrackingLocation,
-  updateTrackingStatus,
+  getTrackingStatus,
+  getTrackingTimeline,
   getDriverLocation,
   predictShipmentDelay,
   getShipmentAlerts,
   markAlertAsRead,
 } from "../services/api";
-
-const DEFAULT_CENTER = [12.9716, 77.5946];
-
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function formatDuration(minutes) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m} min`;
-  if (m === 0) return `${h} hr`;
-  return `${h} hr ${m} min`;
-}
 
 function statusClass(status) {
   return status.toLowerCase().replaceAll(" ", "-");
@@ -49,103 +28,22 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-const forecastByStatus = {
-  Created: { remaining: "1 day", risk: "ON TRACK" },
-  "Picked Up": { remaining: "16 hours", risk: "ON TRACK" },
-  "In Transit": { remaining: "8 hours", risk: "ON TRACK" },
-  "Out for Delivery": { remaining: "2 hours", risk: "ON TRACK" },
-  Delivered: { remaining: "Delivered", risk: "DELIVERED" },
-  "Failed Delivery": { remaining: "Delivery needs attention", risk: "HIGH RISK" },
-  Cancelled: { remaining: "Cancelled", risk: "STOPPED" },
-  Rejected: { remaining: "Rejected", risk: "STOPPED" },
-};
-
-const shipmentSteps = [
-  "Created",
-  "Picked Up",
-  "In Transit",
-  "Out for Delivery",
-  "Delivered",
-];
-const demoTrackingNumbers = [
-  "STP10024591",
-  "STP10024592",
-  "STP10024593",
-  "STP10024594",
-  "STP10024595",
-];
-
-function getForecast(shipment) {
-  const forecast = forecastByStatus[shipment.status] || { remaining: "Under review", risk: "WATCH" };
-  const isDelayed = shipment.status === "Failed Delivery";
-  return {
-    ...forecast,
-    eta: shipment.eta || "Calculating ETA",
-    message: isDelayed
-      ? "A delivery exception was recorded. Operations should review the route and contact the receiver."
-      : shipment.status === "Delivered"
-        ? "Delivery is complete and the final tracking update has been recorded."
-        : `The shipment is ${shipment.status.toLowerCase()} and is forecast to reach its destination on schedule.`,
-  };
-}
-
-function DraggableRouteMap({ shipment, totalDistance, initialProgress, onPositionChange }) {
-  const [progress, setProgress] = useState(initialProgress);
-  const origin = DEFAULT_CENTER;
-  const destination = DEFAULT_CENTER;
-
-  useEffect(() => {
-    setProgress(initialProgress);
-  }, [initialProgress, shipment.trackingNumber]);
-
-  const updateFromPointer = (event, save = false) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const nextProgress = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
-    setProgress(nextProgress);
-
-    if (save && origin && destination) {
-      const latitude = origin[0] + ((destination[0] - origin[0]) * nextProgress);
-      const longitude = origin[1] + ((destination[1] - origin[1]) * nextProgress);
-      const remainingKm = Math.round(haversineKm(latitude, longitude, destination[0], destination[1]) * 10) / 10;
-      onPositionChange({ latitude, longitude, remainingKm, progress: nextProgress });
-    }
-  };
-
-  if (!origin || !destination) {
-    return <div className="interactive-route-map unavailable">Map is unavailable for this route.</div>;
-  }
+function DraggableRouteMap({ shipment, totalDistance, initialProgress }) {
+  const progress = initialProgress ?? 0;
 
   return (
-    <div
-      aria-label="Drag the shipment icon along the route to update its location"
-      className="interactive-route-map"
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        updateFromPointer(event);
-      }}
-      onPointerMove={(event) => {
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) updateFromPointer(event);
-      }}
-      onPointerUp={(event) => {
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-          updateFromPointer(event, true);
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }
-      }}
-      role="slider"
-      tabIndex="0"
-    >
+    <div aria-label="Shipment position from the latest backend location" className="interactive-route-map">
       <div className="route-map-city origin"><strong>{shipment.senderCity}</strong><span>Origin</span></div>
       <div className="route-map-city destination"><strong>{shipment.receiverCity}</strong><span>Destination</span></div>
       <div className="interactive-route-line"><span style={{ width: `${progress * 100}%` }} /></div>
-      <button aria-label="Shipment position" className="shipment-map-marker" style={{ left: `${progress * 100}%` }} type="button">🚚</button>
+      <button aria-label="Shipment position" className="shipment-map-marker" style={{ left: `${progress * 100}%` }} type="button">ðŸšš</button>
       <div className="route-map-hint">Drag the shipment icon to choose its current position · Total: {totalDistance}</div>
     </div>
   );
 }
 
 function TrackShipment() {
-  const { shipments, refetch } = useContext(ShipmentContext);
+  const { shipments } = useContext(ShipmentContext);
   const [trackingNumber, setTrackingNumber] = useState(shipments[0]?.trackingNumber || "");
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
@@ -155,13 +53,10 @@ function TrackShipment() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [liveTracking, setLiveTracking] = useState(null);
   const [driver, setDriver] = useState(null);
-  const [driverLocation, setDriverLocation] = useState(null);
+  const [, setDriverLocation] = useState(null);
   const [delayPrediction, setDelayPrediction] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  const [routeData, setRouteData] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const liveProgressRef = useRef(0);
-  const deliveredRef = useRef(null);
 
   const shipment = useMemo(
     () =>
@@ -182,47 +77,14 @@ function TrackShipment() {
     setRefreshVersion((version) => version + 1);
   }, []);
 
-  const updateMarkerPosition = useCallback(async ({ latitude, longitude, remainingKm, progress }) => {
-    if (!shipment) return;
-    const estimatedMinutes = Math.round(remainingKm);
-    setRouteData((current) => current ? {
-      ...current,
-      remaining: {
-        ...current.remaining,
-        distanceKm: remainingKm,
-        estimatedMinutes,
-        estimatedTravelTime: formatDuration(estimatedMinutes),
-      },
-    } : current);
-    liveProgressRef.current = progress;
-
-    try {
-      await updateTrackingLocation({
-        trackingNumber: shipment.trackingNumber,
-        latitude,
-        longitude,
-        locationName: `Route checkpoint (${Math.round(progress * 100)}% complete)`,
-        description: `Marker moved; ${remainingKm} km remaining.`,
-        distanceRemainingKm: remainingKm,
-      });
-      await refetch();
-      refreshLiveTracking();
-    } catch (error) {
-      console.error("Could not save shipment marker position:", error);
-    }
-  }, [refetch, refreshLiveTracking, shipment]);
-
   useEffect(() => {
     const refreshTimer = window.setInterval(refreshLiveTracking, 15_000);
     return () => window.clearInterval(refreshTimer);
-  }, [refreshLiveTracking]);
+  }, [refreshLiveTracking, shipment?.trackingNumber]);
 
   useEffect(() => {
 
-    if (!shipment) {
-      setServerForecast(null);
-      return undefined;
-    }
+    if (!shipment) return undefined;
 
     let ignoreResponse = false;
     getDeliveryForecast(shipment.trackingNumber)
@@ -293,155 +155,36 @@ function TrackShipment() {
   }, [shipment]);
 
   useEffect(() => {
-    if (!shipment) {
-      setCurrentLocation(null);
-      return undefined;
-    }
+    if (!shipment) return undefined;
 
     let ignoreResponse = false;
-    getTrackingLocation(shipment.trackingNumber)
-      .then((response) => {
-        if (!ignoreResponse) {
-          const loc = response.data;
-          if (loc && loc.latitude != null && loc.longitude != null) {
-            setCurrentLocation({ latitude: loc.latitude, longitude: loc.longitude });
-          }
-        }
-      })
-      .catch(() => {
-        if (!ignoreResponse) setCurrentLocation(null);
+    Promise.allSettled([
+      getTrackingStatus(shipment.trackingNumber),
+      getTrackingTimeline(shipment.trackingNumber),
+      getTrackingLocation(shipment.trackingNumber),
+    ]).then(([statusResult, timelineResult, locationResult]) => {
+      if (ignoreResponse) return;
+      const location = locationResult.status === "fulfilled"
+        ? locationResult.value.data
+        : statusResult.status === "fulfilled"
+          ? statusResult.value.data?.latestLocation
+          : null;
+      setCurrentLocation(location?.latitude != null && location?.longitude != null ? location : null);
+      setLiveTracking({
+        status: statusResult.status === "fulfilled" ? statusResult.value.data : null,
+        location,
+        timeline: timelineResult.status === "fulfilled" ? timelineResult.value.data?.events ?? [] : [],
       });
+    });
 
-    return () => {
-      ignoreResponse = true;
-    };
-  }, [shipment?.trackingNumber, refreshVersion]);
+    return () => { ignoreResponse = true; };
+  }, [shipment, refreshVersion]);
 
-   useEffect(() => {
-     if (!shipment?.senderCity || !shipment?.receiverCity) {
-       setRouteData(null);
-       return undefined;
-     }
 
-    const destLat = shipment.destinationLatitude ?? 26.8467;
-    const destLng = shipment.destinationLongitude ?? 80.9462;
-    const origLat = shipment.originLatitude ?? 12.9716;
-    const origLng = shipment.originLongitude ?? 77.5946;
 
-    let ignoreResponse = false;
-    Promise.all([
-      calculateRoute({
-        originLatitude: origLat,
-        originLongitude: origLng,
-        destinationLatitude: destLat,
-        destinationLongitude: destLng,
-      }),
-      calculateRoute({
-        trackingNumber: shipment.trackingNumber,
-        originLatitude: origLat,
-        originLongitude: origLng,
-        destinationLatitude: destLat,
-        destinationLongitude: destLng,
-      }),
-    ])
-      .then(([totalResponse, remainingResponse]) => {
-        if (!ignoreResponse) {
-          setRouteData({ 
-            total: totalResponse.data, 
-            remaining: remainingResponse.data,
-            originCoords: totalResponse.data.originCoords || DEFAULT_CENTER,
-            destinationCoords: totalResponse.data.destinationCoords || DEFAULT_CENTER
-          });
-        }
-      })
-      .catch(() => { /* route calculation error handle */ });
-
-    return () => {
-      ignoreResponse = true;
-    };
-  }, [shipment?.senderCity, shipment?.receiverCity, shipment?.trackingNumber]);
-
-  const mapOrigin = useMemo(() => routeData?.originCoords || DEFAULT_CENTER, [routeData]);
-  const mapDestination = useMemo(() => routeData?.destinationCoords || DEFAULT_CENTER, [routeData]);
-
-  const currentLat = currentLocation
-    ? currentLocation.latitude
-    : (shipment?.currentLatitude != null
-      ? shipment.currentLatitude
-      : null);
-  const currentLng = currentLocation
-    ? currentLocation.longitude
-    : (shipment?.currentLongitude != null
-      ? shipment.currentLongitude
-      : null);
-
-  const markerProgress = useMemo(() => {
-    if (!mapOrigin || !mapDestination) return 0;
-    if (currentLat != null && currentLng != null) {
-      const totalDist = haversineKm(mapOrigin[0], mapOrigin[1], mapDestination[0], mapDestination[1]);
-      if (totalDist > 0) {
-        const remaining = haversineKm(currentLat, currentLng, mapDestination[0], mapDestination[1]);
-        return Math.max(0, Math.min(1, 1 - (remaining / totalDist)));
-      }
-    }
-    if (routeData && routeData.total?.distanceKm > 0) {
-      return Math.max(0, Math.min(1, 1 - (routeData.remaining.distanceKm / routeData.total.distanceKm)));
-    }
-    return 0;
-  }, [mapOrigin, mapDestination, currentLat, currentLng, routeData]);
-
-  useEffect(() => {
-    liveProgressRef.current = markerProgress;
-  }, [markerProgress]);
-
-  useEffect(() => {
-    if (!shipment || !routeData || !mapOrigin || !mapDestination || shipment.status === "Delivered") {
-      return undefined;
-    }
-
-    const timer = window.setInterval(async () => {
-      const nextProgress = Math.min(1, liveProgressRef.current + 0.02);
-      const latitude = mapOrigin[0] + ((mapDestination[0] - mapOrigin[0]) * nextProgress);
-      const longitude = mapOrigin[1] + ((mapDestination[1] - mapOrigin[1]) * nextProgress);
-      const remainingKm = Math.round(haversineKm(latitude, longitude, mapDestination[0], mapDestination[1]) * 10) / 10;
-      liveProgressRef.current = nextProgress;
-      setRouteData((current) => current ? {
-        ...current,
-        remaining: {
-          ...current.remaining,
-          distanceKm: remainingKm,
-          estimatedMinutes: Math.round(remainingKm),
-          estimatedTravelTime: formatDuration(Math.round(remainingKm)),
-        },
-      } : current);
-
-      try {
-        await updateTrackingLocation({
-          trackingNumber: shipment.trackingNumber,
-          latitude,
-          longitude,
-          locationName: nextProgress >= 1 ? shipment.receiverCity : `Live route (${Math.round(nextProgress * 100)}%)`,
-          description: `Live movement update; ${remainingKm} km remaining.`,
-          distanceRemainingKm: remainingKm,
-        });
-        await refetch();
-        if (nextProgress >= 1 && deliveredRef.current !== shipment.trackingNumber) {
-          deliveredRef.current = shipment.trackingNumber;
-          await updateTrackingStatus({
-            trackingNumber: shipment.trackingNumber,
-            status: "DELIVERED",
-            description: "Shipment reached the destination.",
-            locationName: shipment.receiverCity,
-          });
-          await refetch();
-        }
-      } catch (error) {
-        console.error("Live movement update failed:", error);
-      }
-    }, 5000);
-
-    return () => window.clearInterval(timer);
-  }, [routeData, shipment, mapOrigin, mapDestination, refetch]);
+  const currentLat = currentLocation?.latitude ?? shipment?.currentLatitude ?? null;
+  const currentLng = currentLocation?.longitude ?? shipment?.currentLongitude ?? null;
+  const markerProgress = 0;
 
   const handleMarkAlertRead = useCallback(async (alertId) => {
     try {
@@ -454,9 +197,8 @@ function TrackShipment() {
     }
   }, []);
 
-  const latestEvent = shipment?.history?.at(-1);
   const serverStatus = liveTracking?.status?.currentStatus?.replaceAll("_", " ");
-  const liveLocation = liveTracking?.location?.locationName;
+  const liveLocation = liveTracking?.location?.locationName || currentLocation?.locationName || "Location unavailable";
   const displayStatus = serverStatus || shipment?.status;
   const displayTimeline = liveTracking?.timeline?.length
     ? liveTracking.timeline.map((event) => ({
@@ -465,37 +207,22 @@ function TrackShipment() {
         timestamp: event.updatedAt,
       }))
     : shipment?.history || [];
-  const localForecast = shipment ? getForecast(shipment) : null;
   const forecast = serverForecast
     ? {
         eta: formatDateTime(serverForecast.predictedDeliveryAt),
         remaining: serverForecast.predictedDelayMinutes > 0
           ? `${serverForecast.predictedDelayMinutes} min delay forecast`
-          : `${serverForecast.confidencePercentage}% forecast confidence`,
-
-
-        risk: serverForecast.riskLevel.replaceAll("_", " "),
-
-
-        message: serverForecast.reason,
+          : serverForecast.confidencePercentage != null ? `${serverForecast.confidencePercentage}% forecast confidence` : "N/A",
+        risk: serverForecast.riskLevel?.replaceAll("_", " ") || "N/A",
+        message: serverForecast.reason || "No forecast details are available.",
       }
-    : localForecast;
-  const totalDistanceKm = routeData ? `${routeData.total.distanceKm} km` : "Calculating...";
+    : { eta: "N/A", remaining: "N/A", risk: "N/A", message: "No delivery forecast is available." };
+  const totalDistanceKm = "N/A";
   const backendRemainingKm = shipment?.distanceRemainingKm;
 
-  const mapQuery = (currentLat != null && currentLng != null)
-    ? `${currentLat},${currentLng}`
-    : (shipment
-      ? encodeURIComponent(latestEvent?.location || `${shipment.receiverCity}, India`)
-      : "");
-  const remainingDistanceKm = shipment?.status === "Delivered"
-    ? "0 km"
-    : (currentLocation && backendRemainingKm != null
-      ? `${Math.round(backendRemainingKm)} km`
-      : routeData
-        ? `${routeData.remaining.distanceKm} km`
-        : "Calculating...");
-  const estimatedTravelTime = routeData ? routeData.remaining.estimatedTravelTime : "Calculating...";
+  const mapQuery = currentLat != null && currentLng != null ? `${currentLat},${currentLng}` : encodeURIComponent("Location unavailable");
+  const remainingDistanceKm = backendRemainingKm != null ? `${Math.round(backendRemainingKm)} km` : "N/A";
+  const estimatedTravelTime = "N/A";
 
   return (
     <div className="page">
@@ -539,7 +266,7 @@ function TrackShipment() {
           <section className="live-monitoring" aria-label="Live delivery monitoring">
             <div>
               <div className="eyebrow">Live delivery monitoring</div>
-              <strong>{liveLocation || latestEvent?.location || shipment.receiverCity}</strong>
+              <strong>{liveLocation}</strong>
               <span>Latest checkpoint: {displayStatus}</span>
             </div>
             <div>
@@ -576,12 +303,11 @@ function TrackShipment() {
               />
               <DraggableRouteMap
                 initialProgress={markerProgress}
-                onPositionChange={updateMarkerPosition}
                 shipment={shipment}
                 totalDistance={totalDistanceKm}
               />
             </div>
-            <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {latestEvent?.location || "Location update pending"}. Route: {shipment.senderCity} to {shipment.receiverCity}. Remaining distance: {remainingDistanceKm}. Est. travel time: {estimatedTravelTime}.</p>
+            <p className="subtle" style={{ marginBottom: 0 }}>Current checkpoint: {liveLocation}. Route: {shipment.senderCity} to {shipment.receiverCity}. Remaining distance: {remainingDistanceKm}. Est. travel time: {estimatedTravelTime}.</p>
           </section>
 
           <section className="grid grid-2" style={{ marginBottom: 18 }}>

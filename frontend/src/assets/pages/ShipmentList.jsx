@@ -491,7 +491,7 @@ function ShipmentAdminWorkspace({
   );
 }
 
-function ShipmentList() {
+function ShipmentList({ ownOnly = false }) {
   const { auth } = useContext(AuthContext);
 
   const {
@@ -518,24 +518,31 @@ function ShipmentList() {
 
 
   const role = normalizeRole(auth.user.role);
+  const authenticatedUserId = auth?.user?.userId;
   const canEditStatus = editableRoles.includes(role);
   const isShipmentAdmin = shipmentAdminRoles.includes(role);
   const canManageShipments = shipmentManagerRoles.includes(role);
-  const selectedShipment = shipments.find(
+  const visibleShipments = useMemo(() => {
+    if (!ownOnly) return shipments;
+    if (authenticatedUserId == null) return [];
+    return shipments.filter((shipment) => String(shipment.userId) === String(authenticatedUserId));
+  }, [authenticatedUserId, ownOnly, shipments]);
+
+  const selectedShipment = visibleShipments.find(
       (shipment) => shipment.trackingNumber === selectedTracking,
   );
   console.log("selectedTracking:", selectedTracking);
   console.log("selectedShipment:", selectedShipment);
   console.log("canManageShipments:", canManageShipments);
   const pendingRequests = useMemo(
-      () => shipments.filter((shipment) => shipment.status === "Pending Approval"),
-      [shipments],
+      () => visibleShipments.filter((shipment) => shipment.status === "Pending Approval"),
+      [visibleShipments],
   );
 
   const filteredShipments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return shipments.filter((shipment) => {
+    return visibleShipments.filter((shipment) => {
       const matchesStatus = status === "All" || shipment.status === status;
       const searchable = [
         shipment.trackingNumber,
@@ -549,7 +556,16 @@ function ShipmentList() {
 
       return matchesStatus && (!normalizedQuery || searchable.includes(normalizedQuery));
     });
-  }, [query, shipments, status]);
+  }, [query, status, visibleShipments]);
+
+  const visibleMetrics = useMemo(() => {
+    const total = visibleShipments.length;
+    const delivered = visibleShipments.filter((shipment) => shipment.status === "Delivered").length;
+    const active = visibleShipments.filter((shipment) => !["Delivered", "Cancelled", "Rejected", "Pending Approval"].includes(shipment.status)).length;
+    const delayed = visibleShipments.filter((shipment) => shipment.status === "Failed Delivery").length;
+    const pendingApproval = visibleShipments.filter((shipment) => shipment.status === "Pending Approval").length;
+    return { total, active, delivered, delayed, pendingApproval };
+  }, [visibleShipments]);
 
 
   const approveRequest = (shipment) => {
@@ -581,12 +597,15 @@ function ShipmentList() {
 
         {error && <div className="alert error" style={{ marginBottom: 18 }}>{error}</div>}
         {loading && <div className="alert" style={{ marginBottom: 18 }}>Loading shipments...</div>}
+        {ownOnly && authenticatedUserId == null && !loading && (
+          <div className="alert error" style={{ marginBottom: 18 }}>Unable to verify your account identity.</div>
+        )}
 
         <section className="grid grid-4" style={{ marginBottom: 18 }}>
-          <div className="metric-card"><div className="metric-label">Total</div><div className="metric-value">{metrics.total}</div></div>
-          <div className="metric-card"><div className="metric-label">Active</div><div className="metric-value">{metrics.active}</div></div>
-          <div className="metric-card"><div className="metric-label">Delivered</div><div className="metric-value">{metrics.delivered}</div></div>
-          <div className="metric-card"><div className="metric-label">{isShipmentAdmin ? "Pending requests" : "Delayed or failed"}</div><div className="metric-value">{isShipmentAdmin ? metrics.pendingApproval : metrics.delayed}</div></div>
+          <div className="metric-card"><div className="metric-label">Total</div><div className="metric-value">{ownOnly ? visibleMetrics.total : metrics.total}</div></div>
+          <div className="metric-card"><div className="metric-label">Active</div><div className="metric-value">{ownOnly ? visibleMetrics.active : metrics.active}</div></div>
+          <div className="metric-card"><div className="metric-label">Delivered</div><div className="metric-value">{ownOnly ? visibleMetrics.delivered : metrics.delivered}</div></div>
+          <div className="metric-card"><div className="metric-label">{isShipmentAdmin ? "Pending requests" : "Delayed or failed"}</div><div className="metric-value">{isShipmentAdmin ? (ownOnly ? visibleMetrics.pendingApproval : metrics.pendingApproval) : (ownOnly ? visibleMetrics.delayed : metrics.delayed)}</div></div>
         </section>
 
         {isShipmentAdmin && (

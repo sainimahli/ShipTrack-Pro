@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ShipmentContext } from "../context/shipments";
-import { getRouteHistory, updateTrackingLocation, updateTrackingStatus } from "../services/api";
+import { getRouteHistory } from "../services/api";
 
 function formatDateTime(value) {
   const date = new Date(value);
@@ -14,18 +14,8 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function RouteHistory() {
-  const { shipments, refetch } = useContext(ShipmentContext);
+  const { shipments } = useContext(ShipmentContext);
   const [selectedTracking, setSelectedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [submittedTracking, setSubmittedTracking] = useState(shipments[0]?.trackingNumber || "");
   const [routeHistory, setRouteHistory] = useState([]);
@@ -56,11 +46,14 @@ function RouteHistory() {
   }, []);
 
   useEffect(() => {
-    if (shipment?.trackingNumber) {
-      fetchHistory(shipment.trackingNumber);
-    } else {
-      setRouteHistory([]);
-    }
+    const requestTimer = window.setTimeout(() => {
+      if (shipment?.trackingNumber) {
+        void fetchHistory(shipment.trackingNumber);
+      } else {
+        setRouteHistory([]);
+      }
+    }, 0);
+    return () => window.clearTimeout(requestTimer);
   }, [shipment?.trackingNumber, fetchHistory]);
 
   const handleSubmit = (event) => {
@@ -69,42 +62,10 @@ function RouteHistory() {
   };
 
   const handleSimulateCheckpoint = async () => {
-    if (!shipment || shipment.progress >= 100 || shipment.status === "Delivered") return;
+    if (!shipment) return;
     setSimulating(true);
     try {
-      const origLat = shipment.originLatitude ?? 12.9716;
-      const origLng = shipment.originLongitude ?? 77.5946;
-      const destLat = shipment.destinationLatitude ?? 26.8467;
-      const destLng = shipment.destinationLongitude ?? 80.9462;
-
-      const currentCount = routeHistory.length;
-      const nextProgress = Math.min(1, (currentCount + 1) * 0.15);
-      const latitude = origLat + (destLat - origLat) * nextProgress;
-      const longitude = origLng + (destLng - origLng) * nextProgress;
-      const remainingKm = Math.round(haversineKm(latitude, longitude, destLat, destLng) * 10) / 10;
-
-      await updateTrackingLocation({
-        trackingNumber: shipment.trackingNumber,
-        latitude,
-        longitude,
-        locationName: nextProgress >= 1 ? shipment.receiverCity : `Checkpoint #${currentCount + 1} (${Math.round(nextProgress * 100)}% route)`,
-        description: nextProgress >= 1 ? "Shipment reached destination." : `Simulated location check-in. ${remainingKm} km remaining.`,
-        distanceRemainingKm: remainingKm,
-      });
-
-      if (nextProgress >= 1) {
-        await updateTrackingStatus({
-          trackingNumber: shipment.trackingNumber,
-          status: "DELIVERED",
-          description: "Shipment reached destination.",
-          locationName: shipment.receiverCity,
-        });
-      }
-
-      await refetch();
       await fetchHistory(shipment.trackingNumber);
-    } catch (err) {
-      console.error("Simulation failed:", err);
     } finally {
       setSimulating(false);
     }

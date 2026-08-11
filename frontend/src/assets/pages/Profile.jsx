@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/auth";
-import { getProfile, updateProfile } from "../services/api";
+import { getNotifications, getProfile, updateProfile } from "../services/api";
 
 const roleLabels = {
   CUSTOMER: "Customer",
@@ -12,6 +12,12 @@ const roleLabels = {
 
 const normalizeRole = (role) => roleLabels[role] || role || "Customer";
 
+const formatActivityTime = (value) => {
+  if (!value) return "Time unavailable";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Time unavailable" : date.toLocaleString("en-IN");
+};
+
 function Profile() {
   const { capabilities, updateAuthenticatedUser } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
@@ -20,6 +26,9 @@ function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
+  const [activities, setActivities] = useState([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState("");
 
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
@@ -41,8 +50,25 @@ function Profile() {
   }, [updateAuthenticatedUser]);
 
   useEffect(() => {
-    loadProfile();
+    const requestTimer = window.setTimeout(() => { void loadProfile(); }, 0);
+    return () => window.clearTimeout(requestTimer);
   }, [loadProfile]);
+
+  useEffect(() => {
+    let active = true;
+    getNotifications()
+      .then(({ data }) => {
+        if (active) setActivities(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (active) setActivityError("Unable to load account activity.");
+      })
+      .finally(() => {
+        if (active) setIsActivityLoading(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -171,9 +197,25 @@ function Profile() {
 
           <div className="panel">
             <h2 className="section-title">Account activity</h2>
-            <p className="subtle">
-              Activity history is not available yet. It requires a backend activity endpoint before it can be shown securely.
-            </p>
+            {isActivityLoading && <p className="subtle">Loading account activity...</p>}
+            {activityError && <p className="form-feedback error">{activityError}</p>}
+            {!isActivityLoading && !activityError && activities.length === 0 && (
+              <p className="subtle">No account activity is available yet.</p>
+            )}
+            {!isActivityLoading && activities.length > 0 && (
+              <div className="workflow-list">
+                {activities.map((activity) => (
+                  <div className="workflow-step" key={activity.notificationId}>
+                    <div className="step-number">•</div>
+                    <div>
+                      <strong>{activity.title || activity.eventType || "Account update"}</strong>
+                      <p className="subtle" style={{ margin: "4px 0 0" }}>{activity.message || "No additional details available."}</p>
+                      <small className="subtle">{formatActivityTime(activity.createdAt)}</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
