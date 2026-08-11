@@ -9,14 +9,18 @@
 
 .dashboard-hero {
   align-items: center;
-  background: linear-gradient(135deg, #10263f 0%, #14506b 52%, #206257 100%);
-  border-radius: 8px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(109, 205, 194, 0.18), transparent 28%),
+    linear-gradient(135deg, #112f3d 0%, #125c64 100%);
+  border: 1px solid rgba(126, 210, 198, 0.18);
+  border-radius: 16px;
   color: #ffffff;
   display: grid;
   gap: 22px;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 390px);
   justify-content: space-between;
   margin: 0 0 28px;
+  box-shadow: 0 18px 38px rgba(15, 56, 66, 0.16);
   overflow: hidden;
   padding: 30px;
 }
@@ -58,7 +62,7 @@
   align-items: center;
   background: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 8px;
+  border-radius: 10px;
   color: #12324c;
   display: inline-flex;
   font-size: 14px;
@@ -69,6 +73,13 @@
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.dashboard-action:hover,
+.text-link:hover {
+  box-shadow: 0 8px 18px rgba(8, 36, 47, 0.15);
+  transform: translateY(-1px);
 }
 
 .text-link {

@@ -106,11 +106,11 @@ function TrendChart({ values }) {
   const maximum = Math.max(...values, 1);
   const points = values.map((value, index) => `${(index / (values.length - 1)) * 640},${190 - (value / maximum) * 150}`).join(" ");
   return <svg className="trend-chart" viewBox="0 0 640 210" preserveAspectRatio="none" role="img" aria-label="Weekly shipment volume chart">
-    <defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#3979e8" stopOpacity=".22"/><stop offset="1" stopColor="#3979e8" stopOpacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#218a88" stopOpacity=".22"/><stop offset="1" stopColor="#218a88" stopOpacity="0"/></linearGradient></defs>
     {[38, 84, 130, 176].map((y) => <line key={y} x1="0" x2="640" y1={y} y2={y} stroke="#e8edf4" />)}
     <polygon points={`0,210 ${points} 640,210`} fill="url(#chartFill)" />
-    <polyline points={points} fill="none" stroke="#3979e8" strokeLinecap="round" strokeWidth="4" />
-    {values.map((value, index) => <circle key={index} cx={(index / (values.length - 1)) * 640} cy={190 - (value / maximum) * 150} fill="#fff" r="4" stroke="#3979e8" strokeWidth="3" />)}
+    <polyline points={points} fill="none" stroke="#218a88" strokeLinecap="round" strokeWidth="4" />
+    {values.map((value, index) => <circle key={index} cx={(index / (values.length - 1)) * 640} cy={190 - (value / maximum) * 150} fill="#fff" r="4" stroke="#218a88" strokeWidth="3" />)}
   </svg>;
 }
 
@@ -174,10 +174,10 @@ function AnalyticsDashboard() {
     const deliverySuccessRate = selected === "customer" ? null : value("deliverySuccessRate");
     const percentage = (count) => total > 0 ? (count / total) * 100 : 0;
     const statusData = selected === "business"
-      ? [["Completed", percentage(delivered), "#1da581", "green"], ["Active", percentage(active), "#3979e8", "blue"], ["Delayed", percentage(delayed), "#f2a93b", "amber"], ["Failed", percentage(failed), "#ed6a5e", "red"]]
+      ? [["Completed", percentage(delivered), "#1da581", "green"], ["Active", percentage(active), "#218a88", "blue"], ["Delayed", percentage(delayed), "#f2a93b", "amber"], ["Failed", percentage(failed), "#ed6a5e", "red"]]
       : selected === "admin"
-        ? [["Successful", percentage(delivered), "#1da581", "green"], ["Pending", percentage(pending), "#3979e8", "blue"], ["Cancelled", percentage(cancelled), "#f2a93b", "amber"], ["Failed", percentage(failed), "#ed6a5e", "red"]]
-        : [["Delivered", percentage(delivered), "#1da581", "green"], ["Active", percentage(active), "#3979e8", "blue"], ["Pending", percentage(pending), "#f2a93b", "amber"], ["Failed", percentage(failed), "#ed6a5e", "red"]];
+        ? [["Successful", percentage(delivered), "#1da581", "green"], ["Pending", percentage(pending), "#218a88", "blue"], ["Cancelled", percentage(cancelled), "#f2a93b", "amber"], ["Failed", percentage(failed), "#ed6a5e", "red"]]
+        : [["Delivered", percentage(delivered), "#1da581", "green"], ["Active", percentage(active), "#218a88", "blue"], ["Pending", percentage(pending), "#f2a93b", "amber"], ["Failed", percentage(failed), "#ed6a5e", "red"]];
 
     return {
       total, pending, failed, cancelled, delayed, returned, delivered,

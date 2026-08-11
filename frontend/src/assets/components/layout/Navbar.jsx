@@ -7,6 +7,7 @@ const titles = {
   "/dashboard": ["Dashboard", ""],
   "/analytics": ["Analytics Dashboard", "Customer, business, and platform delivery intelligence"],
   "/shipments": ["Shipment Management", "Create, monitor, and update shipment lifecycle records"],
+  "/shipments/my": ["My Shipments", "Your shipment records, delivery status, and progress"],
   "/shipments/new": ["Create Shipment", "Register a new package into the tracking workflow"],
   "/track": ["Tracking Dashboard", "Search by tracking number and view delivery progress"],
   "/users/manage": ["Manage Users", "Review pending, approved, and rejected account registrations"],
