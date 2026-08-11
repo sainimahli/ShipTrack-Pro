@@ -20,7 +20,16 @@ const navigation = [
     label: "Route History",
     icon: "H",
   },
-
+  {
+    to: "/reports",
+    label: "Reports",
+    icon: "📊",
+  },
+  {
+    to: "/reports/performance",
+    label: "Performance Report",
+    icon: "📈",
+  },
  
   { to: "/profile", label: "Profile", icon: "P" },
   { to: "/signature", label: "Signature Verification", icon: "V" },
