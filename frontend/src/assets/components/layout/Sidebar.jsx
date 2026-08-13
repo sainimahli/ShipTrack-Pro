@@ -7,6 +7,8 @@ const navigation = [
   { to: "/dashboard", label: "Dashboard", icon: "D" },
   { to: "/analytics", label: "Analytics", icon: "A" },
   { to: "/shipments", label: "Shipments", icon: "S" },
+  { to: "/proof-of-delivery", label: "Proof of Delivery", icon: "P", },
+  { to: "/pod-request-confirmation", label: "POD Request & Confirmation", icon: "C", },
   { to: "/shipments/new", label: "Create Shipment", icon: "+" },
   { to: "/shipments/my", label: "My Shipments", icon: "M" },
   { to: "/track", label: "Track", icon: "T" },

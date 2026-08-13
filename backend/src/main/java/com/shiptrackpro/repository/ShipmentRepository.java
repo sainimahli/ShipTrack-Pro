@@ -1,15 +1,16 @@
 package com.shiptrackpro.repository;
 
-import com.shiptrackpro.dto.ShipmentWithLatestLocationDto;
-import com.shiptrackpro.entity.Shipment;
-import com.shiptrackpro.enums.ShipmentStatus;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Optional;
+import com.shiptrackpro.dto.ShipmentWithLatestLocationDto;
+import com.shiptrackpro.entity.Shipment;
+import com.shiptrackpro.enums.ShipmentStatus;
 
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {

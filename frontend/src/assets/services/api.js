@@ -144,13 +144,73 @@ export const getDriverLocation = (driverId) =>
 export const getRouteHistory = (trackingNumber) =>
     API.get(`/tracking/history/${encodeURIComponent(trackingNumber)}`);
 
+// Proof of Delivery Confirmation
+export const createPODConfirmation = (formData) =>
+API.post("/pod/confirmation", formData, {
+  headers: {
+    "Content-Type": "multipart/form-data",
+  },
+});
+
+export const getAllPODs = () =>
+API.get("/pod/all");
+
+// POD Confirmation
+export const getPODConfirmations = () =>
+  API.get("/pod/confirmation/all");
+
+export const confirmPOD = (confirmationId) =>
+  API.post(`/pod/confirmation/${confirmationId}/confirm`);
+
 // Proof of Delivery
 export const getProofOfDelivery = (podId) =>
     API.get(`/pod/${podId}`);
 
 // Download POD Signature
+export const downloadSignature = (podId) =>
+  API.get(`/pod/${podId}/download/signature`, {
+    responseType: "blob",
+  });
+
+// Backward-compatible name used by SignatureVerification.jsx
 export const downloadPodSignature = (podId) =>
-    API.get(`/pod/${podId}/download/signature`, {
+API.get(`/pod/${podId}/download/signature`, {
+responseType: "blob",
+});
+
+// Download POD PDF
+export const downloadPODPdf = (podId) =>
+API.get(`/pod/${podId}/download/pdf`, {
+responseType: "blob",
+});
+
+  // Download Package Image
+export const downloadPackageImage = async (imageUrl) => {
+  const response = await API.get(
+    `/pod/image/download?url=${encodeURIComponent(imageUrl)}`,
+    {
+      responseType: "blob",
+    }
+  );
+
+  return response;
+};
+
+// Reports - Performance Report
+export const getDeliveryPerformanceReport = () =>
+    API.get("/reports/performance");
+
+export const getAnalyticsDashboard = () =>
+    API.get("/admin/dashboard/analytics");
+
+// Reports - Download Reports (Weekly, Monthly, Performance, Individual Shipment)
+export const downloadReport = (type, format) =>
+    API.get(`/reports/${type}/${format}`, {
+        responseType: "blob",
+    });
+
+export const downloadShipmentReport = (trackingNumber, format) =>
+    API.get(`/reports/shipment/${encodeURIComponent(trackingNumber)}/${format}`, {
         responseType: "blob",
     });
 

@@ -636,8 +636,39 @@ function Dashboard() {
   const { auth, users = [] } = useContext(AuthContext);
   const { metrics, shipments } = useContext(ShipmentContext);
   const role = normalizeRole(auth?.user?.role);
+  const authenticatedUserId = auth?.user?.userId;
   const [dashboardUsers, setDashboardUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
+
+  const isPersonalDashboard = role === "Customer" || role === "Business Client";
+  const dashboardShipments = useMemo(() => {
+    if (!isPersonalDashboard) return shipments;
+    if (authenticatedUserId == null) return [];
+
+    return shipments.filter(
+      (shipment) => String(shipment.userId) === String(authenticatedUserId),
+    );
+  }, [authenticatedUserId, isPersonalDashboard, shipments]);
+
+  const dashboardMetrics = useMemo(() => {
+    if (!isPersonalDashboard) return metrics;
+
+    const total = dashboardShipments.length;
+    const active = dashboardShipments.filter(
+      (shipment) => !["Delivered", "Cancelled", "Rejected", "Pending Approval"].includes(shipment.status),
+    ).length;
+    const delivered = dashboardShipments.filter((shipment) => shipment.status === "Delivered").length;
+    const delayed = dashboardShipments.filter((shipment) => shipment.status === "Failed Delivery").length;
+
+    return {
+      total,
+      active,
+      delivered,
+      delayed,
+      pendingApproval: 0,
+      deliveryRate: total ? Math.round((delivered / total) * 100) : 0,
+    };
+  }, [dashboardShipments, isPersonalDashboard, metrics]);
 
   useEffect(() => {
     let active = true;
@@ -670,11 +701,11 @@ function Dashboard() {
   }, [role]);
 
   const data = useMemo(() => getDashboardData(
-    shipments,
-    metrics,
+    dashboardShipments,
+    dashboardMetrics,
     role === "Administrator" ? dashboardUsers : users,
     notifications,
-  ), [dashboardUsers, metrics, notifications, role, shipments, users]);
+  ), [dashboardMetrics, dashboardShipments, dashboardUsers, notifications, role, users]);
 
   if (role === "Administrator") return <AdministratorDashboard data={data} />;
   if (role === "Business Client") return <BusinessClientDashboard data={data} />;

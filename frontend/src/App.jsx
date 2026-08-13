@@ -21,7 +21,10 @@ import TrackShipment from "./assets/pages/TrackShipment";
 import RouteManagement from "./assets/pages/RouteManagement";
 import RouteHistory from "./assets/pages/RouteHistory";
 import SignatureVerification from "./assets/pages/SignatureVerification";
-
+import Reports from "./assets/pages/Reports";
+import DeliveryPerformanceReport from "./assets/pages/DeliveryPerformanceReport";
+import ProofOfDelivery from "./assets/pages/ProofOfDelivery";
+import PODRequestConfirmation from "./assets/pages/PODRequestConfirmation";
 
 const roleLabels = {
   ADMINISTRATOR: "Administrator",
@@ -58,6 +61,8 @@ function AppLayout() {
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
+            <Route path="/proof-of-delivery" element={<ProofOfDelivery />}/>
+            <Route path="/pod-request-confirmation" element={<PODRequestConfirmation />} />
             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
             <Route path="/track" element={<TrackShipment />} />
             <Route path="/tracking" element={<TrackShipment />} />
@@ -65,6 +70,8 @@ function AppLayout() {
             <Route path="/users/manage" element={<AdminRoute><ManageUsers /></AdminRoute>} />
             <Route path="/routes" element={<RouteManagement />} />
             <Route path="/route-history" element={<RouteHistory />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/performance" element={<DeliveryPerformanceReport />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
             <Route path="/signature" element={<SignatureVerification />} />  

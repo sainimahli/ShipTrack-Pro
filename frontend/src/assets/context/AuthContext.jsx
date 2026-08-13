@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext, roleCapabilities } from "./auth";
+import { getProfile } from "../services/api";
 
-const STORAGE_KEY = "shiptrack_auth";
 const OTP_STORAGE_KEY = "shiptrack_otps";
 
 const demoUsers = [
@@ -96,19 +96,26 @@ const getGoogleSeedUser = (options = {}) => {
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(getStoredAuth);
 
+  // The login response contains only token and role. Load the existing profile
+  // endpoint so shipment views can use the real authenticated user ID instead
+  // of guessing from local storage or the JWT subject (which is an email).
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    if (!auth?.token) return undefined;
 
-    if (token) {
-      setAuth({
-        token,
-        user: {
-          role,
-        },
+    let active = true;
+    getProfile()
+      .then(({ data }) => {
+        if (!active) return;
+        setAuth((current) => current?.token === auth.token
+          ? { ...current, user: { ...current.user, ...data, role: data.role || current.user?.role } }
+          : current);
+      })
+      .catch(() => {
+        // The existing role/token session remains usable if profile loading fails.
       });
-    }
-  }, []);
+
+    return () => { active = false; };
+  }, [auth?.token]);
 
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     try {

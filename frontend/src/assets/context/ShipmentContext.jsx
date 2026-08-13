@@ -4,6 +4,7 @@ import {
   getShipments as apiGetShipments,
   createShipment as apiCreateShipment,
   updateShipment as apiUpdateShipment,
+  cancelShipment as apiCancelShipment,
   updateTrackingStatus as apiUpdateTrackingStatus,
   getTrackingTimeline as apiGetTrackingTimeline,
   getDeliveryConfirmation as apiGetDeliveryConfirmation,
@@ -56,6 +57,7 @@ function mapBackendShipment(s) {
     id: String(s.shipmentId),
     trackingNumber: s.trackingNumber,
     shipmentId: s.shipmentId,
+    userId: s.userId,
 
     // --- UI display fields (backend doesn't store free-text names/cities) ---
     // These are populated from the backend where available, otherwise blank.
@@ -64,7 +66,7 @@ function mapBackendShipment(s) {
     receiverName: s.receiverName ?? "",
     receiverCity: s.receiverCity ?? "",
     packageType: s.packageType ?? s.shipmentType ?? "General Cargo",
-    weight: s.totalWeightKg != null ? `${s.totalWeightKg} kg` : "",
+    weight: s.weight ?? (s.totalWeightKg != null ? `${s.totalWeightKg} kg` : ""),
     deliveryAddress: s.deliveryAddress ?? "",
     priority: s.priority ?? "Standard",
 
@@ -80,7 +82,7 @@ function mapBackendShipment(s) {
       {
         status,
         location: "",
-        timestamp: s.createdAt ?? new Date().toISOString(),
+        timestamp: s.createdAt ?? null,
       },
     ],
 
@@ -96,8 +98,9 @@ function mapBackendShipment(s) {
     expectedDeliveryDate: s.expectedDeliveryDate,
     isDelayed: s.isDelayed,
     delayReason: s.delayReason,
-    currLatitude: s.currentLatitude ? s.currentLatitude: 0,
-    currLongitude: s.currentLongitude ? s.currentLongitude: 0,
+    distanceRemainingKm: s.distanceRemainingKm,
+    currentLatitude: s.currentLatitude ?? null,
+    currentLongitude: s.currentLongitude ?? null,
   };
 }
 
@@ -160,31 +163,26 @@ export function ShipmentProvider({ children }) {
   // -------------------------------------------------------------------------
   const createShipment = useCallback(
     async (formData) => {
-      // Map the form fields to the backend DTO shape.
-      // senderAddressId / receiverAddressId are required by the backend.
-      // They are passed through if the form provides them; otherwise the
-      // backend will return a 400 which will surface as an error.
+      const numericWeight = Number.parseFloat(String(formData.weight).trim());
+      if (!Number.isFinite(numericWeight) || numericWeight <= 0) {
+        throw new Error("Package weight must be a number greater than zero.");
+      }
+
+      // The existing backend creates the address records from city/address
+      // details when IDs are omitted, so users never need to enter database IDs.
       const payload = {
-        senderAddressId: formData.senderAddressId ?? null,
-        receiverAddressId: formData.receiverAddressId ?? null,
-        originWarehouseId: formData.originWarehouseId ?? null,
-        destinationWarehouseId: formData.destinationWarehouseId ?? null,
-        assignedDriverId: formData.assignedDriverId ?? null,
-        assignedVehicleId: formData.assignedVehicleId ?? null,
-        senderName: formData.senderName ?? null,
-        senderCity: formData.senderCity ?? null,
-        receiverName: formData.receiverName ?? null,
-        receiverCity: formData.receiverCity ?? null,
-        deliveryAddress: formData.deliveryAddress ?? null,
-        weight: formData.weight != null ? String(formData.weight) : null,
-        priority: formData.priority ?? null,
-        eta: formData.eta ?? formData.expectedDeliveryDate ?? null,
-        totalWeightKg: formData.weight
-          ? parseFloat(String(formData.weight).replace(/[^0-9.]/g, ""))
-          : null,
-        shipmentType: formData.shipmentType || "STANDARD",
-        packageType: formData.packageType || "General Cargo",
-        expectedDeliveryDate: formData.eta ?? formData.expectedDeliveryDate ?? null,
+        senderName: formData.senderName.trim(),
+        senderCity: formData.senderCity.trim(),
+        receiverName: formData.receiverName.trim(),
+        receiverCity: formData.receiverCity.trim(),
+        deliveryAddress: formData.deliveryAddress.trim(),
+        weight: String(numericWeight),
+        priority: formData.priority,
+        eta: formData.eta,
+        totalWeightKg: numericWeight,
+        shipmentType: formData.shipmentType,
+        packageType: formData.packageType,
+        expectedDeliveryDate: formData.eta,
       };
 
       const res = await apiCreateShipment(payload);
@@ -220,7 +218,9 @@ export function ShipmentProvider({ children }) {
     await apiUpdateShipment(shipment.shipmentId, {
       senderAddressId: shipment.senderAddressId,
       receiverAddressId: shipment.receiverAddressId,
+      senderName: changes.senderName ?? shipment.senderName,
       senderCity: changes.senderCity ?? shipment.senderCity,
+      receiverName: changes.receiverName ?? shipment.receiverName,
       receiverCity: changes.receiverCity ?? shipment.receiverCity,
       deliveryAddress: changes.deliveryAddress ?? shipment.deliveryAddress,
       originWarehouseId: shipment.originWarehouseId,
@@ -229,40 +229,24 @@ export function ShipmentProvider({ children }) {
       assignedVehicleId: shipment.assignedVehicleId,
       shipmentType: changes.shipmentType ?? shipment.shipmentType ?? "STANDARD",
       packageType: changes.packageType ?? shipment.packageType ?? "General Cargo",
+      totalWeightKg: Number.parseFloat(String(changes.weight ?? shipment.totalWeightKg ?? shipment.weight).replace(/[^0-9.]/g, "")) || null,
+      weight: String(changes.weight ?? shipment.weight ?? ""),
+      priority: changes.priority ?? shipment.priority,
+      eta: changes.eta ?? shipment.eta ?? null,
       expectedDeliveryDate: changes.eta || shipment.expectedDeliveryDate || null,
     });
     await fetchShipments();
   }, [fetchShipments, shipments]);
 
-  const cancelShipment = useCallback(
-    (trackingNumber, location) => updateStatus(trackingNumber, "Cancelled", location),
-    [updateStatus],
-  );
+  const cancelShipment = useCallback(async (trackingNumber) => {
+    const shipment = shipments.find((item) => item.trackingNumber === trackingNumber);
+    if (!shipment?.shipmentId) throw new Error("Shipment not found");
+    await apiCancelShipment(shipment.shipmentId);
+    await fetchShipments();
+  }, [fetchShipments, shipments]);
 
-  const rejectShipment = useCallback((trackingNumber, location) => {
-    setShipments((items) =>
-      items.map((shipment) => {
-        if (
-          shipment.trackingNumber !== trackingNumber ||
-          shipment.status !== "Pending Approval"
-        ) {
-          return shipment;
-        }
-        return {
-          ...shipment,
-          status: "Rejected",
-          progress: statusProgress.Rejected,
-          history: [
-            ...shipment.history,
-            {
-              status: "Rejected",
-              location: location || shipment.senderCity,
-              timestamp: new Date().toISOString(),
-            },
-          ],
-        };
-      }),
-    );
+  const rejectShipment = useCallback(() => {
+    throw new Error("BACKEND LIMITATION — no supported shipment-rejection API is available.");
   }, []);
 
   // -------------------------------------------------------------------------

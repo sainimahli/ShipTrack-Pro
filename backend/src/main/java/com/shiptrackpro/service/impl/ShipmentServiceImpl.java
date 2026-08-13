@@ -1,36 +1,32 @@
 package com.shiptrackpro.service.impl;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.shiptrackpro.dto.CreateShipmentRequest;
 import com.shiptrackpro.dto.ShipmentResponse;
-import com.shiptrackpro.dto.ShipmentHistoryItem;
 import com.shiptrackpro.dto.UpdateShipmentRequest;
 import com.shiptrackpro.entity.Address;
 import com.shiptrackpro.entity.Shipment;
 import com.shiptrackpro.entity.TrackingEvent;
 import com.shiptrackpro.entity.User;
+import com.shiptrackpro.enums.AddressType;
 import com.shiptrackpro.enums.NotificationChannel;
 import com.shiptrackpro.enums.NotificationEventType;
 import com.shiptrackpro.enums.ShipmentStatus;
-import com.shiptrackpro.enums.AddressType;
 import com.shiptrackpro.exception.ResourceNotFoundException;
-import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.repository.AddressRepository;
+import com.shiptrackpro.repository.ShipmentRepository;
 import com.shiptrackpro.repository.TrackingEventRepository;
 import com.shiptrackpro.repository.UserRepository;
 import com.shiptrackpro.service.NotificationService;
 import com.shiptrackpro.service.ShipmentService;
 import com.shiptrackpro.service.TrackingService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.math.BigDecimal;
-
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -348,4 +344,3 @@ public class ShipmentServiceImpl implements ShipmentService {
     }
 
 }
-
