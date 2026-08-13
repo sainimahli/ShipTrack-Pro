@@ -23,7 +23,8 @@ import RouteHistory from "./assets/pages/RouteHistory";
 import SignatureVerification from "./assets/pages/SignatureVerification";
 import Reports from "./assets/pages/Reports";
 import DeliveryPerformanceReport from "./assets/pages/DeliveryPerformanceReport";
-
+import ProofOfDelivery from "./assets/pages/ProofOfDelivery";
+import PODRequestConfirmation from "./assets/pages/PODRequestConfirmation";
 
 const roleLabels = {
   ADMINISTRATOR: "Administrator",
@@ -60,6 +61,8 @@ function AppLayout() {
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/new" element={<CreateShipment />} />
+            <Route path="/proof-of-delivery" element={<ProofOfDelivery />}/>
+            <Route path="/pod-request-confirmation" element={<PODRequestConfirmation />} />
             <Route path="/delivery-confirmation" element={<DeliveryConfirmation />} />
             <Route path="/track" element={<TrackShipment />} />
             <Route path="/tracking" element={<TrackShipment />} />

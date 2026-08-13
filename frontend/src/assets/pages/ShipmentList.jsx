@@ -1,5 +1,5 @@
 import { useContext, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/auth";
 import { ShipmentContext } from "../context/shipments";
 import {
@@ -515,7 +515,7 @@ function ShipmentList({ ownOnly = false }) {
   const [status, setStatus] = useState("All");
   const [selectedTracking, setSelectedTracking] = useState(null);
 
-
+  const navigate = useNavigate();
 
   const role = normalizeRole(auth.user.role);
   const authenticatedUserId = auth?.user?.userId;
@@ -736,20 +736,36 @@ function ShipmentList({ ownOnly = false }) {
 
                     <td>{shipment.eta}</td>
 
-                    <td>
-                      {canManageShipments ? (
-                          <>
-                            <button
-                                className="button secondary compact"
-                                onClick={() => setSelectedTracking(shipment.trackingNumber)}
-                                type="button"
-                            >
-                              Manage
-                            </button>
+                     <td>
+  {canManageShipments ? (
+    <>
+      <button
+        className="button secondary compact"
+        onClick={() => setSelectedTracking(shipment.trackingNumber)}
+        type="button"
+      >
+        Manage
+      </button>
 
-
-                          </>
-                      ) : canEditStatus ? (
+      {shipment.status === "Delivered" && (
+        <button
+          className="button primary"
+          type="button"
+          style={{ marginTop: 18, marginLeft: 10 }}
+          onClick={() =>
+            navigate("/proof-of-delivery", {
+              state: {
+                shipmentId: shipment.shipmentId,
+                trackingNumber: shipment.trackingNumber,
+              },
+            })
+          }
+        >
+          Complete Delivery
+        </button>
+      )}
+    </>
+  ) : canEditStatus ? (
                           <select
                               className="select"
                               onChange={(e) => updateStatus(shipment.trackingNumber, e.target.value, shipment.receiverCity)}
